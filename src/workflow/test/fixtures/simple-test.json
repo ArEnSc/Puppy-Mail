@@ -1,0 +1,43 @@
+{
+  "id": "simple-workflow-001",
+  "name": "Simple Email Processor",
+  "description": "A simple workflow that analyzes emails and adds labels",
+  "trigger": {
+    "id": "email-trigger",
+    "type": "email_subject",
+    "config": {
+      "subject": "urgent",
+      "matchType": "contains"
+    }
+  },
+  "steps": [
+    {
+      "id": "analyze",
+      "functionName": "analysis",
+      "inputs": {
+        "prompt": "Is this email urgent? Extract any deadlines or action items.",
+        "useTriggeredEmail": true
+      }
+    },
+    {
+      "id": "add-urgent-label",
+      "functionName": "addLabels",
+      "inputs": {
+        "operation": {
+          "emailIdFromPreviousStep": true,
+          "labelIds": ["urgent", "needs-action"],
+          "operation": "add"
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "analyze.success",
+        "operator": "equals",
+        "value": true
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}

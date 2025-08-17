@@ -1,0 +1,41 @@
+{
+  "id": "error-test-workflow",
+  "name": "Error Test Workflow",
+  "description": "Tests error handling and logging",
+  "trigger": {
+    "id": "trigger-error",
+    "type": "email_subject",
+    "config": {
+      "subject": "error",
+      "matchType": "contains"
+    }
+  },
+  "steps": [
+    {
+      "id": "send-without-composition",
+      "functionName": "sendEmail",
+      "inputs": {
+        "composition": null
+      },
+      "onError": {
+        "action": "retry",
+        "retryCount": 2,
+        "retryDelay": 1000
+      }
+    },
+    {
+      "id": "fallback-step",
+      "functionName": "addLabels",
+      "inputs": {
+        "operation": {
+          "emailIdFromPreviousStep": "send-without-composition",
+          "labelIds": ["error-handled"],
+          "operation": "add"
+        }
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}
