@@ -27,7 +27,6 @@ export function EmailList() {
   } = useEmailStore()
   
   const emails = getFilteredEmails()
-  console.log('EmailList: Filtered emails count:', emails.length)
   
   return (
     <div className="flex h-full flex-col bg-background">

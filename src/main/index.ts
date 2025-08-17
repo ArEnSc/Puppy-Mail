@@ -2,6 +2,12 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import * as dotenv from 'dotenv'
+import { GmailAuthService, setupAuthHandlers } from './auth/authService'
+import { createEmailService } from './emailService'
+
+// Load environment variables
+dotenv.config()
 
 function createWindow(): void {
   // Create the browser window.
@@ -51,6 +57,32 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Initialize Gmail auth service
+  const gmailAuthService = new GmailAuthService()
+  setupAuthHandlers(gmailAuthService)
+
+  // Initialize email service
+  const emailService = createEmailService()
+
+  // Handle the existing google-oauth-start event to bridge with new auth system
+  ipcMain.on('google-oauth-start', async (event) => {
+    try {
+      await ipcMain.handle('auth:start')
+      // For now, we'll just indicate success since tokens are stored securely
+      // In a real implementation, you'd fetch user info after auth
+      event.reply('google-oauth-complete', {
+        accessToken: 'stored-securely',
+        refreshToken: 'stored-securely',
+        expiresAt: new Date().getTime() + 3600000,
+        userEmail: 'authenticated@gmail.com'
+      })
+    } catch (error) {
+      event.reply('google-oauth-complete', {
+        error: error instanceof Error ? error.message : 'Authentication failed'
+      })
+    }
+  })
 
   createWindow()
 

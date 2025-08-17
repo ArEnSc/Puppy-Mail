@@ -1,6 +1,7 @@
 import * as cron from 'node-cron'
+import { ipcMain, BrowserWindow } from 'electron'
 import { getEmailConfig, getPollInterval } from './config'
-import { pollEmails, formatEmail, FormattedEmail } from './emailManager'
+import { pollEmails, formatEmail, FormattedEmail, Email } from './emailManager'
 
 export class EmailService {
   private cronJob: cron.ScheduledTask | null = null
@@ -57,6 +58,81 @@ export class EmailService {
   }
 }
 
+// Transform email to match Zustand store format
+function transformEmailForStore(email: Email): any {
+  const senderMatch = email.from.match(/(.*?)\s*<(.+?)>/) || [null, email.from, email.from]
+  const [, senderName, senderEmail] = senderMatch
+  
+  return {
+    id: email.id,
+    threadId: email.threadId,
+    subject: email.subject,
+    from: {
+      name: senderName?.trim() || senderEmail,
+      email: senderEmail
+    },
+    to: [{
+      name: email.to,
+      email: email.to
+    }],
+    cc: [],
+    date: email.date,
+    snippet: email.snippet,
+    body: email.body,
+    isRead: false,
+    isStarred: false,
+    isImportant: false,
+    labels: ['inbox'],
+    attachments: email.attachments.map(att => ({
+      id: att.attachmentId,
+      filename: att.filename,
+      mimeType: att.mimeType,
+      size: att.size
+    }))
+  }
+}
+
+// Set up IPC handlers for email operations
+export function setupEmailIPC(service: EmailService): void {
+  // Fetch emails on demand
+  ipcMain.handle('email:fetch', async () => {
+    try {
+      const config = getEmailConfig()
+      const emails = await pollEmails(config, 50)
+      return emails.map(transformEmailForStore)
+    } catch (error) {
+      console.error('Error fetching emails:', error)
+      throw error
+    }
+  })
+
+  // Start polling
+  ipcMain.handle('email:startPolling', async (_, intervalMinutes?: number) => {
+    const interval = intervalMinutes || getPollInterval()
+    service.stopPolling() // Stop any existing polling
+    
+    // Set up handler to broadcast new emails
+    service.onNewEmails((formattedEmails) => {
+      // Fetch full emails and transform them
+      pollEmails(getEmailConfig(), 50).then(emails => {
+        const transformedEmails = emails.map(transformEmailForStore)
+        BrowserWindow.getAllWindows().forEach(window => {
+          window.webContents.send('email:newEmails', transformedEmails)
+        })
+      }).catch(console.error)
+    })
+    
+    service.startPolling()
+    return { success: true, interval }
+  })
+
+  // Stop polling
+  ipcMain.handle('email:stopPolling', async () => {
+    service.stopPolling()
+    return { success: true }
+  })
+}
+
 // Example usage
 export function createEmailService(): EmailService {
   const service = new EmailService()
@@ -72,6 +148,9 @@ export function createEmailService(): EmailService {
       console.log('---')
     })
   })
+
+  // Set up IPC handlers
+  setupEmailIPC(service)
 
   return service
 }
