@@ -27,7 +27,10 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "electron-updater": "^6.3.9"
+    "dotenv": "^17.2.1",
+    "electron-updater": "^6.3.9",
+    "googleapis": "^156.0.0",
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
