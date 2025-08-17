@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { EmailLayout } from './components/email/EmailLayout'
+import { Settings } from './components/Settings'
 import { useEmailStore } from './store/emailStore'
 
 // Mock data for demonstration
@@ -183,7 +184,12 @@ function App(): React.JSX.Element {
     ])
   }, [setEmails, setFolders])
   
-  return <EmailLayout />
+  return (
+    <>
+      <EmailLayout />
+      <Settings />
+    </>
+  )
 }
 
 export default App
