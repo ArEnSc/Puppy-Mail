@@ -152,6 +152,56 @@ export function useMailActions() {
     }
   }, [])
   
+  const readEmail = useCallback(async (emailId: string) => {
+    setIsLoading(true)
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mailAction:readEmail', emailId)
+      return handleResult(result)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+  
+  const readEmails = useCallback(async (emailIds: string[]) => {
+    setIsLoading(true)
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mailAction:readEmails', emailIds)
+      return handleResult(result)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+  
+  const markAsRead = useCallback(async (emailId: string) => {
+    setIsLoading(true)
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mailAction:markAsRead', emailId)
+      return handleResult(result)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+  
+  const markAsUnread = useCallback(async (emailId: string) => {
+    setIsLoading(true)
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mailAction:markAsUnread', emailId)
+      return handleResult(result)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+  
+  const searchEmails = useCallback(async (query: string, limit?: number) => {
+    setIsLoading(true)
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mailAction:searchEmails', query, limit)
+      return handleResult(result)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+  
   const checkInbox = useCallback(async (filter?: InboxListener['filter']) => {
     setIsLoading(true)
     try {
@@ -233,6 +283,13 @@ export function useMailActions() {
     setLabels,
     getLabels,
     createLabel,
+    
+    // Read operations
+    readEmail,
+    readEmails,
+    markAsRead,
+    markAsUnread,
+    searchEmails,
     
     // Inbox operations
     checkInbox,

@@ -82,6 +82,26 @@ export class MailActionServiceManager {
     return this.service.createLabel(...args)
   }
   
+  public async readEmail(...args: Parameters<MailActionService['readEmail']>) {
+    return this.service.readEmail(...args)
+  }
+  
+  public async readEmails(...args: Parameters<MailActionService['readEmails']>) {
+    return this.service.readEmails(...args)
+  }
+  
+  public async markAsRead(...args: Parameters<MailActionService['markAsRead']>) {
+    return this.service.markAsRead(...args)
+  }
+  
+  public async markAsUnread(...args: Parameters<MailActionService['markAsUnread']>) {
+    return this.service.markAsUnread(...args)
+  }
+  
+  public async searchEmails(...args: Parameters<MailActionService['searchEmails']>) {
+    return this.service.searchEmails(...args)
+  }
+  
   public async checkInbox(...args: Parameters<MailActionService['checkInbox']>) {
     return this.service.checkInbox(...args)
   }

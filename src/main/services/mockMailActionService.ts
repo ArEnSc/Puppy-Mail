@@ -299,6 +299,106 @@ export class MockMailActionService implements MailActionService {
     return this.createSuccess(newLabel)
   }
   
+  // Read operations
+  async readEmail(emailId: string): Promise<MailActionResult<EmailMessage>> {
+    console.log('[MockMailActionService] readEmail called:', emailId)
+    
+    const email = this.mockInbox.find(e => e.id === emailId)
+    if (!email) {
+      return this.createError('NOT_FOUND', `Email ${emailId} not found`)
+    }
+    
+    // Mark as read
+    email.isRead = true
+    
+    console.log(`[MockMailActionService] Read email:
+      ID: ${email.id}
+      From: ${email.from.email}
+      Subject: ${email.subject}
+      Body: ${email.body.substring(0, 100)}...
+      Date: ${email.date.toISOString()}
+      Labels: ${email.labels.join(', ')}
+    `)
+    
+    return this.createSuccess(email)
+  }
+  
+  async readEmails(emailIds: string[]): Promise<MailActionResult<EmailMessage[]>> {
+    console.log('[MockMailActionService] readEmails called:', emailIds)
+    
+    const emails: EmailMessage[] = []
+    const notFound: string[] = []
+    
+    for (const emailId of emailIds) {
+      const email = this.mockInbox.find(e => e.id === emailId)
+      if (email) {
+        email.isRead = true
+        emails.push(email)
+      } else {
+        notFound.push(emailId)
+      }
+    }
+    
+    if (notFound.length > 0) {
+      console.warn(`[MockMailActionService] Some emails not found: ${notFound.join(', ')}`)
+    }
+    
+    console.log(`[MockMailActionService] Read ${emails.length} emails`)
+    return this.createSuccess(emails)
+  }
+  
+  async markAsRead(emailId: string): Promise<MailActionResult<void>> {
+    console.log('[MockMailActionService] markAsRead called:', emailId)
+    
+    const email = this.mockInbox.find(e => e.id === emailId)
+    if (!email) {
+      return this.createError('NOT_FOUND', `Email ${emailId} not found`)
+    }
+    
+    email.isRead = true
+    console.log(`[MockMailActionService] Marked email ${emailId} as read`)
+    
+    return this.createSuccess()
+  }
+  
+  async markAsUnread(emailId: string): Promise<MailActionResult<void>> {
+    console.log('[MockMailActionService] markAsUnread called:', emailId)
+    
+    const email = this.mockInbox.find(e => e.id === emailId)
+    if (!email) {
+      return this.createError('NOT_FOUND', `Email ${emailId} not found`)
+    }
+    
+    email.isRead = false
+    console.log(`[MockMailActionService] Marked email ${emailId} as unread`)
+    
+    return this.createSuccess()
+  }
+  
+  async searchEmails(query: string, limit: number = 50): Promise<MailActionResult<EmailMessage[]>> {
+    console.log('[MockMailActionService] searchEmails called:', query, 'limit:', limit)
+    
+    const queryLower = query.toLowerCase()
+    
+    // Search in subject, body, and sender
+    let results = this.mockInbox.filter(email => 
+      email.subject.toLowerCase().includes(queryLower) ||
+      email.body.toLowerCase().includes(queryLower) ||
+      email.from.email.toLowerCase().includes(queryLower) ||
+      (email.from.name && email.from.name.toLowerCase().includes(queryLower))
+    )
+    
+    // Apply limit
+    results = results.slice(0, limit)
+    
+    console.log(`[MockMailActionService] Found ${results.length} emails matching "${query}"`)
+    results.forEach(email => {
+      console.log(`  - ${email.subject} from ${email.from.email}`)
+    })
+    
+    return this.createSuccess(results)
+  }
+  
   // Inbox operations
   async checkInbox(filter?: InboxListener['filter']): Promise<MailActionResult<EmailMessage[]>> {
     console.log('[MockMailActionService] checkInbox called with filter:', filter)

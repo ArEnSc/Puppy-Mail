@@ -66,6 +66,27 @@ export function setupMailActionHandlers(): void {
     return mailService.createLabel(label)
   })
   
+  // Read operations
+  ipcMain.handle('mailAction:readEmail', async (_event, emailId: string) => {
+    return mailService.readEmail(emailId)
+  })
+  
+  ipcMain.handle('mailAction:readEmails', async (_event, emailIds: string[]) => {
+    return mailService.readEmails(emailIds)
+  })
+  
+  ipcMain.handle('mailAction:markAsRead', async (_event, emailId: string) => {
+    return mailService.markAsRead(emailId)
+  })
+  
+  ipcMain.handle('mailAction:markAsUnread', async (_event, emailId: string) => {
+    return mailService.markAsUnread(emailId)
+  })
+  
+  ipcMain.handle('mailAction:searchEmails', async (_event, query: string, limit?: number) => {
+    return mailService.searchEmails(query, limit)
+  })
+  
   // Inbox operations
   ipcMain.handle('mailAction:checkInbox', async (_event, filter?: InboxListener['filter']) => {
     return mailService.checkInbox(filter)

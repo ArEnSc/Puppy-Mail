@@ -88,6 +88,13 @@ export interface MailActionService {
   getLabels(): Promise<MailActionResult<EmailLabel[]>>
   createLabel(label: Omit<EmailLabel, 'id'>): Promise<MailActionResult<EmailLabel>>
   
+  // Read operations
+  readEmail(emailId: string): Promise<MailActionResult<EmailMessage>>
+  readEmails(emailIds: string[]): Promise<MailActionResult<EmailMessage[]>>
+  markAsRead(emailId: string): Promise<MailActionResult<void>>
+  markAsUnread(emailId: string): Promise<MailActionResult<void>>
+  searchEmails(query: string, limit?: number): Promise<MailActionResult<EmailMessage[]>>
+  
   // Inbox operations
   checkInbox(filter?: InboxListener['filter']): Promise<MailActionResult<EmailMessage[]>>
   listenToInbox(listener: Omit<InboxListener, 'id'>): Promise<MailActionResult<{ listenerId: string }>>

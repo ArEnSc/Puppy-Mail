@@ -66,6 +66,25 @@ export function MailActionTest() {
     const emails = await mailActions.checkInbox()
     if (emails) {
       setResult(`Found ${emails.length} emails in inbox`)
+      // Store first email ID for read test
+      if (emails.length > 0) {
+        window.localStorage.setItem('testEmailId', emails[0].id)
+      }
+    }
+  }
+  
+  const testReadEmail = async () => {
+    const emailId = window.localStorage.getItem('testEmailId') || 'mock-1'
+    const email = await mailActions.readEmail(emailId)
+    if (email) {
+      setResult(`Read email: "${email.subject}" from ${email.from.email}`)
+    }
+  }
+  
+  const testSearchEmails = async () => {
+    const results = await mailActions.searchEmails('test', 10)
+    if (results) {
+      setResult(`Search found ${results.length} emails containing "test"`)
     }
   }
   
@@ -152,6 +171,14 @@ export function MailActionTest() {
             
             <Button onClick={testCheckInbox} disabled={mailActions.isLoading}>
               Test Check Inbox
+            </Button>
+            
+            <Button onClick={testReadEmail} disabled={mailActions.isLoading}>
+              Test Read Email
+            </Button>
+            
+            <Button onClick={testSearchEmails} disabled={mailActions.isLoading}>
+              Test Search Emails
             </Button>
             
             <Button 
