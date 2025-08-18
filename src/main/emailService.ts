@@ -213,7 +213,7 @@ export function setupEmailIPC(service: EmailService): void {
   // Fetch emails from database
   ipcMain.handle('email:fetch', async () => {
     try {
-      const dbEmails = await DBEmailService.getEmails(50, 0)
+      const dbEmails = await DBEmailService.getEmails(300, 0)
       return dbEmails.map((doc) => {
         // Convert Realm object to plain object
         const plainDoc = {
@@ -266,7 +266,7 @@ export function setupEmailIPC(service: EmailService): void {
     service.onNewEmails(async () => {
       // Instead of re-fetching, get emails from database after sync
       try {
-        const dbEmails = await DBEmailService.getEmails(50, 0)
+        const dbEmails = await DBEmailService.getEmails(300, 0)
         const transformedEmails = dbEmails.map((doc) => {
           // Convert Realm object to plain object
           const plainDoc = {
