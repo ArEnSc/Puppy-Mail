@@ -70,7 +70,6 @@ export function ChatView(): JSX.Element {
       _event: any,
       data: { chunk: string; type: 'content' | 'reasoning' }
     ) => {
-      console.log('Received stream chunk:', data)
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
         const { chunk, type } = data
@@ -122,6 +121,7 @@ export function ChatView(): JSX.Element {
       window.electron.ipcRenderer.off('lmstudio:stream:chunk', handleStreamChunk)
       window.electron.ipcRenderer.off('lmstudio:stream:error', handleStreamError)
       window.electron.ipcRenderer.off('lmstudio:stream:complete', handleStreamComplete)
+      isMountedRef.current = false
     }
   }, []) // Empty dependency array - set up listeners only once
 
