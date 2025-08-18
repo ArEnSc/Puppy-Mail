@@ -18,7 +18,26 @@ const customIpcRenderer = {
       'settings:get',
       'settings:set',
       'lmstudio:validate',
-      'lmstudio:chat'
+      'lmstudio:chat',
+      // Mail action channels
+      'mailAction:sendEmail',
+      'mailAction:scheduleEmail',
+      'mailAction:cancelScheduledEmail',
+      'mailAction:getScheduledEmails',
+      'mailAction:createDraft',
+      'mailAction:updateDraft',
+      'mailAction:deleteDraft',
+      'mailAction:getDrafts',
+      'mailAction:addLabels',
+      'mailAction:removeLabels',
+      'mailAction:setLabels',
+      'mailAction:getLabels',
+      'mailAction:createLabel',
+      'mailAction:checkInbox',
+      'mailAction:listenToInbox',
+      'mailAction:stopListening',
+      'mailAction:getThread',
+      'mailAction:checkForResponse'
     ]
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args)
@@ -39,7 +58,8 @@ const customIpcRenderer = {
       'google-oauth-complete',
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
-      'lmstudio:stream:complete'
+      'lmstudio:stream:complete',
+      'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, listener)
@@ -59,7 +79,8 @@ const customIpcRenderer = {
       'google-oauth-complete',
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
-      'lmstudio:stream:complete'
+      'lmstudio:stream:complete',
+      'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.off(channel, listener)
@@ -79,7 +100,8 @@ const customIpcRenderer = {
       'google-oauth-complete',
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
-      'lmstudio:stream:complete'
+      'lmstudio:stream:complete',
+      'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.off(channel, listener)
@@ -99,7 +121,8 @@ const customIpcRenderer = {
       'google-oauth-complete',
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
-      'lmstudio:stream:complete'
+      'lmstudio:stream:complete',
+      'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.once(channel, listener)
