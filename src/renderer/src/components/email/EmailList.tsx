@@ -182,32 +182,37 @@ export function EmailList(): JSX.Element {
       </ScrollArea>
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t px-4 py-2">
+      <div className="border-t">
+        <div className="px-4 py-2 text-center">
           <div className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * pageSize + 1} -{' '}
-            {Math.min(currentPage * pageSize, totalEmails)} of {totalEmails}
+            Showing {Math.max(1, (currentPage - 1) * pageSize + 1)} -{' '}
+            {Math.min(currentPage * pageSize, totalEmails)} of {totalEmails} emails
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={previousPage} disabled={currentPage === 1}>
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={nextPage}
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div className="text-sm text-muted-foreground mt-1">
+            Page {currentPage} of {Math.max(1, totalPages)}
           </div>
         </div>
-      )}
+        <div className="flex items-center justify-center gap-2 px-4 pb-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={previousPage} 
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={nextPage}
+            disabled={currentPage === totalPages || totalPages <= 1}
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

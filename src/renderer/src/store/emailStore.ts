@@ -135,6 +135,7 @@ export const useEmailStore = create<EmailState>()(
         setEmails: (emails) => {
           const pageSize = get().pageSize
           const totalPages = Math.ceil(emails.length / pageSize)
+          console.log(`setEmails: Received ${emails.length} emails, pageSize: ${pageSize}, totalPages: ${totalPages}`)
           set({ emails, totalPages, currentPage: 1 })
         },
         setLastSyncTime: (time) => set({ lastSyncTime: time }),
