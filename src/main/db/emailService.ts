@@ -4,9 +4,10 @@ import { Email } from '../emailManager'
 export class EmailService {
   static async syncEmails(accountId: string, emails: Email[]): Promise<void> {
     try {
+      console.log(`syncEmails: Starting sync for account ${accountId} with ${emails.length} emails`)
       const db = await getDatabase()
       if (!db) {
-        console.warn('Database not available, skipping email sync')
+        console.error('syncEmails: Database not available, cannot sync emails')
         return
       }
 
@@ -56,9 +57,16 @@ export class EmailService {
       )
 
       await db.emails.bulkUpsert(bulkData)
-      console.log(`Synced ${bulkData.length} emails, preserving local state`)
+      console.log(
+        `syncEmails: Successfully synced ${bulkData.length} emails, preserving local state`
+      )
     } catch (error) {
-      console.error('Error syncing emails to database:', error)
+      console.error('syncEmails: Error syncing emails to database:', error)
+      console.error('syncEmails: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       // Don't throw - we want the app to continue working even if DB fails
     }
   }
@@ -74,9 +82,10 @@ export class EmailService {
     }
   ): Promise<EmailDocument[]> {
     try {
+      console.log(`getEmails: Fetching emails with limit=${limit}, offset=${offset}`)
       const db = await getDatabase()
       if (!db) {
-        console.warn('Database not available, returning empty array')
+        console.error('getEmails: Database not available, returning empty array')
         return []
       }
       let query = db.emails.find()
@@ -93,41 +102,74 @@ export class EmailService {
 
       const results = await query.sort({ date: 'desc' }).skip(offset).limit(limit).exec()
 
+      console.log(`getEmails: Found ${results.length} emails`)
       return results
     } catch (error) {
-      console.error('Error getting emails from database:', error)
+      console.error('getEmails: Error getting emails from database:', error)
+      console.error('getEmails: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       return []
     }
   }
 
   static async markAsRead(emailId: string): Promise<void> {
-    const db = await getDatabase()
-    if (!db) {
-      console.warn('Database not available, skipping markAsRead')
-      return
-    }
-    const email = await db.emails.findOne(emailId).exec()
-    if (email) {
-      await email.update({
-        $set: {
-          isRead: true
-        }
+    try {
+      console.log(`markAsRead: Marking email ${emailId} as read`)
+      const db = await getDatabase()
+      if (!db) {
+        console.error('markAsRead: Database not available')
+        return
+      }
+      const email = await db.emails.findOne(emailId).exec()
+      if (email) {
+        await email.update({
+          $set: {
+            isRead: true
+          }
+        })
+        console.log(`markAsRead: Successfully marked email ${emailId} as read`)
+      } else {
+        console.warn(`markAsRead: Email ${emailId} not found`)
+      }
+    } catch (error) {
+      console.error(`markAsRead: Error marking email ${emailId} as read:`, error)
+      console.error('markAsRead: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       })
     }
   }
 
   static async toggleStar(emailId: string): Promise<void> {
-    const db = await getDatabase()
-    if (!db) {
-      console.warn('Database not available, skipping toggleStar')
-      return
-    }
-    const email = await db.emails.findOne(emailId).exec()
-    if (email) {
-      await email.update({
-        $set: {
-          isStarred: !email.isStarred
-        }
+    try {
+      console.log(`toggleStar: Toggling star for email ${emailId}`)
+      const db = await getDatabase()
+      if (!db) {
+        console.error('toggleStar: Database not available')
+        return
+      }
+      const email = await db.emails.findOne(emailId).exec()
+      if (email) {
+        const newStarred = !email.isStarred
+        await email.update({
+          $set: {
+            isStarred: newStarred
+          }
+        })
+        console.log(`toggleStar: Successfully set star to ${newStarred} for email ${emailId}`)
+      } else {
+        console.warn(`toggleStar: Email ${emailId} not found`)
+      }
+    } catch (error) {
+      console.error(`toggleStar: Error toggling star for email ${emailId}:`, error)
+      console.error('toggleStar: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       })
     }
   }

@@ -75,7 +75,12 @@ export class EmailService {
 
       return emails.map(formatEmail)
     } catch (error) {
-      console.error('Error fetching emails:', error)
+      console.error('fetchLatestEmails: Error fetching emails:', error)
+      console.error('fetchLatestEmails: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       throw error
     }
   }

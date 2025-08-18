@@ -1,8 +1,10 @@
 import { createRxDatabase, RxDatabase, RxCollection, RxDocument, addRxPlugin } from 'rxdb'
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie'
+import { getRxStorageFilesystem } from 'rxdb/plugins/storage-filesystem'
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder'
 import { RxDBMigrationPlugin } from 'rxdb/plugins/migration-schema'
 import { RxDBUpdatePlugin } from 'rxdb/plugins/update'
+import { app } from 'electron'
+import { join } from 'path'
 import { emailSchema, accountSchema } from './schema'
 
 // Add plugins
@@ -84,10 +86,16 @@ export async function createDatabase(): Promise<EmailDatabase | null> {
 
       console.log('Creating new RxDB database instance...')
 
-      // Use Dexie storage for persistence
+      // Get app data path for database storage
+      const dbPath = join(app.getPath('userData'), 'database')
+      console.log('Database path:', dbPath)
+
+      // Use filesystem storage for persistence in Electron main process
       const db = await createRxDatabase<DatabaseCollections>({
         name: 'chloedb',
-        storage: getRxStorageDexie(),
+        storage: getRxStorageFilesystem({
+          basePath: dbPath
+        }),
         multiInstance: false,
         eventReduce: true
       })
@@ -108,6 +116,11 @@ export async function createDatabase(): Promise<EmailDatabase | null> {
       return db
     } catch (error) {
       console.error('Error creating database:', error)
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
 
       // Mark as initialized even on error to prevent repeated attempts
       dbInitialized = true
@@ -125,6 +138,9 @@ export async function createDatabase(): Promise<EmailDatabase | null> {
 export async function getDatabase(): Promise<EmailDatabase | null> {
   // Always go through createDatabase to ensure proper initialization
   const db = await createDatabase()
+  if (!db) {
+    console.warn('getDatabase: Database is not available')
+  }
   return db
 }
 

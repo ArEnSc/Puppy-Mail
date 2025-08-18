@@ -66,10 +66,21 @@ app.whenReady().then(async () => {
   })
 
   // Initialize database
+  console.log('Initializing database...')
   try {
-    await createDatabase()
+    const db = await createDatabase()
+    if (db) {
+      console.log('Database initialized successfully')
+    } else {
+      console.error('Database initialization returned null - app will continue without database')
+    }
   } catch (error) {
     console.error('Failed to initialize database:', error)
+    console.error('Database initialization error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
     // Continue anyway - the app can work without the database for now
   }
 
