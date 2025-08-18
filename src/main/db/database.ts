@@ -16,6 +16,7 @@ export class EmailDocument extends Realm.Object<EmailDocument> {
   attachments!: unknown[]
   isRead!: boolean
   isStarred!: boolean
+  isImportant!: boolean
   syncedAt!: Date
 
   static schema: Realm.ObjectSchema = {
@@ -34,6 +35,7 @@ export class EmailDocument extends Realm.Object<EmailDocument> {
       attachments: 'mixed[]',
       isRead: { type: 'bool', default: false },
       isStarred: { type: 'bool', default: false },
+      isImportant: { type: 'bool', default: false },
       syncedAt: { type: 'date', default: new Date() }
     }
   }
@@ -86,7 +88,7 @@ export async function createDatabase(): Promise<Realm | null> {
     realmInstance = await Realm.open({
       path: dbPath,
       schema: [EmailDocument, AccountDocument],
-      schemaVersion: 1,
+      schemaVersion: 2,
       onMigration: (oldRealm, newRealm) => {
         console.log(
           'Database migration from version',

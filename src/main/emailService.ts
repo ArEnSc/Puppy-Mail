@@ -196,7 +196,7 @@ function transformEmailForStore(
     cleanBody: cleanEmail.text,
     isRead: email.isRead ?? false,
     isStarred: email.isStarred ?? false,
-    isImportant: false,
+    isImportant: email.labels ? email.labels.includes('IMPORTANT') : false,
     labels: email.labels || ['inbox'],
     attachments: email.attachments.map((att) => ({
       id: att.attachmentId,
@@ -228,7 +228,8 @@ export function setupEmailIPC(service: EmailService): void {
           attachments: Array.from(doc.attachments),
           labels: Array.from(doc.labels),
           isRead: doc.isRead,
-          isStarred: doc.isStarred
+          isStarred: doc.isStarred,
+          isImportant: doc.isImportant
         }
 
         return transformEmailForStore({

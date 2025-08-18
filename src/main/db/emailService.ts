@@ -28,6 +28,7 @@ export class EmailService {
             existingEmail.date = email.date
             existingEmail.labels = email.labels
             existingEmail.attachments = email.attachments
+            existingEmail.isImportant = email.labels.includes('IMPORTANT')
             existingEmail.syncedAt = new Date()
             // Preserve local state - don't update isRead and isStarred
           } else {
@@ -45,6 +46,7 @@ export class EmailService {
               attachments: email.attachments,
               isRead: email.isRead,
               isStarred: email.isStarred,
+              isImportant: email.labels.includes('IMPORTANT'),
               syncedAt: new Date()
             })
           }
