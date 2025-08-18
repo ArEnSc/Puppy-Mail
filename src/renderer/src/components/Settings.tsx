@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   Dialog,
@@ -124,18 +124,66 @@ export function Settings() {
     setGoogleAuth,
     clearGoogleAuth
   } = useSettingsStore()
+  
+  // Listen for open-settings event
+  useEffect(() => {
+    const handleOpenSettings = () => {
+      setSettingsOpen(true)
+    }
+    
+    window.addEventListener('open-settings', handleOpenSettings)
+    return () => {
+      window.removeEventListener('open-settings', handleOpenSettings)
+    }
+  }, [setSettingsOpen])
+  
+  // Check auth status when dialog opens
+  useEffect(() => {
+    if (isSettingsOpen && window.electron?.ipcRenderer) {
+      console.log('Checking auth status...')
+      window.electron.ipcRenderer.invoke('auth:check').then(isAuthenticated => {
+        console.log('Auth check result:', isAuthenticated)
+        if (isAuthenticated) {
+          // Get stored user info if available
+          const storedAuth = localStorage.getItem('googleAuth')
+          if (storedAuth) {
+            const authData = JSON.parse(storedAuth)
+            setGoogleAuth({
+              isAuthenticated: true,
+              userEmail: authData.userEmail || 'authenticated@gmail.com',
+              error: null
+            })
+          } else {
+            // Even if no stored auth, we're authenticated
+            setGoogleAuth({
+              isAuthenticated: true,
+              userEmail: 'authenticated@gmail.com',
+              error: null
+            })
+          }
+        }
+      }).catch(error => {
+        console.error('Error checking auth:', error)
+      })
+    }
+  }, [isSettingsOpen, setGoogleAuth])
 
   const handleGoogleAuth = async () => {
+    console.log('handleGoogleAuth called')
     try {
       if (window.electron?.ipcRenderer) {
-        // Real Electron OAuth flow
-        window.electron.ipcRenderer.send('google-oauth-start')
-
-        // Listen for the OAuth response
-        window.electron.ipcRenderer.once('google-oauth-complete', (event, data) => {
+        console.log('Electron IPC available, starting OAuth')
+        // Clear any previous errors
+        setGoogleAuth(prev => ({ ...prev, error: null }))
+        
+        // Listen for the OAuth response BEFORE sending the start event
+        const handleOAuthComplete = (event: any, data: any) => {
+          console.log('OAuth complete event received:', data)
           if (data.error) {
+            console.error('OAuth error received:', data.error)
             setGoogleAuth({ error: data.error })
           } else {
+            console.log('OAuth success, updating state')
             setGoogleAuth({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
@@ -144,18 +192,36 @@ export function Settings() {
               isAuthenticated: true,
               error: null
             })
+            
+            // Save auth info to localStorage for persistence
+            localStorage.setItem('googleAuth', JSON.stringify({
+              userEmail: data.userEmail,
+              isAuthenticated: true
+            }))
+            
+            // Show success notification (you could use a toast here)
+            console.log('Successfully connected to Gmail!')
           }
-        })
+        }
+        
+        // Set up the listener first
+        window.electron.ipcRenderer.once('google-oauth-complete', handleOAuthComplete)
+        
+        // Then send the start event
+        console.log('Sending google-oauth-start')
+        window.electron.ipcRenderer.send('google-oauth-start')
       } else {
         // Fallback for development/testing
+        console.log('No Electron IPC available')
         setGoogleAuth({
           error:
             'Google OAuth requires Electron environment. In production, this would open Google sign-in.'
         })
       }
     } catch (error) {
+      console.error('Google auth error in Settings (catch block):', error)
       setGoogleAuth({
-        error: 'Failed to initiate Google authentication'
+        error: error instanceof Error ? error.message : 'Failed to initiate Google authentication'
       })
     }
   }
@@ -174,16 +240,16 @@ export function Settings() {
 
       {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="w-[90vw] max-w-2xl max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="w-[90vw] max-w-2xl h-[90vh] max-h-[600px] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Settings</DialogTitle>
             <DialogDescription>
               Configure your API keys and authentication for email services
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="h-[500px] px-1">
-            <div className="space-y-6 px-4">
+          <ScrollArea className="flex-1 min-h-0 px-1">
+            <div className="space-y-6 px-4 pb-4">
               {/* Google Authentication */}
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Google Gmail</h3>
@@ -205,6 +271,9 @@ export function Settings() {
                         Disconnect
                       </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      You can now sync your emails using the sync button in the header.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">

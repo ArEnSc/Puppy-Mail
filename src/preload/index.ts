@@ -66,6 +66,19 @@ const customIpcRenderer = {
       electronAPI.ipcRenderer.off(channel, listener)
     }
   },
+  once: (
+    channel: string,
+    listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+  ) => {
+    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete']
+    if (validChannels.includes(channel)) {
+      ipcRenderer.once(channel, listener)
+      return
+    }
+    if (electronAPI.ipcRenderer?.once) {
+      electronAPI.ipcRenderer.once(channel, listener)
+    }
+  },
   send: (channel: string, ...args: unknown[]) => {
     const validChannels = ['google-oauth-start', 'open-external']
     if (validChannels.includes(channel)) {

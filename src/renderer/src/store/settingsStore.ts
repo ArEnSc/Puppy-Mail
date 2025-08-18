@@ -167,10 +167,13 @@ export const useSettingsStore = create<SettingsState>()(
           }
         })),
 
-      clearGoogleAuth: () =>
+      clearGoogleAuth: () => {
+        // Clear from localStorage too
+        localStorage.removeItem('googleAuth')
         set({
           googleAuth: defaultGoogleAuth
-        }),
+        })
+      },
 
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
 

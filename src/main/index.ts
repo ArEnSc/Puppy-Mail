@@ -82,63 +82,114 @@ app.whenReady().then(async () => {
   // Handle the existing google-oauth-start event to bridge with new auth system
   ipcMain.on('google-oauth-start', async (event) => {
     try {
-      await new Promise((resolve, reject) => {
-        ipcMain.handleOnce('auth:start', async () => {
-          try {
-            const authUrl = await gmailAuthService.getAuthUrl()
+      const authUrl = await gmailAuthService.getAuthUrl()
 
-            const authWindow = new BrowserWindow({
-              width: 600,
-              height: 800,
-              webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true
-              }
-            })
+      const authWindow = new BrowserWindow({
+        width: 600,
+        height: 800,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      })
 
-            authWindow.loadURL(authUrl)
+      authWindow.loadURL(authUrl)
 
-            authWindow.webContents.on('will-redirect', async (event, url) => {
-              if (
-                url.startsWith(
-                  process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
-                )
-              ) {
-                event.preventDefault()
+      let authCompleted = false
+      
+      // Add a timeout to prevent hanging
+      const authTimeout = setTimeout(() => {
+        if (!authCompleted) {
+          authWindow.close()
+        }
+      }, 120000) // 2 minute timeout
+      
+      const result = await new Promise<{ success: boolean; userEmail?: string }>((resolve, reject) => {
+        // Handle redirects
+        authWindow.webContents.on('will-redirect', async (navEvent, url) => {
+          console.log('Redirect detected:', url)
+          
+          // Check if this is our callback URL (handle both with and without trailing slash)
+          const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+          if (url.startsWith(redirectUri) || url.includes('localhost:3000/auth/callback') || url.includes('code=')) {
+            navEvent.preventDefault()
+            authCompleted = true
 
-                const urlParams = new URL(url)
-                const code = urlParams.searchParams.get('code')
+            const urlParams = new URL(url)
+            const code = urlParams.searchParams.get('code')
 
+            if (code) {
+              try {
+                await gmailAuthService.handleAuthCallback(code)
+                
+                // Get user info after successful auth
+                const gmail = await gmailAuthService.getGmailClient()
+                const profile = await gmail.users.getProfile({ userId: 'me' })
+                
                 authWindow.close()
-
-                if (code) {
-                  await gmailAuthService.handleAuthCallback(code)
-                  resolve({ success: true })
-                } else {
-                  reject(new Error('No authorization code received'))
-                }
+                clearTimeout(authTimeout)
+                resolve({ success: true, userEmail: profile.data.emailAddress || 'authenticated@gmail.com' })
+              } catch (authError) {
+                authWindow.close()
+                reject(authError)
               }
-            })
-
-            authWindow.on('closed', () => {
-              reject(new Error('Authentication cancelled'))
-            })
-          } catch (error) {
-            reject(error)
+            } else {
+              authWindow.close()
+              reject(new Error('No authorization code received'))
+            }
           }
         })
 
-        ipcMain.emit('auth:start')
+        // Also handle navigation for apps that don't trigger will-redirect
+        authWindow.webContents.on('will-navigate', (navEvent, url) => {
+          console.log('Navigation detected:', url)
+          
+          // Check if this is our callback URL (handle both with and without trailing slash)
+          const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+          if (url.startsWith(redirectUri) || url.includes('localhost:3000/auth/callback') || url.includes('code=')) {
+            navEvent.preventDefault()
+            authCompleted = true
+
+            const urlParams = new URL(url)
+            const code = urlParams.searchParams.get('code')
+
+            if (code) {
+              gmailAuthService.handleAuthCallback(code)
+                .then(async () => {
+                  const gmail = await gmailAuthService.getGmailClient()
+                  const profile = await gmail.users.getProfile({ userId: 'me' })
+                  authWindow.close()
+                  clearTimeout(authTimeout)
+                  resolve({ success: true, userEmail: profile.data.emailAddress || 'authenticated@gmail.com' })
+                })
+                .catch(authError => {
+                  authWindow.close()
+                  reject(authError)
+                })
+            } else {
+              authWindow.close()
+              reject(new Error('No authorization code received'))
+            }
+          }
+        })
+
+        authWindow.on('closed', () => {
+          if (!authCompleted) {
+            reject(new Error('Authentication cancelled'))
+          }
+        })
       })
-      // For now, we'll just indicate success since tokens are stored securely
-      // In a real implementation, you'd fetch user info after auth
+
+      // Send success response
       event.reply('google-oauth-complete', {
         accessToken: 'stored-securely',
         refreshToken: 'stored-securely',
         expiresAt: new Date().getTime() + 3600000,
-        userEmail: 'authenticated@gmail.com'
+        userEmail: result.userEmail,
+        isAuthenticated: true
       })
     } catch (error) {
+      console.error('Google OAuth error:', error)
       event.reply('google-oauth-complete', {
         error: error instanceof Error ? error.message : 'Authentication failed'
       })
