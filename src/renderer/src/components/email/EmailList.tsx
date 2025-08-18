@@ -211,4 +211,3 @@ export function EmailList(): JSX.Element {
     </div>
   )
 }
-

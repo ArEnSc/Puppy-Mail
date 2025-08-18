@@ -101,11 +101,24 @@ export function FolderList(): JSX.Element {
       <div className="p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <span className="text-sm font-medium">JD</span>
+            <span className="text-sm font-medium">
+              {googleAuth.userEmail ? googleAuth.userEmail.substring(0, 2).toUpperCase() : 'U'}
+            </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">John Doe</p>
-            <p className="truncate text-xs text-muted-foreground">john@example.com</p>
+            <p className="truncate text-sm font-medium">
+              {googleAuth.userEmail
+                ? googleAuth.userEmail
+                    .split('@')[0]
+                    .replace('.', ' ')
+                    .split(' ')
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')
+                : 'User'}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {googleAuth.userEmail || 'Not authenticated'}
+            </p>
           </div>
         </div>
       </div>

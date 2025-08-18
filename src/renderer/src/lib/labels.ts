@@ -119,4 +119,3 @@ export function getLabelConfig(label: string): LabelConfig {
     textColor: color.text
   }
 }
-
