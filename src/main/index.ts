@@ -58,6 +58,11 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Handle opening external links
+  ipcMain.on('open-external', (_, url) => {
+    shell.openExternal(url)
+  })
+
   // Initialize Gmail auth service
   const gmailAuthService = new GmailAuthService()
   setupAuthHandlers(gmailAuthService)

@@ -6,6 +6,7 @@ import DOMPurify from 'dompurify'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { EmailWebview } from './EmailWebview'
 import { 
   Reply, 
   ReplyAll, 
@@ -136,15 +137,9 @@ export function EmailDetail() {
           {/* Email Body */}
           <div className="relative overflow-hidden" style={{ maxWidth: '100%' }}>
             {viewMode === 'original' ? (
-              <div 
-                className="text-sm leading-relaxed overflow-x-auto [&>*]:max-w-full [&_img]:max-w-full [&_table]:max-w-full"
-                style={{ 
-                  maxWidth: '100%', 
-                  wordWrap: 'break-word', 
-                  overflowWrap: 'break-word',
-                  width: '100%'
-                }}
-                dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+              <EmailWebview 
+                htmlContent={email.body}
+                className="min-h-[200px]"
               />
             ) : (
               <div 
