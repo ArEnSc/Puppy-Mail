@@ -83,14 +83,35 @@ export async function createDatabase(): Promise<EmailDatabase> {
 
     dbInstance = db
     return db
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating database:', error)
-    // If database already exists, try to get existing instance
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'DB9') {
-      console.log('Database already exists, attempting to connect...')
-      // For now, we'll throw the error
-      throw error
+    
+    // DB9 error means database already exists
+    if (error?.code === 'DB9') {
+      console.log('Database already exists, creating new instance...')
+      
+      // Try with a different name to avoid conflict
+      const timestamp = Date.now()
+      const db = await createRxDatabase<DatabaseCollections>({
+        name: `emailagentdb_${timestamp}`,
+        storage: getRxStorageDexie(),
+        ignoreDuplicate: true
+      })
+
+      // Add collections
+      await db.addCollections({
+        emails: {
+          schema: emailSchema
+        },
+        accounts: {
+          schema: accountSchema
+        }
+      })
+
+      dbInstance = db
+      return db
     }
+    
     throw error
   }
 }

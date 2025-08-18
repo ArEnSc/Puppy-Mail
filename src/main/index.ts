@@ -65,7 +65,12 @@ app.whenReady().then(async () => {
   })
 
   // Initialize database
-  await createDatabase()
+  try {
+    await createDatabase()
+  } catch (error) {
+    console.error('Failed to initialize database:', error)
+    // Continue anyway - the app can work without the database for now
+  }
 
   // Initialize Gmail auth service
   const gmailAuthService = new GmailAuthService()

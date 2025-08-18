@@ -45,12 +45,17 @@ export async function createGmailClient(config: EmailConfig): Promise<gmail_v1.G
   return google.gmail({ version: 'v1', auth: oauth2Client })
 }
 
-export async function pollEmailsWithClient(gmail: gmail_v1.Gmail, maxResults: number = 10, whitelistedEmails: string[] = []): Promise<Email[]> {
+export async function pollEmailsWithClient(
+  gmail: gmail_v1.Gmail,
+  maxResults: number = 10,
+  whitelistedEmails: string[] = []
+): Promise<Email[]> {
   try {
     // Build query for whitelisted emails
-    const fromQuery = whitelistedEmails.length > 0 
-      ? whitelistedEmails.map((email) => `from:${email}`).join(' OR ')
-      : undefined
+    const fromQuery =
+      whitelistedEmails.length > 0
+        ? whitelistedEmails.map((email) => `from:${email}`).join(' OR ')
+        : undefined
 
     const query = fromQuery ? `{${fromQuery}}` : ''
 

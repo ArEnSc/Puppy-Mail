@@ -1,7 +1,13 @@
 import * as cron from 'node-cron'
 import { ipcMain, BrowserWindow } from 'electron'
 import { getEmailConfig, getPollInterval } from './config'
-import { pollEmails, formatEmail, FormattedEmail, Email, pollEmailsWithClient } from './emailManager'
+import {
+  pollEmails,
+  formatEmail,
+  FormattedEmail,
+  Email,
+  pollEmailsWithClient
+} from './emailManager'
 import { getCleanEmail } from './utils/emailSanitizer'
 import { EmailService as DBEmailService } from './db/emailService'
 import { GmailAuthService } from './auth/authService'
@@ -30,7 +36,7 @@ export class EmailService {
 
       // Get authenticated Gmail client
       const gmail = await this.gmailAuthService.getGmailClient()
-      
+
       // Get whitelisted emails from config if available
       let whitelistedEmails: string[] = []
       try {
@@ -39,7 +45,7 @@ export class EmailService {
       } catch (e) {
         // Config might not be available if using OAuth, that's ok
       }
-      
+
       const emails = await pollEmailsWithClient(gmail, maxResults, whitelistedEmails)
 
       // Save to database - RxDB will handle duplicates via primary key
@@ -100,7 +106,45 @@ export class EmailService {
 }
 
 // Transform email to match Zustand store format
-function transformEmailForStore(email: Email): any {
+interface StoreEmail {
+  id: string
+  threadId: string
+  subject: string
+  from: {
+    name: string
+    email: string
+  }
+  to: Array<{
+    name: string
+    email: string
+  }>
+  cc: Array<{
+    name: string
+    email: string
+  }>
+  date: Date
+  snippet: string
+  body: string
+  cleanBody: string
+  isRead: boolean
+  isStarred: boolean
+  isImportant: boolean
+  labels: string[]
+  attachments: Array<{
+    id: string
+    filename: string
+    mimeType: string
+    size: number
+  }>
+  categorizedAttachments: {
+    images: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    pdfs: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    videos: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    others: Array<{ id: string; filename: string; mimeType: string; size: number }>
+  }
+}
+
+function transformEmailForStore(email: Email): StoreEmail {
   const senderMatch = email.from.match(/(.*?)\s*<(.+?)>/) || [null, email.from, email.from]
   const [, senderName, senderEmail] = senderMatch
 

@@ -8,9 +8,9 @@ const api = {}
 const customIpcRenderer = {
   invoke: (channel: string, ...args: unknown[]) => {
     const validChannels = [
-      'email:fetch', 
-      'email:sync', 
-      'email:startPolling', 
+      'email:fetch',
+      'email:sync',
+      'email:startPolling',
       'email:stopPolling',
       'auth:check',
       'auth:start',
@@ -27,7 +27,10 @@ const customIpcRenderer = {
     }
     throw new Error(`Invalid channel: ${channel}`)
   },
-  on: (channel: string, listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => {
+  on: (
+    channel: string,
+    listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+  ) => {
     const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete']
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, listener)
@@ -37,14 +40,30 @@ const customIpcRenderer = {
       electronAPI.ipcRenderer.on(channel, listener)
     }
   },
-  removeListener: (channel: string, listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => {
+  removeListener: (
+    channel: string,
+    listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+  ) => {
     const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete']
     if (validChannels.includes(channel)) {
-      ipcRenderer.removeListener(channel, listener)
+      ipcRenderer.off(channel, listener)
       return
     }
     if (electronAPI.ipcRenderer?.removeListener) {
       electronAPI.ipcRenderer.removeListener(channel, listener)
+    }
+  },
+  off: (
+    channel: string,
+    listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+  ) => {
+    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete']
+    if (validChannels.includes(channel)) {
+      ipcRenderer.off(channel, listener)
+      return
+    }
+    if (electronAPI.ipcRenderer?.off) {
+      electronAPI.ipcRenderer.off(channel, listener)
     }
   },
   send: (channel: string, ...args: unknown[]) => {
