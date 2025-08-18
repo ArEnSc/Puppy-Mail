@@ -55,27 +55,29 @@ interface EmailState {
   searchQuery: string
   isLoading: boolean
   error: string | null
-  
+  lastSyncTime: Date | null
+
   // Actions
   setEmails: (emails: Email[]) => void
+  setLastSyncTime: (time: Date) => void
   addEmail: (email: Email) => void
   updateEmail: (id: string, updates: Partial<Email>) => void
   deleteEmail: (id: string) => void
   moveToTrash: (id: string) => void
-  
+
   setFolders: (folders: EmailFolder[]) => void
   selectFolder: (folderId: string) => void
   selectEmail: (emailId: string | null) => void
-  
+
   markAsRead: (id: string) => void
   markAsUnread: (id: string) => void
   toggleStar: (id: string) => void
   toggleImportant: (id: string) => void
-  
+
   setSearchQuery: (query: string) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  
+
   // Computed
   getFilteredEmails: () => Email[]
   getSelectedEmail: () => Email | null
@@ -86,7 +88,7 @@ const defaultFolders: EmailFolder[] = [
   { id: 'important', name: 'Important', type: 'system', count: 0 },
   { id: 'sent', name: 'Sent', type: 'system', count: 0 },
   { id: 'drafts', name: 'Drafts', type: 'system', count: 0 },
-  { id: 'trash', name: 'Trash', type: 'system', count: 0 },
+  { id: 'trash', name: 'Trash', type: 'system', count: 0 }
 ]
 
 export const useEmailStore = create<EmailState>()(
@@ -100,115 +102,121 @@ export const useEmailStore = create<EmailState>()(
         searchQuery: '',
         isLoading: false,
         error: null,
-        
+        lastSyncTime: null,
+
         setEmails: (emails) => set({ emails }),
-        
-        addEmail: (email) => set((state) => ({ 
-          emails: [email, ...state.emails] 
-        })),
-        
-        updateEmail: (id, updates) => set((state) => ({
-          emails: state.emails.map(email => 
-            email.id === id ? { ...email, ...updates } : email
-          )
-        })),
-        
-        deleteEmail: (id) => set((state) => ({
-          emails: state.emails.filter(email => email.id !== id),
-          selectedEmailId: state.selectedEmailId === id ? null : state.selectedEmailId
-        })),
-        
-        moveToTrash: (id) => set((state) => ({
-          emails: state.emails.map(email =>
-            email.id === id
-              ? { ...email, labels: ['trash'] }
-              : email
-          )
-        })),
-        
+        setLastSyncTime: (time) => set({ lastSyncTime: time }),
+
+        addEmail: (email) =>
+          set((state) => ({
+            emails: [email, ...state.emails]
+          })),
+
+        updateEmail: (id, updates) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, ...updates } : email
+            )
+          })),
+
+        deleteEmail: (id) =>
+          set((state) => ({
+            emails: state.emails.filter((email) => email.id !== id),
+            selectedEmailId: state.selectedEmailId === id ? null : state.selectedEmailId
+          })),
+
+        moveToTrash: (id) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, labels: ['trash'] } : email
+            )
+          })),
+
         setFolders: (folders) => set({ folders }),
-        
-        selectFolder: (folderId) => set({ 
-          selectedFolderId: folderId,
-          selectedEmailId: null 
-        }),
-        
+
+        selectFolder: (folderId) =>
+          set({
+            selectedFolderId: folderId,
+            selectedEmailId: null
+          }),
+
         selectEmail: (emailId) => set({ selectedEmailId: emailId }),
-        
-        markAsRead: (id) => set((state) => ({
-          emails: state.emails.map(email =>
-            email.id === id ? { ...email, isRead: true } : email
-          )
-        })),
-        
-        markAsUnread: (id) => set((state) => ({
-          emails: state.emails.map(email =>
-            email.id === id ? { ...email, isRead: false } : email
-          )
-        })),
-        
-        toggleStar: (id) => set((state) => ({
-          emails: state.emails.map(email =>
-            email.id === id ? { ...email, isStarred: !email.isStarred } : email
-          )
-        })),
-        
-        toggleImportant: (id) => set((state) => ({
-          emails: state.emails.map(email =>
-            email.id === id ? { ...email, isImportant: !email.isImportant } : email
-          )
-        })),
-        
+
+        markAsRead: (id) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, isRead: true } : email
+            )
+          })),
+
+        markAsUnread: (id) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, isRead: false } : email
+            )
+          })),
+
+        toggleStar: (id) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, isStarred: !email.isStarred } : email
+            )
+          })),
+
+        toggleImportant: (id) =>
+          set((state) => ({
+            emails: state.emails.map((email) =>
+              email.id === id ? { ...email, isImportant: !email.isImportant } : email
+            )
+          })),
+
         setSearchQuery: (query) => set({ searchQuery: query }),
         setLoading: (loading) => set({ isLoading: loading }),
         setError: (error) => set({ error }),
-        
+
         getFilteredEmails: () => {
           const state = get()
           let filtered = state.emails
-          
+
           // Filter by folder
           switch (state.selectedFolderId) {
             case 'inbox':
-              filtered = filtered.filter(email => 
-                !email.labels.includes('trash') && !email.labels.includes('sent')
+              filtered = filtered.filter(
+                (email) => !email.labels.includes('trash') && !email.labels.includes('sent')
               )
               break
             case 'important':
-              filtered = filtered.filter(email => email.isImportant)
+              filtered = filtered.filter((email) => email.isImportant)
               break
             case 'trash':
-              filtered = filtered.filter(email => email.labels.includes('trash'))
+              filtered = filtered.filter((email) => email.labels.includes('trash'))
               break
             case 'sent':
-              filtered = filtered.filter(email => email.labels.includes('sent'))
+              filtered = filtered.filter((email) => email.labels.includes('sent'))
               break
             default:
-              filtered = filtered.filter(email => 
-                email.labels.includes(state.selectedFolderId)
-              )
+              filtered = filtered.filter((email) => email.labels.includes(state.selectedFolderId))
           }
-          
+
           // Filter by search query
           if (state.searchQuery) {
             const query = state.searchQuery.toLowerCase()
-            filtered = filtered.filter(email =>
-              email.subject.toLowerCase().includes(query) ||
-              email.snippet.toLowerCase().includes(query) ||
-              email.from.name.toLowerCase().includes(query) ||
-              email.from.email.toLowerCase().includes(query)
+            filtered = filtered.filter(
+              (email) =>
+                email.subject.toLowerCase().includes(query) ||
+                email.snippet.toLowerCase().includes(query) ||
+                email.from.name.toLowerCase().includes(query) ||
+                email.from.email.toLowerCase().includes(query)
             )
           }
-          
+
           // Sort by date
-          return filtered.sort((a, b) => 
-            new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
+          return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         },
-        
+
         getSelectedEmail: () => {
           const state = get()
-          return state.emails.find(email => email.id === state.selectedEmailId) || null
+          return state.emails.find((email) => email.id === state.selectedEmailId) || null
         }
       }),
       {

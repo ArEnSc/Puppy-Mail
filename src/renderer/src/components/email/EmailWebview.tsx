@@ -20,7 +20,7 @@ export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps)
           .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
           .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove inline event handlers
           .replace(/javascript:/gi, '') // Remove javascript: protocol
-        
+
         // Create a complete HTML document with proper styling
         const fullHtml = `
           <!DOCTYPE html>
@@ -91,10 +91,10 @@ export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps)
 
         // Wait for content to load
         iframe.onload = adjustHeight
-        
+
         // Also adjust height after images load
         const images = iframeDoc.getElementsByTagName('img')
-        Array.from(images).forEach(img => {
+        Array.from(images).forEach((img) => {
           if (img.complete) {
             adjustHeight()
           } else {
@@ -126,7 +126,7 @@ export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps)
       className={`w-full border-0 ${className}`}
       title="Email Content"
       sandbox="allow-same-origin"
-      style={{ 
+      style={{
         minHeight: '400px',
         backgroundColor: 'transparent'
       }}

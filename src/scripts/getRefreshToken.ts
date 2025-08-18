@@ -41,7 +41,7 @@ async function getRefreshToken(): Promise<AuthResult> {
     const server = http.createServer(async (req, res) => {
       try {
         const reqUrl = url.parse(req.url || '', true)
-        
+
         if (reqUrl.pathname === REDIRECT_PATH) {
           const code = reqUrl.query.code as string
           const error = reqUrl.query.error as string
@@ -61,7 +61,7 @@ async function getRefreshToken(): Promise<AuthResult> {
           if (code) {
             try {
               const { tokens } = await oauth2Client.getToken(code)
-              
+
               res.writeHead(200, { 'Content-Type': 'text/html' })
               res.end(`
                 <h1>Authentication Successful!</h1>
@@ -71,7 +71,7 @@ async function getRefreshToken(): Promise<AuthResult> {
                   h1 { color: #4CAF50; }
                 </style>
               `)
-              
+
               server.close()
               resolve({
                 refreshToken: tokens.refresh_token,
@@ -105,7 +105,7 @@ async function getRefreshToken(): Promise<AuthResult> {
       console.log(`\nOpening authentication URL in your browser...`)
       console.log(`If it doesn't open automatically, visit:`)
       console.log(`\n${authUrl}\n`)
-      
+
       open(authUrl).catch(() => {
         console.log('Failed to open browser automatically.')
       })
@@ -121,16 +121,13 @@ async function getRefreshToken(): Promise<AuthResult> {
 async function updateEnvFile(refreshToken: string): Promise<void> {
   const envPath = path.join(__dirname, '../../.env')
   let envContent = fs.readFileSync(envPath, 'utf8')
-  
+
   if (envContent.includes('GMAIL_REFRESH_TOKEN=')) {
-    envContent = envContent.replace(
-      /GMAIL_REFRESH_TOKEN=.*/,
-      `GMAIL_REFRESH_TOKEN=${refreshToken}`
-    )
+    envContent = envContent.replace(/GMAIL_REFRESH_TOKEN=.*/, `GMAIL_REFRESH_TOKEN=${refreshToken}`)
   } else {
     envContent += `\nGMAIL_REFRESH_TOKEN=${refreshToken}`
   }
-  
+
   fs.writeFileSync(envPath, envContent)
 }
 
@@ -138,24 +135,27 @@ async function main() {
   try {
     console.log('Starting Gmail authentication...')
     const result = await getRefreshToken()
-    
+
     if (result.refreshToken) {
       console.log('\n✅ Authentication successful!')
       console.log('\nYour refresh token is:')
       console.log(`\n${result.refreshToken}\n`)
-      
+
       const answer = await new Promise<string>((resolve) => {
         const readline = require('readline').createInterface({
           input: process.stdin,
           output: process.stdout
         })
-        
-        readline.question('Would you like to update your .env file automatically? (y/n) ', (answer) => {
-          readline.close()
-          resolve(answer.toLowerCase())
-        })
+
+        readline.question(
+          'Would you like to update your .env file automatically? (y/n) ',
+          (answer) => {
+            readline.close()
+            resolve(answer.toLowerCase())
+          }
+        )
       })
-      
+
       if (answer === 'y' || answer === 'yes') {
         await updateEnvFile(result.refreshToken)
         console.log('\n✅ .env file updated successfully!')
@@ -166,7 +166,7 @@ async function main() {
     } else {
       console.error('\n❌ No refresh token received')
     }
-    
+
     process.exit(0)
   } catch (error) {
     console.error('\n❌ Authentication failed:', error)

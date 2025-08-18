@@ -22,7 +22,7 @@ export function setupGoogleAuth(mainWindow: BrowserWindow) {
         scope: SCOPES,
         prompt: 'consent'
       })
-      
+
       // Create a new window for authentication
       const authWindow = new BrowserWindow({
         width: 600,
@@ -32,33 +32,33 @@ export function setupGoogleAuth(mainWindow: BrowserWindow) {
           contextIsolation: true
         }
       })
-      
+
       authWindow.loadURL(authUrl)
-      
+
       // Handle the OAuth callback
       authWindow.webContents.on('will-redirect', async (event, url) => {
         if (url.startsWith('http://localhost:3000/oauth/callback')) {
           event.preventDefault()
-          
+
           const urlParams = new URL(url)
           const code = urlParams.searchParams.get('code')
-          
+
           if (code) {
             try {
               const { tokens } = await oauth2Client.getToken(code)
               oauth2Client.setCredentials(tokens)
-              
+
               // Get user info
               const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client })
               const { data } = await oauth2.userinfo.get()
-              
+
               mainWindow.webContents.send('google-oauth-complete', {
                 accessToken: tokens.access_token,
                 refreshToken: tokens.refresh_token,
                 expiresAt: tokens.expiry_date,
                 userEmail: data.email
               })
-              
+
               authWindow.close()
             } catch (error) {
               mainWindow.webContents.send('google-oauth-complete', {
@@ -69,7 +69,7 @@ export function setupGoogleAuth(mainWindow: BrowserWindow) {
           }
         }
       })
-      
+
       authWindow.on('closed', () => {
         // If window is closed without completing auth
         mainWindow.webContents.send('google-oauth-complete', {

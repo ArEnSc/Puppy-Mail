@@ -23,7 +23,7 @@ interface SettingsState {
   anthropic: ApiKeyConfig
   googleAuth: GoogleAuthConfig
   isSettingsOpen: boolean
-  
+
   // Actions
   setApiKey: (service: 'openai' | 'anthropic', key: string) => void
   validateApiKey: (service: 'openai' | 'anthropic') => Promise<void>
@@ -54,10 +54,10 @@ const defaultGoogleAuth: GoogleAuthConfig = {
 const validateOpenAI = async (apiKey: string): Promise<void> => {
   const response = await fetch('https://api.openai.com/v1/models', {
     headers: {
-      'Authorization': `Bearer ${apiKey}`
+      Authorization: `Bearer ${apiKey}`
     }
   })
-  
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: { message: 'Invalid API key' } }))
     throw new Error(error.error?.message || 'Invalid API key')
@@ -79,14 +79,13 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
       max_tokens: 1
     })
   })
-  
+
   if (response.status === 401) {
     throw new Error('Invalid API key')
   } else if (!response.ok && response.status !== 400) {
     throw new Error('Failed to validate API key')
   }
 }
-
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
@@ -95,19 +94,20 @@ export const useSettingsStore = create<SettingsState>()(
       anthropic: defaultApiKeyConfig,
       googleAuth: defaultGoogleAuth,
       isSettingsOpen: false,
-      
-      setApiKey: (service, key) => set((state) => ({
-        [service]: {
-          ...state[service],
-          key,
-          error: null
-        }
-      })),
-      
+
+      setApiKey: (service, key) =>
+        set((state) => ({
+          [service]: {
+            ...state[service],
+            key,
+            error: null
+          }
+        })),
+
       validateApiKey: async (service) => {
         const state = get()
         const apiKey = state[service].key
-        
+
         if (!apiKey) {
           set((state) => ({
             [service]: {
@@ -118,7 +118,7 @@ export const useSettingsStore = create<SettingsState>()(
           }))
           return
         }
-        
+
         set((state) => ({
           [service]: {
             ...state[service],
@@ -126,7 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
             error: null
           }
         }))
-        
+
         try {
           switch (service) {
             case 'openai':
@@ -136,7 +136,7 @@ export const useSettingsStore = create<SettingsState>()(
               await validateAnthropic(apiKey)
               break
           }
-          
+
           set((state) => ({
             [service]: {
               ...state[service],
@@ -158,25 +158,28 @@ export const useSettingsStore = create<SettingsState>()(
           }))
         }
       },
-      
-      setGoogleAuth: (auth) => set((state) => ({
-        googleAuth: {
-          ...state.googleAuth,
-          ...auth
-        }
-      })),
-      
-      clearGoogleAuth: () => set({
-        googleAuth: defaultGoogleAuth
-      }),
-      
+
+      setGoogleAuth: (auth) =>
+        set((state) => ({
+          googleAuth: {
+            ...state.googleAuth,
+            ...auth
+          }
+        })),
+
+      clearGoogleAuth: () =>
+        set({
+          googleAuth: defaultGoogleAuth
+        }),
+
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
-      
-      clearAllSettings: () => set({
-        openai: defaultApiKeyConfig,
-        anthropic: defaultApiKeyConfig,
-        googleAuth: defaultGoogleAuth
-      })
+
+      clearAllSettings: () =>
+        set({
+          openai: defaultApiKeyConfig,
+          anthropic: defaultApiKeyConfig,
+          googleAuth: defaultGoogleAuth
+        })
     }),
     {
       name: 'email-settings',

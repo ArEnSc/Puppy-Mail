@@ -45,12 +45,12 @@ export async function createGmailClient(config: EmailConfig): Promise<gmail_v1.G
   return google.gmail({ version: 'v1', auth: oauth2Client })
 }
 
-export async function pollEmails(config: EmailConfig, maxResults: number = 10): Promise<Email[]> {
+export async function pollEmailsWithClient(gmail: gmail_v1.Gmail, maxResults: number = 10, whitelistedEmails: string[] = []): Promise<Email[]> {
   try {
-    const gmail = await createGmailClient(config)
-
     // Build query for whitelisted emails
-    const fromQuery = config.whitelistedEmails.map((email) => `from:${email}`).join(' OR ')
+    const fromQuery = whitelistedEmails.length > 0 
+      ? whitelistedEmails.map((email) => `from:${email}`).join(' OR ')
+      : undefined
 
     const query = fromQuery ? `{${fromQuery}}` : ''
 
@@ -87,6 +87,11 @@ export async function pollEmails(config: EmailConfig, maxResults: number = 10): 
       `Failed to poll emails: ${error instanceof Error ? error.message : String(error)}`
     )
   }
+}
+
+export async function pollEmails(config: EmailConfig, maxResults: number = 10): Promise<Email[]> {
+  const gmail = await createGmailClient(config)
+  return pollEmailsWithClient(gmail, maxResults, config.whitelistedEmails)
 }
 
 function parseGmailMessage(message: gmail_v1.Schema$Message): Email {

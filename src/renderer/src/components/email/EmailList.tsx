@@ -18,16 +18,11 @@ function formatEmailDate(date: Date): string {
 }
 
 export function EmailList() {
-  const { 
-    selectedEmailId, 
-    selectEmail, 
-    getFilteredEmails,
-    markAsRead,
-    toggleStar 
-  } = useEmailStore()
-  
+  const { selectedEmailId, selectEmail, getFilteredEmails, markAsRead, toggleStar } =
+    useEmailStore()
+
   const emails = getFilteredEmails()
-  
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
@@ -39,7 +34,7 @@ export function EmailList() {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </div>
-      
+
       {/* Email List */}
       <ScrollArea className="flex-1">
         {emails.length === 0 ? (
@@ -58,10 +53,10 @@ export function EmailList() {
                   }
                 }}
                 className={cn(
-                  "flex cursor-pointer gap-3 p-4 transition-colors",
-                  "hover:bg-accent/50",
-                  selectedEmailId === email.id && "bg-accent",
-                  !email.isRead && "bg-blue-50/50 dark:bg-blue-950/20"
+                  'flex cursor-pointer gap-3 p-4 transition-colors',
+                  'hover:bg-accent/50',
+                  selectedEmailId === email.id && 'bg-accent',
+                  !email.isRead && 'bg-blue-50/50 dark:bg-blue-950/20'
                 )}
               >
                 {/* Unread Indicator */}
@@ -72,32 +67,34 @@ export function EmailList() {
                     <div className="h-2 w-2" />
                   )}
                 </div>
-                
+
                 {/* Email Content */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className={cn(
-                      "truncate text-sm",
-                      !email.isRead ? "font-semibold" : "font-medium"
-                    )}>
+                    <p
+                      className={cn(
+                        'truncate text-sm',
+                        !email.isRead ? 'font-semibold' : 'font-medium'
+                      )}
+                    >
                       {email.from.name || email.from.email}
                     </p>
                     <span className="flex-shrink-0 text-xs text-muted-foreground">
                       {formatEmailDate(new Date(email.date))}
                     </span>
                   </div>
-                  
-                  <p className={cn(
-                    "truncate text-sm",
-                    !email.isRead ? "font-medium text-foreground" : "text-muted-foreground"
-                  )}>
+
+                  <p
+                    className={cn(
+                      'truncate text-sm',
+                      !email.isRead ? 'font-medium text-foreground' : 'text-muted-foreground'
+                    )}
+                  >
                     {email.subject}
                   </p>
-                  
-                  <p className="truncate text-sm text-muted-foreground">
-                    {email.snippet}
-                  </p>
-                  
+
+                  <p className="truncate text-sm text-muted-foreground">{email.snippet}</p>
+
                   <div className="mt-1 flex items-center gap-2">
                     {email.attachments && email.attachments.length > 0 && (
                       <Paperclip className="h-3 w-3 text-muted-foreground" />
@@ -111,13 +108,13 @@ export function EmailList() {
                         toggleStar(email.id)
                       }}
                     >
-                      <Star 
+                      <Star
                         className={cn(
-                          "h-3 w-3",
-                          email.isStarred 
-                            ? "fill-yellow-500 text-yellow-500" 
-                            : "text-muted-foreground"
-                        )} 
+                          'h-3 w-3',
+                          email.isStarred
+                            ? 'fill-yellow-500 text-yellow-500'
+                            : 'text-muted-foreground'
+                        )}
                       />
                     </Button>
                   </div>

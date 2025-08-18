@@ -24,12 +24,12 @@ export function extractTextFromHtml(html: string): string {
   return convert(html, {
     wordwrap: false,
     selectors: [
-      { 
-        selector: 'a', 
-        options: { 
+      {
+        selector: 'a',
+        options: {
           ignoreHref: false,
           linkBrackets: ['[', ']']
-        } 
+        }
       },
       { selector: 'img', format: 'skip' },
       { selector: 'h1', options: { uppercase: false } },
@@ -49,17 +49,19 @@ export function extractTextFromHtml(html: string): string {
 /**
  * Categorize attachments by type
  */
-export function categorizeAttachments(attachments: Attachment[] = []): SanitizedEmail['attachments'] {
+export function categorizeAttachments(
+  attachments: Attachment[] = []
+): SanitizedEmail['attachments'] {
   const categorized = {
     images: [] as Attachment[],
     pdfs: [] as Attachment[],
     videos: [] as Attachment[],
     others: [] as Attachment[]
   }
-  
-  attachments.forEach(attachment => {
+
+  attachments.forEach((attachment) => {
     const mimeType = attachment.mimeType.toLowerCase()
-    
+
     if (mimeType.startsWith('image/')) {
       categorized.images.push(attachment)
     } else if (mimeType === 'application/pdf') {
@@ -70,7 +72,7 @@ export function categorizeAttachments(attachments: Attachment[] = []): Sanitized
       categorized.others.push(attachment)
     }
   })
-  
+
   return categorized
 }
 
@@ -82,7 +84,7 @@ export function sanitizeEmailBody(body: string): string {
   if (body.includes('<') && body.includes('>')) {
     return extractTextFromHtml(body)
   }
-  
+
   // If it's already plain text, just clean it up
   return body
     .replace(/\r\n/g, '\n') // Normalize line endings

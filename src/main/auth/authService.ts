@@ -67,7 +67,7 @@ export class GmailAuthService {
     }
 
     this.oauth2Client.setCredentials(tokens)
-    
+
     try {
       await this.oauth2Client.getAccessToken()
       return true
@@ -102,7 +102,7 @@ export class GmailAuthService {
     }
 
     this.oauth2Client.setCredentials(tokens)
-    
+
     return google.gmail({ version: 'v1', auth: this.oauth2Client })
   }
 
@@ -139,7 +139,7 @@ export function setupAuthHandlers(authService: GmailAuthService): void {
 
   ipcMain.handle('auth:start', async () => {
     const authUrl = await authService.getAuthUrl()
-    
+
     const authWindow = new BrowserWindow({
       width: 600,
       height: 800,
@@ -155,7 +155,7 @@ export function setupAuthHandlers(authService: GmailAuthService): void {
       authWindow.webContents.on('will-redirect', async (event, url) => {
         if (url.startsWith(authService['config'].redirectUri)) {
           event.preventDefault()
-          
+
           const urlParams = new URL(url)
           const code = urlParams.searchParams.get('code')
           const error = urlParams.searchParams.get('error')

@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import * as dotenv from 'dotenv'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { createEmailService } from './emailService'
+import { createDatabase, closeDatabase } from './db/database'
 
 // Load environment variables
 dotenv.config()
@@ -44,7 +45,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -63,12 +64,15 @@ app.whenReady().then(() => {
     shell.openExternal(url)
   })
 
+  // Initialize database
+  await createDatabase()
+
   // Initialize Gmail auth service
   const gmailAuthService = new GmailAuthService()
   setupAuthHandlers(gmailAuthService)
 
   // Initialize email service
-  createEmailService()
+  createEmailService(gmailAuthService)
 
   // Handle the existing google-oauth-start event to bridge with new auth system
   ipcMain.on('google-oauth-start', async (event) => {
@@ -77,7 +81,7 @@ app.whenReady().then(() => {
         ipcMain.handleOnce('auth:start', async () => {
           try {
             const authUrl = await gmailAuthService.getAuthUrl()
-            
+
             const authWindow = new BrowserWindow({
               width: 600,
               height: 800,
@@ -90,9 +94,13 @@ app.whenReady().then(() => {
             authWindow.loadURL(authUrl)
 
             authWindow.webContents.on('will-redirect', async (event, url) => {
-              if (url.startsWith(process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback')) {
+              if (
+                url.startsWith(
+                  process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+                )
+              ) {
                 event.preventDefault()
-                
+
                 const urlParams = new URL(url)
                 const code = urlParams.searchParams.get('code')
 
@@ -114,7 +122,7 @@ app.whenReady().then(() => {
             reject(error)
           }
         })
-        
+
         ipcMain.emit('auth:start')
       })
       // For now, we'll just indicate success since tokens are stored securely
@@ -148,6 +156,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Clean up database on app quit
+app.on('before-quit', async () => {
+  await closeDatabase()
 })
 
 // In this file you can include the rest of your app's specific main process

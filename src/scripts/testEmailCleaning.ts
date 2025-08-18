@@ -1,4 +1,9 @@
-import { extractTextFromHtml, sanitizeEmailBody, categorizeAttachments, getCleanEmail } from '../renderer/src/utils/emailSanitizer'
+import {
+  extractTextFromHtml,
+  sanitizeEmailBody,
+  categorizeAttachments,
+  getCleanEmail
+} from '../renderer/src/utils/emailSanitizer'
 
 // Test HTML email content
 const htmlEmail = `
@@ -48,7 +53,12 @@ const testAttachments = [
   { id: '1', filename: 'photo.jpg', mimeType: 'image/jpeg', size: 1024000 },
   { id: '2', filename: 'document.pdf', mimeType: 'application/pdf', size: 2048000 },
   { id: '3', filename: 'video.mp4', mimeType: 'video/mp4', size: 10240000 },
-  { id: '4', filename: 'spreadsheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 512000 },
+  {
+    id: '4',
+    filename: 'spreadsheet.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    size: 512000
+  },
   { id: '5', filename: 'image.png', mimeType: 'image/png', size: 768000 }
 ]
 
@@ -75,10 +85,22 @@ console.log('\n')
 console.log('3. Testing Attachment Categorization:')
 console.log('------------------------------------')
 const categorized = categorizeAttachments(testAttachments)
-console.log('Images:', categorized.images.map(a => a.filename))
-console.log('PDFs:', categorized.pdfs.map(a => a.filename))
-console.log('Videos:', categorized.videos.map(a => a.filename))
-console.log('Others:', categorized.others.map(a => a.filename))
+console.log(
+  'Images:',
+  categorized.images.map((a) => a.filename)
+)
+console.log(
+  'PDFs:',
+  categorized.pdfs.map((a) => a.filename)
+)
+console.log(
+  'Videos:',
+  categorized.videos.map((a) => a.filename)
+)
+console.log(
+  'Others:',
+  categorized.others.map((a) => a.filename)
+)
 console.log('\n')
 
 // Test complete email cleaning

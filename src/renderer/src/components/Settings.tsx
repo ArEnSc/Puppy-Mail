@@ -5,18 +5,18 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  Settings as SettingsIcon, 
-  Check, 
-  X, 
-  Loader2, 
+import {
+  Settings as SettingsIcon,
+  Check,
+  X,
+  Loader2,
   AlertCircle,
   ExternalLink,
   LogOut
@@ -48,7 +48,7 @@ function ApiKeyField({
   type = 'password'
 }: ApiKeyFieldProps) {
   const [showKey, setShowKey] = useState(false)
-  
+
   return (
     <div className="space-y-2">
       <Label htmlFor={label}>{label}</Label>
@@ -124,13 +124,13 @@ export function Settings() {
     setGoogleAuth,
     clearGoogleAuth
   } = useSettingsStore()
-  
+
   const handleGoogleAuth = async () => {
     try {
       if (window.electron?.ipcRenderer) {
         // Real Electron OAuth flow
         window.electron.ipcRenderer.send('google-oauth-start')
-        
+
         // Listen for the OAuth response
         window.electron.ipcRenderer.once('google-oauth-complete', (event, data) => {
           if (data.error) {
@@ -148,17 +148,18 @@ export function Settings() {
         })
       } else {
         // Fallback for development/testing
-        setGoogleAuth({ 
-          error: 'Google OAuth requires Electron environment. In production, this would open Google sign-in.' 
+        setGoogleAuth({
+          error:
+            'Google OAuth requires Electron environment. In production, this would open Google sign-in.'
         })
       }
     } catch (error) {
-      setGoogleAuth({ 
-        error: 'Failed to initiate Google authentication' 
+      setGoogleAuth({
+        error: 'Failed to initiate Google authentication'
       })
     }
   }
-  
+
   return (
     <>
       {/* Settings Button */}
@@ -170,7 +171,7 @@ export function Settings() {
       >
         <SettingsIcon className="h-5 w-5" />
       </Button>
-      
+
       {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="w-[90vw] max-w-2xl max-h-[80vh]">
@@ -180,27 +181,26 @@ export function Settings() {
               Configure your API keys and authentication for email services
             </DialogDescription>
           </DialogHeader>
-          
+
           <ScrollArea className="h-[500px] px-1">
             <div className="space-y-6 px-4">
               {/* Google Authentication */}
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Google Gmail</h3>
                 <p className="text-sm text-muted-foreground">
-                  Connect your Google account to access Gmail. This uses OAuth 2.0 for secure authentication.
+                  Connect your Google account to access Gmail. This uses OAuth 2.0 for secure
+                  authentication.
                 </p>
                 {googleAuth.isAuthenticated ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-3">
                       <div className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm text-green-900 dark:text-green-100">Connected as {googleAuth.userEmail}</span>
+                        <span className="text-sm text-green-900 dark:text-green-100">
+                          Connected as {googleAuth.userEmail}
+                        </span>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearGoogleAuth}
-                      >
+                      <Button variant="outline" size="sm" onClick={clearGoogleAuth}>
                         <LogOut className="mr-2 h-4 w-4" />
                         Disconnect
                       </Button>
@@ -208,10 +208,7 @@ export function Settings() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Button
-                      onClick={handleGoogleAuth}
-                      className="w-full"
-                    >
+                    <Button onClick={handleGoogleAuth} className="w-full">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Connect Google Account
                     </Button>
@@ -224,9 +221,9 @@ export function Settings() {
                   </div>
                 )}
               </div>
-              
+
               <Separator />
-              
+
               {/* OpenAI API Key */}
               <ApiKeyField
                 label="OpenAI API Key"
@@ -239,9 +236,9 @@ export function Settings() {
                 onChange={(value) => setApiKey('openai', value)}
                 onValidate={() => validateApiKey('openai')}
               />
-              
+
               <Separator />
-              
+
               {/* Anthropic API Key */}
               <ApiKeyField
                 label="Anthropic API Key"
@@ -254,9 +251,9 @@ export function Settings() {
                 onChange={(value) => setApiKey('anthropic', value)}
                 onValidate={() => validateApiKey('anthropic')}
               />
-              
+
               <Separator />
-              
+
               {/* Info Section */}
               <div className="rounded-lg bg-muted p-4">
                 <h4 className="mb-2 text-sm font-semibold">About API Keys</h4>

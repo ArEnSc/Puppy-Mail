@@ -6,7 +6,7 @@ import { useEmailSync } from './hooks/useEmailSync'
 function App(): React.JSX.Element {
   // Sync emails with Gmail
   useEmailSync()
-  
+
   return (
     <>
       <EmailLayout />
