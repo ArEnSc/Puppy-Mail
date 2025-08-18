@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { logInfo, logError } from '@/shared/errorHandler'
 
 export function useLMStudioAutoConnect(): void {
   const { lmStudio, validateLMStudio } = useSettingsStore()
@@ -7,9 +8,10 @@ export function useLMStudioAutoConnect(): void {
   useEffect(() => {
     // Auto-connect if we have a URL and model saved but not connected
     if (lmStudio.url && lmStudio.model && !lmStudio.isConnected && !lmStudio.isValidating) {
-      console.log('Auto-connecting to LM Studio at:', lmStudio.url)
+      logInfo('Auto-connecting to LM Studio', { url: lmStudio.url, model: lmStudio.model })
+
       validateLMStudio().catch((error) => {
-        console.error('Failed to auto-connect to LM Studio:', error)
+        logError(error, 'LMSTUDIO_AUTO_CONNECT_ERROR')
       })
     }
   }, []) // Only run on mount

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/shared/constants'
+import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 
 interface ApiKeyConfig {
   key: string
@@ -64,7 +66,7 @@ const defaultGoogleAuth: GoogleAuthConfig = {
 }
 
 const defaultLMStudio: LMStudioConfig = {
-  url: 'http://localhost:1234/v1',
+  url: API_ENDPOINTS.LMSTUDIO_DEFAULT_URL,
   isConnected: false,
   isValidating: false,
   error: null,
@@ -111,23 +113,21 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
 
 const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
   try {
-    // Use IPC to validate connection through main process
-    if (window.electron?.ipcRenderer) {
-      const result = await window.electron.ipcRenderer.invoke('lmstudio:validate', url)
+    const result = await ipc.invoke<{ success: boolean; models?: string[]; error?: string }>(
+      IPC_CHANNELS.LMSTUDIO_VALIDATE,
+      url
+    )
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to connect to LM Studio')
-      }
-
-      return { models: result.models || [] }
-    } else {
-      throw new Error('Electron IPC not available')
+    if (!result.success) {
+      throw new Error(result.error || ERROR_MESSAGES.LMSTUDIO_CONNECTION_FAILED)
     }
+
+    return { models: result.models || [] }
   } catch (error) {
     if (error instanceof Error) {
       throw error
     }
-    throw new Error('Failed to validate LM Studio connection')
+    throw new Error(ERROR_MESSAGES.LMSTUDIO_CONNECTION_FAILED)
   }
 }
 
@@ -301,7 +301,7 @@ export const useSettingsStore = create<SettingsState>()(
         })
     }),
     {
-      name: 'email-settings',
+      name: STORAGE_KEYS.SETTINGS_STORE,
       partialize: (state) => ({
         openai: { key: state.openai.key },
         anthropic: { key: state.anthropic.key },

@@ -192,7 +192,7 @@ export function ChatView(): JSX.Element {
   }
 
   const toggleReasoning = (messageId: string) => {
-    setExpandedReasonings(prev => {
+    setExpandedReasonings((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(messageId)) {
         newSet.delete(messageId)
@@ -236,46 +236,48 @@ export function ChatView(): JSX.Element {
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
                   </p>
-                  
+
                   {/* Reasoning section - collapsible, only for assistant messages */}
-                  {message.role === 'assistant' && message.reasoning !== undefined && message.reasoning && (
-                    <div className="mt-2 border-t border-border/50 pt-2">
-                      <button
-                        onClick={() => toggleReasoning(message.id)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {expandedReasonings.has(message.id) ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
+                  {message.role === 'assistant' &&
+                    message.reasoning !== undefined &&
+                    message.reasoning && (
+                      <div className="mt-2 border-t border-border/50 pt-2">
+                        <button
+                          onClick={() => toggleReasoning(message.id)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {expandedReasonings.has(message.id) ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          <span className="font-medium">Reasoning</span>
+                        </button>
+
+                        {expandedReasonings.has(message.id) && (
+                          <div className="mt-2 pl-4">
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                              {message.reasoning}
+                              {isStreaming && message.id === streamingMessageId && (
+                                <span className="inline-block ml-1 animate-pulse">▋</span>
+                              )}
+                            </p>
+                          </div>
                         )}
-                        <span className="font-medium">Reasoning</span>
-                      </button>
-                      
-                      {expandedReasonings.has(message.id) && (
-                        <div className="mt-2 pl-4">
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
-                            {message.reasoning}
-                            {isStreaming && message.id === streamingMessageId && (
-                              <span className="inline-block ml-1 animate-pulse">▋</span>
-                            )}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
+                      </div>
+                    )}
+
                   {/* Show reasoning indicator while streaming but no content yet */}
-                  {message.role === 'assistant' && 
-                   isStreaming && 
-                   message.id === streamingMessageId && 
-                   !message.content && 
-                   message.reasoning && (
-                    <div className="mt-2 text-xs text-muted-foreground italic">
-                      Processing reasoning...
-                    </div>
-                  )}
-                  
+                  {message.role === 'assistant' &&
+                    isStreaming &&
+                    message.id === streamingMessageId &&
+                    !message.content &&
+                    message.reasoning && (
+                      <div className="mt-2 text-xs text-muted-foreground italic">
+                        Processing reasoning...
+                      </div>
+                    )}
+
                   <p className="mt-1 text-xs opacity-70">
                     {message.timestamp.toLocaleTimeString()}
                   </p>

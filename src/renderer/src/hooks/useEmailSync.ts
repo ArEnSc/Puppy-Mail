@@ -1,5 +1,8 @@
 import { useEffect, useCallback } from 'react'
 import { useEmailStore } from '@/store/emailStore'
+import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+import { ERROR_MESSAGES } from '@/shared/constants'
+import { logError, logInfo } from '@/shared/errorHandler'
 
 export function useEmailSync(): { syncEmails: () => Promise<void> } {
   const { setEmails, setLoading, setError, setLastSyncTime } = useEmailStore()
@@ -10,18 +13,19 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
     setError(null)
 
     try {
-      if (window.electron?.ipcRenderer) {
-        const result = await window.electron.ipcRenderer.invoke('email:sync')
-        if (result.success && result.timestamp) {
-          setLastSyncTime(new Date(result.timestamp))
-          // Fetch updated emails from database
-          const emails = await window.electron.ipcRenderer.invoke('email:fetch')
-          setEmails(emails)
-        }
+      const result = await ipc.invoke<{ success: boolean; timestamp: string }>(
+        IPC_CHANNELS.EMAIL_SYNC
+      )
+
+      if (result.success && result.timestamp) {
+        setLastSyncTime(new Date(result.timestamp))
+        // Fetch updated emails from database
+        const emails = await ipc.invoke(IPC_CHANNELS.EMAIL_FETCH)
+        setEmails(emails)
       }
     } catch (error) {
-      console.error('Failed to sync emails:', error)
-      setError(error instanceof Error ? error.message : 'Failed to sync emails')
+      logError(error as Error, 'EMAIL_SYNC_ERROR')
+      setError(error instanceof Error ? error.message : ERROR_MESSAGES.EMAIL_SYNC_FAILED)
     } finally {
       setLoading(false)
     }
@@ -34,16 +38,16 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
       setError(null)
 
       try {
-        if (window.electron?.ipcRenderer) {
-          const emails = await window.electron.ipcRenderer.invoke('email:fetch')
+        if (ipc.isAvailable()) {
+          const emails = await ipc.invoke(IPC_CHANNELS.EMAIL_FETCH)
           setEmails(emails)
         } else {
           // Development fallback
-          console.log('Email sync not available in development mode')
+          logInfo('Email sync not available in development mode')
         }
       } catch (error) {
-        console.error('Failed to fetch emails:', error)
-        setError(error instanceof Error ? error.message : 'Failed to fetch emails')
+        logError(error as Error, 'EMAIL_FETCH_ERROR')
+        setError(error instanceof Error ? error.message : ERROR_MESSAGES.EMAIL_FETCH_FAILED)
       } finally {
         setLoading(false)
       }
@@ -63,31 +67,30 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
     ): Promise<void> => {
       setLastSyncTime(new Date(data.timestamp))
       // Fetch updated emails from database after sync completes
-      if (window.electron?.ipcRenderer) {
-        try {
-          const emails = await window.electron.ipcRenderer.invoke('email:fetch')
-          setEmails(emails)
-        } catch (error) {
-          console.error('Failed to fetch emails after sync:', error)
-        }
+      try {
+        const emails = await ipc.invoke(IPC_CHANNELS.EMAIL_FETCH)
+        setEmails(emails)
+      } catch (error) {
+        logError(error as Error, 'EMAIL_FETCH_AFTER_SYNC_ERROR')
       }
     }
 
-    if (window.electron?.ipcRenderer) {
-      window.electron.ipcRenderer.on('email:newEmails', handleNewEmails)
-      window.electron.ipcRenderer.on('email:syncComplete', handleSyncComplete)
+    // Set up event listeners
+    const unsubscribeNewEmails = ipc.on(IPC_CHANNELS.EMAIL_NEW_EMAILS, handleNewEmails)
+    const unsubscribeSyncComplete = ipc.on(IPC_CHANNELS.EMAIL_SYNC_COMPLETE, handleSyncComplete)
 
-      // Start polling
-      window.electron.ipcRenderer.invoke('email:startPolling').catch(console.error)
-    }
+    // Start polling
+    ipc.invoke(IPC_CHANNELS.EMAIL_START_POLLING).catch((error) => {
+      logError(error, 'EMAIL_POLLING_START_ERROR')
+    })
 
     // Cleanup
     return () => {
-      if (window.electron?.ipcRenderer) {
-        window.electron.ipcRenderer.removeListener('email:newEmails', handleNewEmails)
-        window.electron.ipcRenderer.removeListener('email:syncComplete', handleSyncComplete)
-        window.electron.ipcRenderer.invoke('email:stopPolling').catch(console.error)
-      }
+      unsubscribeNewEmails()
+      unsubscribeSyncComplete()
+      ipc.invoke(IPC_CHANNELS.EMAIL_STOP_POLLING).catch((error) => {
+        logError(error, 'EMAIL_POLLING_STOP_ERROR')
+      })
     }
   }, [setEmails, setLoading, setError, setLastSyncTime])
 
