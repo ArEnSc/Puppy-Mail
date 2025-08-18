@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, BrowserWindow } from 'electron'
 
 interface LMStudioModel {
   id: string
@@ -148,6 +148,96 @@ export class LMStudioService {
       }
     }
   }
+
+  async streamMessage(
+    url: string, 
+    model: string, 
+    messages: Array<{ role: string; content: string }>,
+    onChunk: (chunk: string) => void,
+    onError: (error: string) => void,
+    onComplete: () => void
+  ): Promise<void> {
+    try {
+      // Remove trailing slash if present
+      const cleanUrl = url.replace(/\/$/, '')
+      
+      const response = await fetch(`${cleanUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: true
+        }),
+        signal: AbortSignal.timeout(60000) // 60 second timeout for streaming
+      })
+
+      if (!response.ok) {
+        onError(`LM Studio returned status ${response.status}`)
+        return
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        onError('No response body')
+        return
+      }
+
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) {
+          onComplete()
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        
+        // Process complete SSE messages
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            
+            if (data === '[DONE]') {
+              onComplete()
+              return
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.choices?.[0]?.delta?.content
+              
+              if (content) {
+                onChunk(content)
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete JSON
+              console.warn('Failed to parse SSE data:', e)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('LMStudioService: Error streaming message:', error)
+      
+      if (error instanceof Error) {
+        onError(error.message)
+      } else {
+        onError('Failed to stream message from LM Studio')
+      }
+    }
+  }
 }
 
 export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
@@ -157,5 +247,31 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
 
   ipcMain.handle('lmstudio:chat', async (_event, url: string, model: string, messages: Array<{ role: string; content: string }>) => {
     return lmStudioService.sendMessage(url, model, messages)
+  })
+
+  // Streaming handler
+  ipcMain.on('lmstudio:stream', async (event, url: string, model: string, messages: Array<{ role: string; content: string }>) => {
+    const webContents = event.sender
+
+    await lmStudioService.streamMessage(
+      url,
+      model,
+      messages,
+      (chunk) => {
+        if (!webContents.isDestroyed()) {
+          webContents.send('lmstudio:stream:chunk', chunk)
+        }
+      },
+      (error) => {
+        if (!webContents.isDestroyed()) {
+          webContents.send('lmstudio:stream:error', error)
+        }
+      },
+      () => {
+        if (!webContents.isDestroyed()) {
+          webContents.send('lmstudio:stream:complete')
+        }
+      }
+    )
   })
 }

@@ -328,6 +328,17 @@ export function setupEmailIPC(service: EmailService): void {
       throw error
     }
   })
+
+  // Clear all emails from database
+  ipcMain.handle('email:clearAll', async () => {
+    try {
+      await DBEmailService.clearAllEmails()
+      return { success: true }
+    } catch (error) {
+      console.error('Error clearing all emails:', error)
+      throw error
+    }
+  })
 }
 
 // Example usage

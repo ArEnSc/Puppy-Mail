@@ -216,6 +216,31 @@ export class EmailService {
       return []
     }
   }
+
+  static async clearAllEmails(): Promise<void> {
+    try {
+      console.log('clearAllEmails: Starting to clear all emails from database')
+      const db = await getDatabase()
+      if (!db) {
+        console.error('clearAllEmails: Database not available')
+        return
+      }
+
+      db.write(() => {
+        const allEmails = db.objects<EmailDocument>('Email')
+        const emailCount = allEmails.length
+        db.delete(allEmails)
+        console.log(`clearAllEmails: Successfully deleted ${emailCount} emails`)
+      })
+    } catch (error) {
+      console.error('clearAllEmails: Error clearing all emails:', error)
+      console.error('clearAllEmails: Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
+    }
+  }
 }
 
 export class AccountService {

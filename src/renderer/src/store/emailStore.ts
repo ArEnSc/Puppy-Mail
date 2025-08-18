@@ -74,6 +74,7 @@ interface EmailState {
   updateEmail: (id: string, updates: Partial<Email>) => void
   deleteEmail: (id: string) => void
   moveToTrash: (id: string) => void
+  clearAllEmails: () => void
 
   setFolders: (folders: EmailFolder[]) => void
   selectFolder: (folderId: string) => void
@@ -167,6 +168,15 @@ export const useEmailStore = create<EmailState>()(
               email.id === id ? { ...email, labels: ['trash'] } : email
             )
           })),
+
+        clearAllEmails: () => {
+          set({ 
+            emails: [], 
+            selectedEmailId: null, 
+            totalPages: 1, 
+            currentPage: 1 
+          })
+        },
 
         setFolders: (folders) => set({ folders }),
 
