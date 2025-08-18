@@ -1,5 +1,5 @@
 import { createRxDatabase, RxDatabase, RxCollection, RxDocument, addRxPlugin } from 'rxdb'
-import { getRxStorageMemory } from 'rxdb/plugins/storage-memory'
+import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie'
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder'
 import { RxDBMigrationPlugin } from 'rxdb/plugins/migration-schema'
 import { RxDBUpdatePlugin } from 'rxdb/plugins/update'
@@ -84,10 +84,10 @@ export async function createDatabase(): Promise<EmailDatabase | null> {
 
       console.log('Creating new RxDB database instance...')
 
-      // Use memory storage with a fixed database name
+      // Use Dexie storage for persistence
       const db = await createRxDatabase<DatabaseCollections>({
         name: 'chloedb',
-        storage: getRxStorageMemory(),
+        storage: getRxStorageDexie(),
         multiInstance: false,
         eventReduce: true
       })

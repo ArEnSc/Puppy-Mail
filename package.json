@@ -36,6 +36,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@types/dompurify": "^3.0.5",
     "date-fns": "^4.1.0",
+    "dexie": "^4.0.11",
     "dompurify": "^3.2.6",
     "dotenv": "^17.2.1",
     "electron-updater": "^6.3.9",
