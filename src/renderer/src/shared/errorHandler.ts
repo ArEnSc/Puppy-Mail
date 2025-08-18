@@ -18,7 +18,7 @@ export interface AppError {
 }
 
 export class ErrorHandler {
-  private static isDevelopment = process.env.NODE_ENV === 'development'
+  private static isDevelopment = import.meta.env.DEV
 
   /**
    * Log error with appropriate severity

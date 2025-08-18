@@ -5,7 +5,7 @@
 // API Endpoints
 export const API_ENDPOINTS = {
   LMSTUDIO_DEFAULT_URL: 'http://localhost:1234/v1',
-  OAUTH_REDIRECT_URI: process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback',
+  OAUTH_REDIRECT_URI: 'http://localhost:3000/auth/callback',
   OAUTH_REDIRECT_PORT: 3000
 } as const
 
