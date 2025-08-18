@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain } from 'electron'
 
 interface LMStudioModel {
   id: string
@@ -13,13 +13,15 @@ interface LMStudioModelsResponse {
 }
 
 export class LMStudioService {
-  async validateConnection(url: string): Promise<{ success: boolean; models?: string[]; error?: string }> {
+  async validateConnection(
+    url: string
+  ): Promise<{ success: boolean; models?: string[]; error?: string }> {
     try {
       console.log('LMStudioService: Validating connection to', url)
-      
+
       // Remove trailing slash if present
       const cleanUrl = url.replace(/\/$/, '')
-      
+
       // Test the connection by fetching available models
       const response = await fetch(`${cleanUrl}/models`, {
         method: 'GET',
@@ -39,9 +41,9 @@ export class LMStudioService {
         }
       }
 
-      const data = await response.json() as LMStudioModelsResponse
+      const data = (await response.json()) as LMStudioModelsResponse
       console.log('LMStudioService: Models response:', data)
-      
+
       if (!data.data || !Array.isArray(data.data)) {
         return {
           success: false,
@@ -50,7 +52,7 @@ export class LMStudioService {
       }
 
       const models = data.data.map((model) => model.id).filter(Boolean)
-      
+
       if (models.length === 0) {
         return {
           success: false,
@@ -65,7 +67,7 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('LMStudioService: Error validating connection:', error)
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           return {
@@ -84,7 +86,7 @@ export class LMStudioService {
           error: error.message
         }
       }
-      
+
       return {
         success: false,
         error: 'Failed to connect to LM Studio'
@@ -92,11 +94,15 @@ export class LMStudioService {
     }
   }
 
-  async sendMessage(url: string, model: string, messages: Array<{ role: string; content: string }>): Promise<{ success: boolean; response?: string; error?: string }> {
+  async sendMessage(
+    url: string,
+    model: string,
+    messages: Array<{ role: string; content: string }>
+  ): Promise<{ success: boolean; response?: string; error?: string }> {
     try {
       // Remove trailing slash if present
       const cleanUrl = url.replace(/\/$/, '')
-      
+
       const response = await fetch(`${cleanUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -120,7 +126,7 @@ export class LMStudioService {
       }
 
       const data = await response.json()
-      
+
       if (data.choices && data.choices[0] && data.choices[0].message) {
         return {
           success: true,
@@ -134,14 +140,14 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('LMStudioService: Error sending message:', error)
-      
+
       if (error instanceof Error) {
         return {
           success: false,
           error: error.message
         }
       }
-      
+
       return {
         success: false,
         error: 'Failed to send message to LM Studio'
@@ -150,8 +156,8 @@ export class LMStudioService {
   }
 
   async streamMessage(
-    url: string, 
-    model: string, 
+    url: string,
+    model: string,
     messages: Array<{ role: string; content: string }>,
     onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
     onError: (error: string) => void,
@@ -160,7 +166,7 @@ export class LMStudioService {
     try {
       // Remove trailing slash if present
       const cleanUrl = url.replace(/\/$/, '')
-      
+
       const response = await fetch(`${cleanUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -193,14 +199,14 @@ export class LMStudioService {
 
       while (true) {
         const { done, value } = await reader.read()
-        
+
         if (done) {
           onComplete()
           break
         }
 
         buffer += decoder.decode(value, { stream: true })
-        
+
         // Process complete SSE messages
         const lines = buffer.split('\n')
         buffer = lines.pop() || '' // Keep incomplete line in buffer
@@ -208,7 +214,7 @@ export class LMStudioService {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
-            
+
             if (data === '[DONE]') {
               onComplete()
               return
@@ -216,15 +222,15 @@ export class LMStudioService {
 
             try {
               const parsed = JSON.parse(data)
-              
+
               // Check for both 'content' and 'reasoning' fields
               const delta = parsed.choices?.[0]?.delta
-              
+
               if (delta?.reasoning) {
                 console.log('Sending reasoning chunk:', delta.reasoning)
                 onChunk(delta.reasoning, 'reasoning')
               }
-              
+
               if (delta?.content) {
                 console.log('Sending content chunk:', delta.content)
                 onChunk(delta.content, 'content')
@@ -237,7 +243,7 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('LMStudioService: Error streaming message:', error)
-      
+
       if (error instanceof Error) {
         onError(error.message)
       } else {
@@ -252,33 +258,49 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
     return lmStudioService.validateConnection(url)
   })
 
-  ipcMain.handle('lmstudio:chat', async (_event, url: string, model: string, messages: Array<{ role: string; content: string }>) => {
-    return lmStudioService.sendMessage(url, model, messages)
-  })
+  ipcMain.handle(
+    'lmstudio:chat',
+    async (
+      _event,
+      url: string,
+      model: string,
+      messages: Array<{ role: string; content: string }>
+    ) => {
+      return lmStudioService.sendMessage(url, model, messages)
+    }
+  )
 
   // Streaming handler
-  ipcMain.on('lmstudio:stream', async (event, url: string, model: string, messages: Array<{ role: string; content: string }>) => {
-    const webContents = event.sender
+  ipcMain.on(
+    'lmstudio:stream',
+    async (
+      event,
+      url: string,
+      model: string,
+      messages: Array<{ role: string; content: string }>
+    ) => {
+      const webContents = event.sender
 
-    await lmStudioService.streamMessage(
-      url,
-      model,
-      messages,
-      (chunk, type) => {
-        if (!webContents.isDestroyed()) {
-          webContents.send('lmstudio:stream:chunk', { chunk, type: type || 'content' })
+      await lmStudioService.streamMessage(
+        url,
+        model,
+        messages,
+        (chunk, type) => {
+          if (!webContents.isDestroyed()) {
+            webContents.send('lmstudio:stream:chunk', { chunk, type: type || 'content' })
+          }
+        },
+        (error) => {
+          if (!webContents.isDestroyed()) {
+            webContents.send('lmstudio:stream:error', error)
+          }
+        },
+        () => {
+          if (!webContents.isDestroyed()) {
+            webContents.send('lmstudio:stream:complete')
+          }
         }
-      },
-      (error) => {
-        if (!webContents.isDestroyed()) {
-          webContents.send('lmstudio:stream:error', error)
-        }
-      },
-      () => {
-        if (!webContents.isDestroyed()) {
-          webContents.send('lmstudio:stream:complete')
-        }
-      }
-    )
-  })
+      )
+    }
+  )
 }

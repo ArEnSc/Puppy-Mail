@@ -33,7 +33,14 @@ const customIpcRenderer = {
     channel: string,
     listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
   ) => {
-    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete', 'lmstudio:stream:chunk', 'lmstudio:stream:error', 'lmstudio:stream:complete']
+    const validChannels = [
+      'email:newEmails',
+      'email:syncComplete',
+      'google-oauth-complete',
+      'lmstudio:stream:chunk',
+      'lmstudio:stream:error',
+      'lmstudio:stream:complete'
+    ]
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, listener)
       return
@@ -46,7 +53,14 @@ const customIpcRenderer = {
     channel: string,
     listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
   ) => {
-    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete', 'lmstudio:stream:chunk', 'lmstudio:stream:error', 'lmstudio:stream:complete']
+    const validChannels = [
+      'email:newEmails',
+      'email:syncComplete',
+      'google-oauth-complete',
+      'lmstudio:stream:chunk',
+      'lmstudio:stream:error',
+      'lmstudio:stream:complete'
+    ]
     if (validChannels.includes(channel)) {
       ipcRenderer.off(channel, listener)
       return
@@ -59,7 +73,14 @@ const customIpcRenderer = {
     channel: string,
     listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
   ) => {
-    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete', 'lmstudio:stream:chunk', 'lmstudio:stream:error', 'lmstudio:stream:complete']
+    const validChannels = [
+      'email:newEmails',
+      'email:syncComplete',
+      'google-oauth-complete',
+      'lmstudio:stream:chunk',
+      'lmstudio:stream:error',
+      'lmstudio:stream:complete'
+    ]
     if (validChannels.includes(channel)) {
       ipcRenderer.off(channel, listener)
       return
@@ -72,7 +93,14 @@ const customIpcRenderer = {
     channel: string,
     listener: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
   ) => {
-    const validChannels = ['email:newEmails', 'email:syncComplete', 'google-oauth-complete', 'lmstudio:stream:chunk', 'lmstudio:stream:error', 'lmstudio:stream:complete']
+    const validChannels = [
+      'email:newEmails',
+      'email:syncComplete',
+      'google-oauth-complete',
+      'lmstudio:stream:chunk',
+      'lmstudio:stream:error',
+      'lmstudio:stream:complete'
+    ]
     if (validChannels.includes(channel)) {
       ipcRenderer.once(channel, listener)
       return

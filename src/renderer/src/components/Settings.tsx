@@ -16,7 +16,6 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Settings as SettingsIcon,
   Check,
   Loader2,
   AlertCircle,
@@ -128,10 +127,9 @@ export function Settings(): JSX.Element {
     setGoogleAuth,
     clearGoogleAuth,
     setLMStudioUrl,
-    setLMStudioModel,
     validateLMStudio
   } = useSettingsStore()
-  
+
   const { clearAllEmails } = useEmailStore()
   const { syncEmails } = useEmailSync()
   const [showClearDialog, setShowClearDialog] = useState(false)
@@ -142,7 +140,7 @@ export function Settings(): JSX.Element {
     const handleOpenSettings = (): void => {
       setSettingsOpen(true)
     }
-    
+
     window.addEventListener('openSettings', handleOpenSettings)
     return () => window.removeEventListener('openSettings', handleOpenSettings)
   }, [setSettingsOpen])
@@ -363,9 +361,10 @@ export function Settings(): JSX.Element {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">LM Studio (Local LLM)</h3>
                 <p className="text-sm text-muted-foreground">
-                  Connect to your local LM Studio instance for AI-powered features using locally running models.
+                  Connect to your local LM Studio instance for AI-powered features using locally
+                  running models.
                 </p>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="lmstudio-url">LM Studio Server URL</Label>
                   <div className="flex gap-2">
@@ -400,23 +399,21 @@ export function Settings(): JSX.Element {
                       )}
                     </Button>
                   </div>
-                  
+
                   {lmStudio.model && lmStudio.isConnected && (
                     <div className="mt-2">
                       <Label htmlFor="lmstudio-model">Active Model</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {lmStudio.model}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{lmStudio.model}</p>
                     </div>
                   )}
-                  
+
                   {lmStudio.error && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
                       <AlertCircle className="h-3 w-3" />
                       {lmStudio.error}
                     </p>
                   )}
-                  
+
                   {lmStudio.isConnected && !lmStudio.error && (
                     <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
                       <Check className="h-3 w-3" />
@@ -440,8 +437,8 @@ export function Settings(): JSX.Element {
                     <div className="flex-1 space-y-1">
                       <h4 className="text-sm font-semibold">Clear Local Email Database</h4>
                       <p className="text-sm text-muted-foreground">
-                        This will permanently delete all emails stored locally on your device. 
-                        Your emails will remain in Gmail and can be synced again.
+                        This will permanently delete all emails stored locally on your device. Your
+                        emails will remain in Gmail and can be synced again.
                       </p>
                     </div>
                   </div>
@@ -480,10 +477,8 @@ export function Settings(): JSX.Element {
           <DialogHeader>
             <DialogTitle>Clear Local Email Database</DialogTitle>
             <DialogDescription className="space-y-3">
-              <p>
-                This action will permanently delete all emails stored locally on your device.
-              </p>
-              
+              <p>This action will permanently delete all emails stored locally on your device.</p>
+
               <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
                 <div className="flex gap-2">
                   <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
@@ -500,7 +495,7 @@ export function Settings(): JSX.Element {
                   </div>
                 </div>
               </div>
-              
+
               <p className="text-sm font-medium">
                 This action cannot be undone. Are you sure you want to continue?
               </p>
@@ -510,11 +505,7 @@ export function Settings(): JSX.Element {
             <Button variant="outline" onClick={() => setShowClearDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleClearEmails}
-              disabled={isClearing}
-            >
+            <Button variant="destructive" onClick={handleClearEmails} disabled={isClearing}>
               {isClearing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

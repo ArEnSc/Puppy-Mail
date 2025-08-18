@@ -21,7 +21,8 @@ export function ChatView(): JSX.Element {
     {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'Hello! I\'m ready to help you with your automated tasks. What would you like to configure?',
+      content:
+        "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
       timestamp: new Date()
     }
   ])
@@ -35,7 +36,9 @@ export function ChatView(): JSX.Element {
   useEffect(() => {
     // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      )
       if (scrollContainer) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight
       }
@@ -52,7 +55,7 @@ export function ChatView(): JSX.Element {
 
   // Use a ref to store the current streaming message ID to avoid closure issues
   const streamingMessageIdRef = useRef<string | null>(null)
-  
+
   useEffect(() => {
     streamingMessageIdRef.current = streamingMessageId
   }, [streamingMessageId])
@@ -60,25 +63,30 @@ export function ChatView(): JSX.Element {
   useEffect(() => {
     // Track mounting
     isMountedRef.current = true
-    
+
     if (!window.electron?.ipcRenderer) return
 
-    const handleStreamChunk = (_event: any, data: { chunk: string; type: 'content' | 'reasoning' }) => {
+    const handleStreamChunk = (
+      _event: any,
+      data: { chunk: string; type: 'content' | 'reasoning' }
+    ) => {
       console.log('Received stream chunk:', data)
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
         const { chunk, type } = data
-        
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === currentId) {
-            if (type === 'reasoning') {
-              return { ...msg, reasoning: (msg.reasoning || '') + chunk }
-            } else {
-              return { ...msg, content: msg.content + chunk }
+
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === currentId) {
+              if (type === 'reasoning') {
+                return { ...msg, reasoning: (msg.reasoning || '') + chunk }
+              } else {
+                return { ...msg, content: msg.content + chunk }
+              }
             }
-          }
-          return msg
-        }))
+            return msg
+          })
+        )
       }
     }
 
@@ -87,7 +95,7 @@ export function ChatView(): JSX.Element {
       setIsStreaming(false)
       setStreamingMessageId(null)
       streamingMessageIdRef.current = null
-      
+
       // Add error message
       const errorMessage: Message = {
         id: crypto.randomUUID(),
@@ -95,7 +103,7 @@ export function ChatView(): JSX.Element {
         content: `Error: ${error}`,
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages((prev) => [...prev, errorMessage])
     }
 
     const handleStreamComplete = () => {
@@ -121,15 +129,15 @@ export function ChatView(): JSX.Element {
     if (inputValue.trim() && !isStreaming) {
       // Clear any existing streaming state
       setStreamingMessageId(null)
-      
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
         content: inputValue.trim(),
         timestamp: new Date()
       }
-      
-      setMessages(prev => [...prev, userMessage])
+
+      setMessages((prev) => [...prev, userMessage])
       setInputValue('')
 
       // Check if LM Studio is connected
@@ -140,7 +148,7 @@ export function ChatView(): JSX.Element {
           content: 'Please connect to LM Studio in the settings first.',
           timestamp: new Date()
         }
-        setMessages(prev => [...prev, errorMessage])
+        setMessages((prev) => [...prev, errorMessage])
         return
       }
 
@@ -153,19 +161,17 @@ export function ChatView(): JSX.Element {
         reasoning: '',
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, assistantMessage])
       setStreamingMessageId(assistantMessageId)
       streamingMessageIdRef.current = assistantMessageId
       setIsStreaming(true)
 
       // Start streaming
       if (window.electron?.ipcRenderer) {
-        const conversationMessages = messages
-          .concat(userMessage)
-          .map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
+        const conversationMessages = messages.concat(userMessage).map((msg) => ({
+          role: msg.role,
+          content: msg.content
+        }))
 
         window.electron.ipcRenderer.send(
           'lmstudio:stream',
@@ -193,9 +199,7 @@ export function ChatView(): JSX.Element {
           {!selectedAutomatedTask && 'Task Assistant'}
         </h2>
         {lmStudio.isConnected && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Connected to {lmStudio.model}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">Connected to {lmStudio.model}</p>
         )}
       </div>
 
@@ -207,11 +211,10 @@ export function ChatView(): JSX.Element {
               {message.role === 'assistant' && message.reasoning !== undefined && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted/50 border border-border">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Reasoning
-                    </p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Reasoning</p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                      {message.reasoning || (isStreaming && message.id === streamingMessageId ? 'Thinking...' : '')}
+                      {message.reasoning ||
+                        (isStreaming && message.id === streamingMessageId ? 'Thinking...' : '')}
                       {isStreaming && message.id === streamingMessageId && message.reasoning && (
                         <span className="inline-block ml-1 animate-pulse">▋</span>
                       )}
@@ -219,20 +222,19 @@ export function ChatView(): JSX.Element {
                   </div>
                 </div>
               )}
-              
+
               {/* Main message cell */}
-              <div
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+              <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                    message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.content || (isStreaming && message.id === streamingMessageId && !message.reasoning ? 'Thinking...' : '')}
+                    {message.content ||
+                      (isStreaming && message.id === streamingMessageId && !message.reasoning
+                        ? 'Thinking...'
+                        : '')}
                     {isStreaming && message.id === streamingMessageId && message.content && (
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
@@ -259,8 +261,8 @@ export function ChatView(): JSX.Element {
             disabled={isStreaming}
             rows={1}
           />
-          <Button 
-            onClick={handleSend} 
+          <Button
+            onClick={handleSend}
             disabled={!inputValue.trim() || isStreaming}
             className="self-end"
           >

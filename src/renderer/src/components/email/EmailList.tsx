@@ -193,10 +193,10 @@ export function EmailList(): JSX.Element {
           </div>
         </div>
         <div className="flex items-center gap-2 px-4 pb-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={previousPage} 
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={previousPage}
             disabled={currentPage === 1}
             className="flex-1 justify-center"
           >

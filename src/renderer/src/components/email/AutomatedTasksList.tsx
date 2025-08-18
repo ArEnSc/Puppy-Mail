@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 
 interface TaskRun {
@@ -120,15 +120,15 @@ export function AutomatedTasksList(): JSX.Element {
   }
 
   const handleCancel = (runId: string) => {
-    setTaskRuns(taskRuns.map(run => 
-      run.id === runId 
-        ? { ...run, status: 'cancelled', endTime: new Date() }
-        : run
-    ))
+    setTaskRuns(
+      taskRuns.map((run) =>
+        run.id === runId ? { ...run, status: 'cancelled', endTime: new Date() } : run
+      )
+    )
   }
 
   const handleDelete = (runId: string) => {
-    setTaskRuns(taskRuns.filter(run => run.id !== runId))
+    setTaskRuns(taskRuns.filter((run) => run.id !== runId))
     setDeleteTaskId(null)
   }
 
@@ -140,8 +140,8 @@ export function AutomatedTasksList(): JSX.Element {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const filteredRuns = selectedAutomatedTask 
-    ? taskRuns.filter(run => run.taskId === selectedAutomatedTask)
+  const filteredRuns = selectedAutomatedTask
+    ? taskRuns.filter((run) => run.taskId === selectedAutomatedTask)
     : taskRuns
 
   return (
@@ -154,10 +154,10 @@ export function AutomatedTasksList(): JSX.Element {
             {!selectedAutomatedTask && 'All Tasks'}
           </h2>
           {selectedAutomatedTask && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={handleStart}
-              disabled={filteredRuns.some(run => run.status === 'running')}
+              disabled={filteredRuns.some((run) => run.status === 'running')}
             >
               <Play className="mr-2 h-4 w-4" />
               Start
@@ -190,25 +190,17 @@ export function AutomatedTasksList(): JSX.Element {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Started: {run.startTime.toLocaleTimeString()} • 
-                  Duration: {formatDuration(run.startTime, run.endTime)}
+                  Started: {run.startTime.toLocaleTimeString()} • Duration:{' '}
+                  {formatDuration(run.startTime, run.endTime)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {run.status === 'running' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCancel(run.id)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => handleCancel(run.id)}>
                     <Square className="h-4 w-4" />
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDeleteTaskId(run.id)}
-                >
+                <Button size="sm" variant="ghost" onClick={() => setDeleteTaskId(run.id)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -229,7 +221,10 @@ export function AutomatedTasksList(): JSX.Element {
             <Button variant="outline" onClick={() => setDeleteTaskId(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={() => deleteTaskId && handleDelete(deleteTaskId)}>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTaskId && handleDelete(deleteTaskId)}
+            >
               Delete
             </Button>
           </DialogFooter>

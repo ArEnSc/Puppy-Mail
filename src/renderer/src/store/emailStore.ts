@@ -139,7 +139,9 @@ export const useEmailStore = create<EmailState>()(
         setEmails: (emails) => {
           const pageSize = get().pageSize
           const totalPages = Math.ceil(emails.length / pageSize)
-          console.log(`setEmails: Received ${emails.length} emails, pageSize: ${pageSize}, totalPages: ${totalPages}`)
+          console.log(
+            `setEmails: Received ${emails.length} emails, pageSize: ${pageSize}, totalPages: ${totalPages}`
+          )
           set({ emails, totalPages, currentPage: 1 })
         },
         setLastSyncTime: (time) => set({ lastSyncTime: time }),
@@ -170,11 +172,11 @@ export const useEmailStore = create<EmailState>()(
           })),
 
         clearAllEmails: () => {
-          set({ 
-            emails: [], 
-            selectedEmailId: null, 
-            totalPages: 1, 
-            currentPage: 1 
+          set({
+            emails: [],
+            selectedEmailId: null,
+            totalPages: 1,
+            currentPage: 1
           })
         },
 
@@ -189,7 +191,7 @@ export const useEmailStore = create<EmailState>()(
           }),
 
         selectEmail: (emailId) => set({ selectedEmailId: emailId }),
-        
+
         selectAutomatedTask: (taskId) =>
           set({
             selectedAutomatedTask: taskId,

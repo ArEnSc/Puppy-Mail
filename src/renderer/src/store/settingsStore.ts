@@ -114,11 +114,11 @@ const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
     // Use IPC to validate connection through main process
     if (window.electron?.ipcRenderer) {
       const result = await window.electron.ipcRenderer.invoke('lmstudio:validate', url)
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to connect to LM Studio')
       }
-      
+
       return { models: result.models || [] }
     } else {
       throw new Error('Electron IPC not available')
@@ -263,7 +263,7 @@ export const useSettingsStore = create<SettingsState>()(
 
         try {
           const { models } = await validateLMStudio(url)
-          
+
           // If no model is selected, select the first one
           const selectedModel = state.lmStudio.model || models[0]
 

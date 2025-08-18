@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
-import { RefreshCw, CheckCircle, AlertCircle, Settings } from 'lucide-react'
+import { RefreshCw, CheckCircle, AlertCircle, Settings, Bot, Wifi, WifiOff } from 'lucide-react'
 import { useEmailStore } from '@/store/emailStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils'
 export function SyncStatus(): JSX.Element {
   const { isLoading, lastSyncTime, error } = useEmailStore()
   const { syncEmails } = useEmailSync()
+  const { lmStudio } = useSettingsStore()
 
   const handleOpenSettings = (): void => {
     // Dispatch a custom event to open settings
@@ -22,26 +24,55 @@ export function SyncStatus(): JSX.Element {
       </Button>
 
       {!isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {error && error.includes('Not authenticated') ? (
-            <button
-              onClick={handleOpenSettings}
-              className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
-            >
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <span className="underline underline-offset-2">
-                Please connect Gmail in Settings to sync emails
-              </span>
-              <Settings className="h-3.5 w-3.5" />
-            </button>
-          ) : lastSyncTime ? (
-            <>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Last synced: {format(lastSyncTime, 'MMM d, h:mm a')}</span>
-            </>
-          ) : (
-            <span>Not synced yet</span>
-          )}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-1">
+          {/* Email Sync Status */}
+          <div className="flex items-center gap-2">
+            {error && error.includes('Not authenticated') ? (
+              <button
+                onClick={handleOpenSettings}
+                className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
+              >
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <span className="underline underline-offset-2">
+                  Please connect Gmail in Settings to sync emails
+                </span>
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+            ) : lastSyncTime ? (
+              <>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Last synced: {format(lastSyncTime, 'MMM d, h:mm a')}</span>
+              </>
+            ) : (
+              <span>Not synced yet</span>
+            )}
+          </div>
+
+          {/* Separator */}
+          <div className="h-4 w-px bg-border" />
+
+          {/* LM Studio Status */}
+          <div className="flex items-center gap-2">
+            {lmStudio.isConnected ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <Wifi className="h-4 w-4 text-green-600" />
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-xs">
+                  LM Studio: {lmStudio.model ? lmStudio.model.split('/').pop() : 'Connected'}
+                </span>
+              </>
+            ) : (
+              <button
+                onClick={handleOpenSettings}
+                className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
+              >
+                <WifiOff className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs">LM Studio offline</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

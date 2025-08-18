@@ -16,7 +16,15 @@ const folderIcons = {
 }
 
 export function FolderList(): JSX.Element {
-  const { folders, selectedFolderId, selectFolder, searchQuery, setSearchQuery, selectAutomatedTask, selectedAutomatedTask } = useEmailStore()
+  const {
+    folders,
+    selectedFolderId,
+    selectFolder,
+    searchQuery,
+    setSearchQuery,
+    selectAutomatedTask,
+    selectedAutomatedTask
+  } = useEmailStore()
   const { googleAuth } = useSettingsStore()
 
   return (
@@ -99,19 +107,21 @@ export function FolderList(): JSX.Element {
         {/* Automated Tasks Section */}
         <div className="py-2">
           <div className="mb-2 flex items-center justify-between px-3">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground">Automated Tasks</h3>
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+              Automated Tasks
+            </h3>
           </div>
           <div className="space-y-1">
-            <Button 
-              variant={selectedAutomatedTask === 'daily-summary' ? 'secondary' : 'ghost'} 
+            <Button
+              variant={selectedAutomatedTask === 'daily-summary' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
               onClick={() => selectAutomatedTask('daily-summary')}
             >
               <div className="mr-2 h-2 w-2 rounded-full bg-orange-500" />
               <span className="text-sm">Daily Summary</span>
             </Button>
-            <Button 
-              variant={selectedAutomatedTask === 'email-cleanup' ? 'secondary' : 'ghost'} 
+            <Button
+              variant={selectedAutomatedTask === 'email-cleanup' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
               onClick={() => selectAutomatedTask('email-cleanup')}
             >
