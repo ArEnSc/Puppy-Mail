@@ -110,9 +110,9 @@ app.whenReady().then(async () => {
         authWindow.webContents.on('will-redirect', async (navEvent, url) => {
           console.log('Redirect detected:', url)
           
-          // Check if this is our callback URL (handle both with and without trailing slash)
+          // Check if this is our callback URL with a code parameter
           const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
-          if (url.startsWith(redirectUri) || url.includes('localhost:3000/auth/callback') || url.includes('code=')) {
+          if (url.startsWith(redirectUri) && url.includes('code=')) {
             navEvent.preventDefault()
             authCompleted = true
 
@@ -139,15 +139,16 @@ app.whenReady().then(async () => {
               reject(new Error('No authorization code received'))
             }
           }
+          // Don't do anything for other redirects - let the OAuth flow continue
         })
 
         // Also handle navigation for apps that don't trigger will-redirect
         authWindow.webContents.on('will-navigate', (navEvent, url) => {
           console.log('Navigation detected:', url)
           
-          // Check if this is our callback URL (handle both with and without trailing slash)
+          // Check if this is our callback URL with a code parameter
           const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
-          if (url.startsWith(redirectUri) || url.includes('localhost:3000/auth/callback') || url.includes('code=')) {
+          if (url.startsWith(redirectUri) && url.includes('code=')) {
             navEvent.preventDefault()
             authCompleted = true
 
@@ -172,6 +173,7 @@ app.whenReady().then(async () => {
               reject(new Error('No authorization code received'))
             }
           }
+          // Don't do anything for other navigations - let the OAuth flow continue
         })
 
         authWindow.on('closed', () => {
