@@ -11,55 +11,47 @@ export class EmailService {
         return
       }
 
-      // For each email, check if it exists and preserve local modifications
-      const bulkData = await Promise.all(
-        emails.map(async (email) => {
-          // Try to find existing email in database
-          const existingEmail = await db.emails.findOne(email.id).exec()
+      // Use a write transaction for bulk operations
+      db.write(() => {
+        emails.forEach((email) => {
+          // Check if email exists
+          const existingEmail = db.objectForPrimaryKey<EmailDocument>('Email', email.id)
 
           if (existingEmail) {
             // Email exists - preserve local modifications (read/starred status)
-            return {
-              id: String(email.id),
-              threadId: String(email.threadId),
-              from: String(email.from),
-              to: email.to.split(',').map((t) => t.trim()),
-              subject: String(email.subject),
-              body: String(email.body),
-              snippet: String(email.snippet),
-              date: email.date.toISOString(),
-              labels: email.labels,
-              attachments: email.attachments,
-              // Preserve local state
-              isRead: existingEmail.isRead,
-              isStarred: existingEmail.isStarred,
-              syncedAt: new Date().toISOString()
-            }
+            existingEmail.threadId = email.threadId
+            existingEmail.from = email.from
+            existingEmail.to = email.to.split(',').map((t) => t.trim())
+            existingEmail.subject = email.subject
+            existingEmail.body = email.body
+            existingEmail.snippet = email.snippet
+            existingEmail.date = email.date
+            existingEmail.labels = email.labels
+            existingEmail.attachments = email.attachments
+            existingEmail.syncedAt = new Date()
+            // Preserve local state - don't update isRead and isStarred
           } else {
-            // New email - use data from Gmail
-            return {
-              id: String(email.id),
-              threadId: String(email.threadId),
-              from: String(email.from),
+            // New email - create it
+            db.create<EmailDocument>('Email', {
+              id: email.id,
+              threadId: email.threadId,
+              from: email.from,
               to: email.to.split(',').map((t) => t.trim()),
-              subject: String(email.subject),
-              body: String(email.body),
-              snippet: String(email.snippet),
-              date: email.date.toISOString(),
+              subject: email.subject,
+              body: email.body,
+              snippet: email.snippet,
+              date: email.date,
               labels: email.labels,
               attachments: email.attachments,
               isRead: email.isRead,
               isStarred: email.isStarred,
-              syncedAt: new Date().toISOString()
-            }
+              syncedAt: new Date()
+            })
           }
         })
-      )
+      })
 
-      await db.emails.bulkUpsert(bulkData)
-      console.log(
-        `syncEmails: Successfully synced ${bulkData.length} emails, preserving local state`
-      )
+      console.log(`syncEmails: Successfully synced ${emails.length} emails, preserving local state`)
     } catch (error) {
       console.error('syncEmails: Error syncing emails to database:', error)
       console.error('syncEmails: Error details:', {
@@ -88,19 +80,28 @@ export class EmailService {
         console.error('getEmails: Database not available, returning empty array')
         return []
       }
-      let query = db.emails.find()
 
+      let query = db.objects<EmailDocument>('Email')
+
+      // Apply filters
       if (filters?.isRead !== undefined) {
-        query = query.where('isRead').eq(filters.isRead)
+        query = query.filtered('isRead = $0', filters.isRead)
       }
       if (filters?.isStarred !== undefined) {
-        query = query.where('isStarred').eq(filters.isStarred)
+        query = query.filtered('isStarred = $0', filters.isStarred)
       }
       if (filters?.from) {
-        query = query.where('from').regex(new RegExp(filters.from, 'i'))
+        query = query.filtered('from CONTAINS[c] $0', filters.from)
+      }
+      if (filters?.label) {
+        query = query.filtered('labels CONTAINS $0', filters.label)
       }
 
-      const results = await query.sort({ date: 'desc' }).skip(offset).limit(limit).exec()
+      // Sort by date descending
+      query = query.sorted('date', true)
+
+      // Apply pagination
+      const results = Array.from(query.slice(offset, offset + limit))
 
       console.log(`getEmails: Found ${results.length} emails`)
       return results
@@ -123,17 +124,16 @@ export class EmailService {
         console.error('markAsRead: Database not available')
         return
       }
-      const email = await db.emails.findOne(emailId).exec()
-      if (email) {
-        await email.update({
-          $set: {
-            isRead: true
-          }
-        })
-        console.log(`markAsRead: Successfully marked email ${emailId} as read`)
-      } else {
-        console.warn(`markAsRead: Email ${emailId} not found`)
-      }
+
+      db.write(() => {
+        const email = db.objectForPrimaryKey<EmailDocument>('Email', emailId)
+        if (email) {
+          email.isRead = true
+          console.log(`markAsRead: Successfully marked email ${emailId} as read`)
+        } else {
+          console.warn(`markAsRead: Email ${emailId} not found`)
+        }
+      })
     } catch (error) {
       console.error(`markAsRead: Error marking email ${emailId} as read:`, error)
       console.error('markAsRead: Error details:', {
@@ -152,18 +152,17 @@ export class EmailService {
         console.error('toggleStar: Database not available')
         return
       }
-      const email = await db.emails.findOne(emailId).exec()
-      if (email) {
-        const newStarred = !email.isStarred
-        await email.update({
-          $set: {
-            isStarred: newStarred
-          }
-        })
-        console.log(`toggleStar: Successfully set star to ${newStarred} for email ${emailId}`)
-      } else {
-        console.warn(`toggleStar: Email ${emailId} not found`)
-      }
+
+      db.write(() => {
+        const email = db.objectForPrimaryKey<EmailDocument>('Email', emailId)
+        if (email) {
+          const newStarred = !email.isStarred
+          email.isStarred = newStarred
+          console.log(`toggleStar: Successfully set star to ${newStarred} for email ${emailId}`)
+        } else {
+          console.warn(`toggleStar: Email ${emailId} not found`)
+        }
+      })
     } catch (error) {
       console.error(`toggleStar: Error toggling star for email ${emailId}:`, error)
       console.error('toggleStar: Error details:', {
@@ -175,27 +174,45 @@ export class EmailService {
   }
 
   static async deleteEmail(emailId: string): Promise<void> {
-    const db = await getDatabase()
-    const email = await db.emails.findOne(emailId).exec()
-    if (email) {
-      await email.remove()
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        console.error('deleteEmail: Database not available')
+        return
+      }
+
+      db.write(() => {
+        const email = db.objectForPrimaryKey<EmailDocument>('Email', emailId)
+        if (email) {
+          db.delete(email)
+          console.log(`deleteEmail: Successfully deleted email ${emailId}`)
+        }
+      })
+    } catch (error) {
+      console.error(`deleteEmail: Error deleting email ${emailId}:`, error)
     }
   }
 
   static async searchEmails(searchTerm: string): Promise<EmailDocument[]> {
-    const db = await getDatabase()
-    const results = await db.emails
-      .find({
-        $or: [
-          { subject: { $regex: searchTerm, $options: 'i' } },
-          { body: { $regex: searchTerm, $options: 'i' } },
-          { from: { $regex: searchTerm, $options: 'i' } }
-        ]
-      })
-      .sort({ date: 'desc' })
-      .exec()
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        return []
+      }
 
-    return results
+      const results = db
+        .objects<EmailDocument>('Email')
+        .filtered(
+          'subject CONTAINS[c] $0 OR body CONTAINS[c] $0 OR from CONTAINS[c] $0',
+          searchTerm
+        )
+        .sorted('date', true)
+
+      return Array.from(results)
+    } catch (error) {
+      console.error('searchEmails: Error searching emails:', error)
+      return []
+    }
   }
 }
 
@@ -206,34 +223,53 @@ export class AccountService {
     accessToken: string
     refreshToken: string
     expiresAt: Date
-  }): Promise<AccountDocument> {
-    const db = await getDatabase()
+  }): Promise<AccountDocument | null> {
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        return null
+      }
 
-    const account = await db.accounts.upsert({
-      id: accountData.email,
-      email: accountData.email,
-      provider: accountData.provider,
-      accessToken: accountData.accessToken,
-      refreshToken: accountData.refreshToken,
-      expiresAt: accountData.expiresAt,
-      lastSync: new Date(),
-      isActive: true
-    })
+      let account: AccountDocument | null = null
 
-    return account
+      db.write(() => {
+        account = db.create<AccountDocument>(
+          'Account',
+          {
+            id: accountData.email,
+            email: accountData.email,
+            provider: accountData.provider,
+            accessToken: accountData.accessToken,
+            refreshToken: accountData.refreshToken,
+            expiresAt: accountData.expiresAt,
+            lastSync: new Date(),
+            isActive: true
+          },
+          Realm.UpdateMode.Modified
+        ) // Upsert mode
+      })
+
+      return account
+    } catch (error) {
+      console.error('saveAccount: Error saving account:', error)
+      return null
+    }
   }
 
   static async getActiveAccounts(): Promise<AccountDocument[]> {
-    const db = await getDatabase()
-    const accounts = await db.accounts
-      .find({
-        selector: {
-          isActive: true
-        }
-      })
-      .exec()
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        return []
+      }
 
-    return accounts
+      const accounts = db.objects<AccountDocument>('Account').filtered('isActive = true')
+
+      return Array.from(accounts)
+    } catch (error) {
+      console.error('getActiveAccounts: Error getting accounts:', error)
+      return []
+    }
   }
 
   static async updateTokens(
@@ -241,29 +277,40 @@ export class AccountService {
     accessToken: string,
     expiresAt: Date
   ): Promise<void> {
-    const db = await getDatabase()
-    const account = await db.accounts.findOne(accountId).exec()
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        return
+      }
 
-    if (account) {
-      await account.update({
-        $set: {
-          accessToken,
-          expiresAt
+      db.write(() => {
+        const account = db.objectForPrimaryKey<AccountDocument>('Account', accountId)
+        if (account) {
+          account.accessToken = accessToken
+          account.expiresAt = expiresAt
         }
       })
+    } catch (error) {
+      console.error('updateTokens: Error updating tokens:', error)
     }
   }
 
   static async deactivateAccount(accountId: string): Promise<void> {
-    const db = await getDatabase()
-    const account = await db.accounts.findOne(accountId).exec()
+    try {
+      const db = await getDatabase()
+      if (!db) {
+        return
+      }
 
-    if (account) {
-      await account.update({
-        $set: {
-          isActive: false
+      db.write(() => {
+        const account = db.objectForPrimaryKey<AccountDocument>('Account', accountId)
+        if (account) {
+          account.isActive = false
         }
       })
+    } catch (error) {
+      console.error('deactivateAccount: Error deactivating account:', error)
     }
   }
 }
+

@@ -44,7 +44,7 @@
     "lucide-react": "^0.539.0",
     "node-cron": "^4.2.1",
     "react-intersection-observer": "^9.16.0",
-    "rxdb": "^16.17.2",
+    "realm": "^20.2.0",
     "rxjs": "^7.8.2",
     "zustand": "^5.0.7"
   },

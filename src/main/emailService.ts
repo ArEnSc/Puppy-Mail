@@ -214,23 +214,28 @@ export function setupEmailIPC(service: EmailService): void {
   ipcMain.handle('email:fetch', async () => {
     try {
       const dbEmails = await DBEmailService.getEmails(50, 0)
-      return dbEmails.map((doc) =>
-        transformEmailForStore({
+      return dbEmails.map((doc) => {
+        // Convert Realm object to plain object
+        const plainDoc = {
           id: doc.id,
           threadId: doc.threadId,
           from: doc.from,
-          to: doc.to.join(', '),
+          to: Array.from(doc.to).join(', '),
           subject: doc.subject,
           snippet: doc.snippet,
           body: doc.body,
-          date: new Date(doc.date),
-          attachments: doc.attachments,
-          internalDate: new Date(doc.date).getTime().toString(),
-          labels: doc.labels,
+          date: doc.date,
+          attachments: Array.from(doc.attachments),
+          labels: Array.from(doc.labels),
           isRead: doc.isRead,
           isStarred: doc.isStarred
+        }
+
+        return transformEmailForStore({
+          ...plainDoc,
+          internalDate: new Date(plainDoc.date).getTime().toString()
         })
-      )
+      })
     } catch (error) {
       console.error('Error fetching emails from database:', error)
       // Return empty array instead of throwing to keep the app functional
@@ -261,23 +266,28 @@ export function setupEmailIPC(service: EmailService): void {
       // Instead of re-fetching, get emails from database after sync
       try {
         const dbEmails = await DBEmailService.getEmails(50, 0)
-        const transformedEmails = dbEmails.map((doc) =>
-          transformEmailForStore({
+        const transformedEmails = dbEmails.map((doc) => {
+          // Convert Realm object to plain object
+          const plainDoc = {
             id: doc.id,
             threadId: doc.threadId,
             from: doc.from,
-            to: doc.to.join(', '),
+            to: Array.from(doc.to).join(', '),
             subject: doc.subject,
             snippet: doc.snippet,
             body: doc.body,
-            date: new Date(doc.date),
-            attachments: doc.attachments,
-            internalDate: doc.date.getTime().toString(),
-            labels: doc.labels,
+            date: doc.date,
+            attachments: Array.from(doc.attachments),
+            labels: Array.from(doc.labels),
             isRead: doc.isRead,
             isStarred: doc.isStarred
+          }
+
+          return transformEmailForStore({
+            ...plainDoc,
+            internalDate: new Date(plainDoc.date).getTime().toString()
           })
-        )
+        })
         BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('email:newEmails', transformedEmails)
         })
