@@ -1,6 +1,6 @@
-# Puppy Mail
+# Chloe
 
-An Electron application with React and TypeScript
+Your intelligent email companion - An Electron application with React and TypeScript
 
 **Repository**: [https://github.com/ArEnSc/Puppy-Mail](https://github.com/ArEnSc/Puppy-Mail)
 

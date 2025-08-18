@@ -65,7 +65,7 @@ export async function createDatabase(): Promise<EmailDatabase> {
     return dbInstance
   }
 
-  const dbName = 'emailagentdb' // Simple name
+  const dbName = 'chloedb' // Database for Chloe email app
 
   try {
     // Use memory storage for now to avoid persistence issues
