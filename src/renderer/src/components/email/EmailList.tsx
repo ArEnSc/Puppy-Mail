@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { Star, Paperclip, Circle, MoreHorizontal } from 'lucide-react'
+import { Star, Paperclip, Circle, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 
 function formatEmailDate(date: Date): string {
   if (isToday(date)) {
@@ -16,17 +16,30 @@ function formatEmailDate(date: Date): string {
 }
 
 export function EmailList(): JSX.Element {
-  const { selectedEmailId, selectEmail, getFilteredEmails, markAsRead, toggleStar } =
-    useEmailStore()
+  const {
+    selectedEmailId,
+    selectEmail,
+    getPaginatedEmails,
+    getFilteredEmails,
+    markAsRead,
+    toggleStar,
+    currentPage,
+    totalPages,
+    pageSize,
+    nextPage,
+    previousPage
+  } = useEmailStore()
 
-  const emails = getFilteredEmails()
+  const paginatedEmails = getPaginatedEmails()
+  const allFilteredEmails = getFilteredEmails()
+  const totalEmails = allFilteredEmails.length
 
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b px-4">
         <h2 className="text-sm font-semibold">
-          {emails.length} {emails.length === 1 ? 'message' : 'messages'}
+          {totalEmails} {totalEmails === 1 ? 'message' : 'messages'}
         </h2>
         <Button size="icon" variant="ghost">
           <MoreHorizontal className="h-4 w-4" />
@@ -35,13 +48,13 @@ export function EmailList(): JSX.Element {
 
       {/* Email List */}
       <ScrollArea className="flex-1">
-        {emails.length === 0 ? (
+        {paginatedEmails.length === 0 ? (
           <div className="flex h-full items-center justify-center p-8 text-center">
             <p className="text-sm text-muted-foreground">No emails found</p>
           </div>
         ) : (
           <div className="divide-y">
-            {emails.map((email) => (
+            {paginatedEmails.map((email) => (
               <div
                 key={email.id}
                 onClick={() => {
@@ -122,6 +135,34 @@ export function EmailList(): JSX.Element {
           </div>
         )}
       </ScrollArea>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <div className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * pageSize + 1} -{' '}
+            {Math.min(currentPage * pageSize, totalEmails)} of {totalEmails}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={previousPage} disabled={currentPage === 1}>
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={nextPage}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

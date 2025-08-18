@@ -155,7 +155,9 @@ interface StoreEmail {
   }
 }
 
-function transformEmailForStore(email: Email): StoreEmail {
+function transformEmailForStore(
+  email: Email & { isRead?: boolean; isStarred?: boolean; labels?: string[] }
+): StoreEmail {
   const senderMatch = email.from.match(/(.*?)\s*<(.+?)>/) || [null, email.from, email.from]
   const [, senderName, senderEmail] = senderMatch
 
@@ -187,10 +189,10 @@ function transformEmailForStore(email: Email): StoreEmail {
     snippet: email.snippet,
     body: email.body,
     cleanBody: cleanEmail.text,
-    isRead: false,
-    isStarred: false,
+    isRead: email.isRead ?? false,
+    isStarred: email.isStarred ?? false,
     isImportant: false,
-    labels: ['inbox'],
+    labels: email.labels || ['inbox'],
     attachments: email.attachments.map((att) => ({
       id: att.attachmentId,
       filename: att.filename,
@@ -216,9 +218,12 @@ export function setupEmailIPC(service: EmailService): void {
           subject: doc.subject,
           snippet: doc.snippet,
           body: doc.body,
-          date: doc.date,
+          date: new Date(doc.date),
           attachments: doc.attachments,
-          internalDate: new Date(doc.date).getTime().toString()
+          internalDate: new Date(doc.date).getTime().toString(),
+          labels: doc.labels,
+          isRead: doc.isRead,
+          isStarred: doc.isStarred
         })
       )
     } catch (error) {
@@ -260,9 +265,12 @@ export function setupEmailIPC(service: EmailService): void {
             subject: doc.subject,
             snippet: doc.snippet,
             body: doc.body,
-            date: doc.date.toISOString(),
+            date: new Date(doc.date),
             attachments: doc.attachments,
-            internalDate: doc.date.getTime().toString()
+            internalDate: doc.date.getTime().toString(),
+            labels: doc.labels,
+            isRead: doc.isRead,
+            isStarred: doc.isStarred
           })
         )
         BrowserWindow.getAllWindows().forEach((window) => {
@@ -281,6 +289,28 @@ export function setupEmailIPC(service: EmailService): void {
   ipcMain.handle('email:stopPolling', async () => {
     service.stopPolling()
     return { success: true }
+  })
+
+  // Mark email as read
+  ipcMain.handle('email:markAsRead', async (_, emailId: string) => {
+    try {
+      await DBEmailService.markAsRead(emailId)
+      return { success: true }
+    } catch (error) {
+      console.error('Error marking email as read:', error)
+      throw error
+    }
+  })
+
+  // Toggle star status
+  ipcMain.handle('email:toggleStar', async (_, emailId: string) => {
+    try {
+      await DBEmailService.toggleStar(emailId)
+      return { success: true }
+    } catch (error) {
+      console.error('Error toggling star:', error)
+      throw error
+    }
   })
 }
 

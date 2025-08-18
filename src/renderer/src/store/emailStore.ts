@@ -57,6 +57,11 @@ interface EmailState {
   error: string | null
   lastSyncTime: Date | null
 
+  // Pagination
+  currentPage: number
+  pageSize: number
+  totalPages: number
+
   // Actions
   setEmails: (emails: Email[]) => void
   setLastSyncTime: (time: Date) => void
@@ -78,8 +83,15 @@ interface EmailState {
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
 
+  // Pagination actions
+  setCurrentPage: (page: number) => void
+  setPageSize: (size: number) => void
+  nextPage: () => void
+  previousPage: () => void
+
   // Computed
   getFilteredEmails: () => Email[]
+  getPaginatedEmails: () => Email[]
   getSelectedEmail: () => Email | null
 }
 
@@ -104,7 +116,16 @@ export const useEmailStore = create<EmailState>()(
         error: null,
         lastSyncTime: null,
 
-        setEmails: (emails) => set({ emails }),
+        // Pagination state
+        currentPage: 1,
+        pageSize: 50,
+        totalPages: 1,
+
+        setEmails: (emails) => {
+          const pageSize = get().pageSize
+          const totalPages = Math.ceil(emails.length / pageSize)
+          set({ emails, totalPages, currentPage: 1 })
+        },
         setLastSyncTime: (time) => set({ lastSyncTime: time }),
 
         addEmail: (email) =>
@@ -137,17 +158,23 @@ export const useEmailStore = create<EmailState>()(
         selectFolder: (folderId) =>
           set({
             selectedFolderId: folderId,
-            selectedEmailId: null
+            selectedEmailId: null,
+            currentPage: 1
           }),
 
         selectEmail: (emailId) => set({ selectedEmailId: emailId }),
 
-        markAsRead: (id) =>
+        markAsRead: (id) => {
           set((state) => ({
             emails: state.emails.map((email) =>
               email.id === id ? { ...email, isRead: true } : email
             )
-          })),
+          }))
+          // Sync to database
+          if (window.electron?.ipcRenderer) {
+            window.electron.ipcRenderer.invoke('email:markAsRead', id).catch(console.error)
+          }
+        },
 
         markAsUnread: (id) =>
           set((state) => ({
@@ -156,12 +183,17 @@ export const useEmailStore = create<EmailState>()(
             )
           })),
 
-        toggleStar: (id) =>
+        toggleStar: (id) => {
           set((state) => ({
             emails: state.emails.map((email) =>
               email.id === id ? { ...email, isStarred: !email.isStarred } : email
             )
-          })),
+          }))
+          // Sync to database
+          if (window.electron?.ipcRenderer) {
+            window.electron.ipcRenderer.invoke('email:toggleStar', id).catch(console.error)
+          }
+        },
 
         toggleImportant: (id) =>
           set((state) => ({
@@ -170,9 +202,31 @@ export const useEmailStore = create<EmailState>()(
             )
           })),
 
-        setSearchQuery: (query) => set({ searchQuery: query }),
+        setSearchQuery: (query) => {
+          set({ searchQuery: query, currentPage: 1 })
+        },
         setLoading: (loading) => set({ isLoading: loading }),
         setError: (error) => set({ error }),
+
+        // Pagination actions
+        setCurrentPage: (page) => set({ currentPage: page }),
+        setPageSize: (size) => {
+          const emails = get().emails
+          const totalPages = Math.ceil(emails.length / size)
+          set({ pageSize: size, totalPages, currentPage: 1 })
+        },
+        nextPage: () => {
+          const { currentPage, totalPages } = get()
+          if (currentPage < totalPages) {
+            set({ currentPage: currentPage + 1 })
+          }
+        },
+        previousPage: () => {
+          const currentPage = get().currentPage
+          if (currentPage > 1) {
+            set({ currentPage: currentPage - 1 })
+          }
+        },
 
         getFilteredEmails: () => {
           const state = get()
@@ -212,6 +266,21 @@ export const useEmailStore = create<EmailState>()(
 
           // Sort by date
           return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        },
+
+        getPaginatedEmails: () => {
+          const state = get()
+          const filtered = state.getFilteredEmails()
+          const start = (state.currentPage - 1) * state.pageSize
+          const end = start + state.pageSize
+
+          // Update total pages based on filtered results
+          const totalPages = Math.ceil(filtered.length / state.pageSize)
+          if (totalPages !== state.totalPages) {
+            set({ totalPages })
+          }
+
+          return filtered.slice(start, end)
         },
 
         getSelectedEmail: () => {

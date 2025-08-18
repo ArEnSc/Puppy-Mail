@@ -10,23 +10,53 @@ export class EmailService {
         return
       }
 
-      const bulkData = emails.map((email) => ({
-        id: String(email.id),
-        threadId: String(email.threadId),
-        from: String(email.from),
-        to: email.to.split(',').map((t) => t.trim()),
-        subject: String(email.subject),
-        body: String(email.body),
-        snippet: String(email.snippet),
-        date: email.date.toISOString(),
-        labels: email.labels,
-        attachments: email.attachments,
-        isRead: email.isRead,
-        isStarred: email.isStarred,
-        syncedAt: new Date().toISOString()
-      }))
+      // For each email, check if it exists and preserve local modifications
+      const bulkData = await Promise.all(
+        emails.map(async (email) => {
+          // Try to find existing email in database
+          const existingEmail = await db.emails.findOne(email.id).exec()
+
+          if (existingEmail) {
+            // Email exists - preserve local modifications (read/starred status)
+            return {
+              id: String(email.id),
+              threadId: String(email.threadId),
+              from: String(email.from),
+              to: email.to.split(',').map((t) => t.trim()),
+              subject: String(email.subject),
+              body: String(email.body),
+              snippet: String(email.snippet),
+              date: email.date.toISOString(),
+              labels: email.labels,
+              attachments: email.attachments,
+              // Preserve local state
+              isRead: existingEmail.isRead,
+              isStarred: existingEmail.isStarred,
+              syncedAt: new Date().toISOString()
+            }
+          } else {
+            // New email - use data from Gmail
+            return {
+              id: String(email.id),
+              threadId: String(email.threadId),
+              from: String(email.from),
+              to: email.to.split(',').map((t) => t.trim()),
+              subject: String(email.subject),
+              body: String(email.body),
+              snippet: String(email.snippet),
+              date: email.date.toISOString(),
+              labels: email.labels,
+              attachments: email.attachments,
+              isRead: email.isRead,
+              isStarred: email.isStarred,
+              syncedAt: new Date().toISOString()
+            }
+          }
+        })
+      )
 
       await db.emails.bulkUpsert(bulkData)
+      console.log(`Synced ${bulkData.length} emails, preserving local state`)
     } catch (error) {
       console.error('Error syncing emails to database:', error)
       // Don't throw - we want the app to continue working even if DB fails
@@ -72,6 +102,10 @@ export class EmailService {
 
   static async markAsRead(emailId: string): Promise<void> {
     const db = await getDatabase()
+    if (!db) {
+      console.warn('Database not available, skipping markAsRead')
+      return
+    }
     const email = await db.emails.findOne(emailId).exec()
     if (email) {
       await email.update({
@@ -84,6 +118,10 @@ export class EmailService {
 
   static async toggleStar(emailId: string): Promise<void> {
     const db = await getDatabase()
+    if (!db) {
+      console.warn('Database not available, skipping toggleStar')
+      return
+    }
     const email = await db.emails.findOne(emailId).exec()
     if (email) {
       await email.update({
