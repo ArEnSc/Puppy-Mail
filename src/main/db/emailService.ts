@@ -1,25 +1,29 @@
 import { getDatabase, EmailDocument, AccountDocument } from './database'
-import { gmail_v1 } from 'googleapis'
+import { Email } from '../emailManager'
 
 export class EmailService {
-  static async syncEmails(accountId: string, emails: gmail_v1.Schema$Message[]): Promise<void> {
+  static async syncEmails(accountId: string, emails: Email[]): Promise<void> {
     try {
       const db = await getDatabase()
+      if (!db) {
+        console.warn('Database not available, skipping email sync')
+        return
+      }
 
       const bulkData = emails.map((email) => ({
-        id: email.id!,
-        threadId: email.threadId || '',
-        from: this.extractFrom(email),
-        to: this.extractTo(email),
-        subject: this.extractSubject(email),
-        body: email.snippet || '',
-        snippet: email.snippet || '',
-        date: new Date(parseInt(email.internalDate || '0')),
-        labels: email.labelIds || [],
-        attachments: this.extractAttachments(email),
-        isRead: !email.labelIds?.includes('UNREAD'),
-        isStarred: email.labelIds?.includes('STARRED') || false,
-        syncedAt: new Date()
+        id: String(email.id),
+        threadId: String(email.threadId),
+        from: String(email.from),
+        to: email.to.split(',').map((t) => t.trim()),
+        subject: String(email.subject),
+        body: String(email.body),
+        snippet: String(email.snippet),
+        date: email.date.toISOString(),
+        labels: email.labels,
+        attachments: email.attachments,
+        isRead: email.isRead,
+        isStarred: email.isStarred,
+        syncedAt: new Date().toISOString()
       }))
 
       await db.emails.bulkUpsert(bulkData)
@@ -41,6 +45,10 @@ export class EmailService {
   ): Promise<EmailDocument[]> {
     try {
       const db = await getDatabase()
+      if (!db) {
+        console.warn('Database not available, returning empty array')
+        return []
+      }
       let query = db.emails.find()
 
       if (filters?.isRead !== undefined) {
@@ -108,57 +116,6 @@ export class EmailService {
       .exec()
 
     return results
-  }
-
-  // Helper methods
-  private static extractFrom(email: gmail_v1.Schema$Message): string {
-    const fromHeader = email.payload?.headers?.find((h) => h.name === 'From')
-    return fromHeader?.value || ''
-  }
-
-  private static extractTo(email: gmail_v1.Schema$Message): string[] {
-    const toHeader = email.payload?.headers?.find((h) => h.name === 'To')
-    return toHeader?.value?.split(',').map((t) => t.trim()) || []
-  }
-
-  private static extractSubject(email: gmail_v1.Schema$Message): string {
-    const subjectHeader = email.payload?.headers?.find((h) => h.name === 'Subject')
-    return subjectHeader?.value || ''
-  }
-
-  private static extractAttachments(email: gmail_v1.Schema$Message): Array<{
-    filename: string
-    mimeType: string
-    size: number
-    attachmentId: string
-  }> {
-    const attachments: Array<{
-      filename: string
-      mimeType: string
-      size: number
-      attachmentId: string
-    }> = []
-
-    function processPayload(payload: gmail_v1.Schema$MessagePart): void {
-      if (payload.filename && payload.body?.attachmentId) {
-        attachments.push({
-          filename: payload.filename,
-          mimeType: payload.mimeType || '',
-          size: payload.body.size || 0,
-          attachmentId: payload.body.attachmentId
-        })
-      }
-
-      if (payload.parts) {
-        payload.parts.forEach(processPayload)
-      }
-    }
-
-    if (email.payload) {
-      processPayload(email.payload)
-    }
-
-    return attachments
   }
 }
 

@@ -1,13 +1,7 @@
 import * as cron from 'node-cron'
 import { ipcMain, BrowserWindow } from 'electron'
 import { getEmailConfig, getPollInterval } from './config'
-import {
-  pollEmails,
-  formatEmail,
-  FormattedEmail,
-  Email,
-  pollEmailsWithClient
-} from './emailManager'
+import { formatEmail, FormattedEmail, Email, pollEmailsWithClient } from './emailManager'
 import { getCleanEmail } from './utils/emailSanitizer'
 import { EmailService as DBEmailService } from './db/emailService'
 import { GmailAuthService } from './auth/authService'
@@ -222,9 +216,9 @@ export function setupEmailIPC(service: EmailService): void {
           subject: doc.subject,
           snippet: doc.snippet,
           body: doc.body,
-          date: doc.date.toISOString(),
+          date: doc.date,
           attachments: doc.attachments,
-          internalDate: doc.date.getTime().toString()
+          internalDate: new Date(doc.date).getTime().toString()
         })
       )
     } catch (error) {
@@ -253,16 +247,30 @@ export function setupEmailIPC(service: EmailService): void {
     service.stopPolling() // Stop any existing polling
 
     // Set up handler to broadcast new emails
-    service.onNewEmails(() => {
-      // Fetch full emails and transform them
-      pollEmails(getEmailConfig(), 50)
-        .then((emails) => {
-          const transformedEmails = emails.map(transformEmailForStore)
-          BrowserWindow.getAllWindows().forEach((window) => {
-            window.webContents.send('email:newEmails', transformedEmails)
+    service.onNewEmails(async () => {
+      // Instead of re-fetching, get emails from database after sync
+      try {
+        const dbEmails = await DBEmailService.getEmails(50, 0)
+        const transformedEmails = dbEmails.map((doc) =>
+          transformEmailForStore({
+            id: doc.id,
+            threadId: doc.threadId,
+            from: doc.from,
+            to: doc.to.join(', '),
+            subject: doc.subject,
+            snippet: doc.snippet,
+            body: doc.body,
+            date: doc.date.toISOString(),
+            attachments: doc.attachments,
+            internalDate: doc.date.getTime().toString()
           })
+        )
+        BrowserWindow.getAllWindows().forEach((window) => {
+          window.webContents.send('email:newEmails', transformedEmails)
         })
-        .catch(console.error)
+      } catch (error) {
+        console.error('Error broadcasting new emails:', error)
+      }
     })
 
     service.startPolling()

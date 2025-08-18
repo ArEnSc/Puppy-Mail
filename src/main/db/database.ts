@@ -23,7 +23,7 @@ export type EmailDocument = RxDocument<{
   subject: string
   body: string
   snippet: string
-  date: Date
+  date: string
   labels: string[]
   attachments: Array<{
     filename: string
@@ -33,7 +33,7 @@ export type EmailDocument = RxDocument<{
   }>
   isRead: boolean
   isStarred: boolean
-  syncedAt: Date
+  syncedAt: string
 }>
 
 export type AccountDocument = RxDocument<{
@@ -42,8 +42,8 @@ export type AccountDocument = RxDocument<{
   provider: 'gmail' | 'outlook' | 'other'
   accessToken: string
   refreshToken: string
-  expiresAt: Date
-  lastSync: Date
+  expiresAt: string
+  lastSync: string
   isActive: boolean
 }>
 
@@ -57,62 +57,82 @@ export type DatabaseCollections = {
 
 export type EmailDatabase = RxDatabase<DatabaseCollections>
 
+// Global database instance - only one should exist
 let dbInstance: EmailDatabase | null = null
+let dbInitPromise: Promise<EmailDatabase | null> | null = null
+let dbInitialized = false
 
-export async function createDatabase(): Promise<EmailDatabase> {
-  if (dbInstance) {
+export async function createDatabase(): Promise<EmailDatabase | null> {
+  // If already initialized (successfully or not), return the instance
+  if (dbInitialized) {
     return dbInstance
   }
 
-  const dbName = 'chloedb' // Database for Chloe email app
-
-  try {
-    // Use memory storage for now to avoid persistence issues
-    const db = await createRxDatabase<DatabaseCollections>({
-      name: dbName,
-      storage: getRxStorageMemory(), // Using memory storage temporarily
-      ignoreDuplicate: true,
-      multiInstance: false,
-      eventReduce: true
-    })
-
-    // Add collections
-    await db.addCollections({
-      emails: {
-        schema: emailSchema
-      },
-      accounts: {
-        schema: accountSchema
-      }
-    })
-
-    dbInstance = db
-    console.log('Database created successfully')
-    return db
-  } catch (error) {
-    console.error('Error creating database:', error)
-
-    // If database already exists, we shouldn't get here with ignoreDuplicate: true
-    // But if we do, let's handle it gracefully
-    if ((error as Error & { code?: string })?.code === 'DB9') {
-      console.log('Database conflict detected, this should not happen with ignoreDuplicate: true')
-      throw new Error('Database initialization failed due to conflict')
-    }
-
-    throw error
+  // If initialization is already in progress, wait for it
+  if (dbInitPromise) {
+    return dbInitPromise
   }
+
+  // Start initialization
+  dbInitPromise = (async () => {
+    try {
+      // Double-check we don't already have an instance
+      if (dbInstance) {
+        dbInitialized = true
+        return dbInstance
+      }
+
+      console.log('Creating new RxDB database instance...')
+
+      // Use memory storage with a fixed database name
+      const db = await createRxDatabase<DatabaseCollections>({
+        name: 'chloedb',
+        storage: getRxStorageMemory(),
+        multiInstance: false,
+        eventReduce: true
+      })
+
+      // Add collections
+      await db.addCollections({
+        emails: {
+          schema: emailSchema
+        },
+        accounts: {
+          schema: accountSchema
+        }
+      })
+
+      dbInstance = db
+      dbInitialized = true
+      console.log('Database created successfully')
+      return db
+    } catch (error) {
+      console.error('Error creating database:', error)
+
+      // Mark as initialized even on error to prevent repeated attempts
+      dbInitialized = true
+      dbInitPromise = null
+
+      // Log the error but don't throw - let the app continue without database
+      console.warn('App will continue without database functionality')
+      return null
+    }
+  })()
+
+  return dbInitPromise
 }
 
-export async function getDatabase(): Promise<EmailDatabase> {
-  if (!dbInstance) {
-    return createDatabase()
-  }
-  return dbInstance
+export async function getDatabase(): Promise<EmailDatabase | null> {
+  // Always go through createDatabase to ensure proper initialization
+  const db = await createDatabase()
+  return db
 }
 
 export async function closeDatabase(): Promise<void> {
   if (dbInstance) {
     await dbInstance.destroy()
     dbInstance = null
+    dbInitPromise = null
+    dbInitialized = false
   }
 }

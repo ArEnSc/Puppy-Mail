@@ -57,11 +57,20 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
     }
 
     // Listen for sync complete events
-    const handleSyncComplete = (
+    const handleSyncComplete = async (
       _event: unknown,
       data: { timestamp: string; count: number }
-    ): void => {
+    ): Promise<void> => {
       setLastSyncTime(new Date(data.timestamp))
+      // Fetch updated emails from database after sync completes
+      if (window.electron?.ipcRenderer) {
+        try {
+          const emails = await window.electron.ipcRenderer.invoke('email:fetch')
+          setEmails(emails)
+        } catch (error) {
+          console.error('Failed to fetch emails after sync:', error)
+        }
+      }
     }
 
     if (window.electron?.ipcRenderer) {

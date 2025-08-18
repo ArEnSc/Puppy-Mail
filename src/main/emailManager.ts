@@ -18,6 +18,9 @@ export interface Email {
   body: string
   date: Date
   snippet: string
+  labels: string[]
+  isRead: boolean
+  isStarred: boolean
   attachments: Array<{
     filename: string
     mimeType: string
@@ -129,6 +132,9 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): Email {
     body,
     date: new Date(parseInt(message.internalDate || '0')),
     snippet: message.snippet || '',
+    labels: message.labelIds || [],
+    isRead: !message.labelIds?.includes('UNREAD'),
+    isStarred: message.labelIds?.includes('STARRED') || false,
     attachments
   }
 }
