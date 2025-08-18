@@ -104,7 +104,7 @@ interface EmailState {
 
 const defaultFolders: EmailFolder[] = [
   { id: 'inbox', name: 'Inbox', type: 'system', count: 0 },
-  { id: 'important', name: 'Important', type: 'system', count: 0 },
+  { id: 'important', name: 'Starred', type: 'system', count: 0 },
   { id: 'sent', name: 'Sent', type: 'system', count: 0 },
   { id: 'drafts', name: 'Drafts', type: 'system', count: 0 },
   { id: 'trash', name: 'Trash', type: 'system', count: 0 }
@@ -255,7 +255,7 @@ export const useEmailStore = create<EmailState>()(
               )
               break
             case 'important':
-              filtered = filtered.filter((email) => email.isImportant)
+              filtered = filtered.filter((email) => email.isStarred)
               break
             case 'trash':
               filtered = filtered.filter((email) => email.labels.includes('trash'))

@@ -248,7 +248,7 @@ export function setupEmailIPC(service: EmailService): void {
   ipcMain.handle('email:sync', async () => {
     try {
       console.log('Email sync requested')
-      const emails = await service.fetchLatestEmails(50)
+      const emails = await service.fetchLatestEmails(300)
       console.log(`Sync completed: fetched ${emails.length} emails`)
       return { success: true, timestamp: service.lastSyncTime }
     } catch (error) {
