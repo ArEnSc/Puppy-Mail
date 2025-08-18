@@ -1,4 +1,5 @@
 import { useEmailStore } from '@/store/emailStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ const folderIcons = {
 
 export function FolderList(): JSX.Element {
   const { folders, selectedFolderId, selectFolder, searchQuery, setSearchQuery } = useEmailStore()
+  const { googleAuth } = useSettingsStore()
 
   return (
     <div className="flex h-full flex-col bg-background">

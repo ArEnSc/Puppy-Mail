@@ -77,6 +77,8 @@ module.exports = {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('tailwindcss-animate'),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('@tailwindcss/typography')
+    require('@tailwindcss/typography'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@tailwindcss/line-clamp')
   ]
 }

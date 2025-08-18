@@ -120,4 +120,3 @@ export function EmailLayout(): JSX.Element {
     </div>
   )
 }
-

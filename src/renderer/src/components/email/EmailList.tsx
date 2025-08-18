@@ -4,6 +4,7 @@ import { format, isToday, isYesterday } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Star, Paperclip, Circle, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
+import { getLabelConfig } from '@/lib/labels'
 
 function formatEmailDate(date: Date): string {
   if (isToday(date)) {
@@ -81,7 +82,8 @@ export function EmailList(): JSX.Element {
 
                 {/* Email Content */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
+                  {/* First Row: From and Date */}
+                  <div className="flex items-baseline justify-between gap-2 mb-1">
                     <p
                       className={cn(
                         'truncate text-sm',
@@ -95,25 +97,28 @@ export function EmailList(): JSX.Element {
                     </span>
                   </div>
 
+                  {/* Subject */}
                   <p
                     className={cn(
-                      'truncate text-sm',
+                      'text-sm mb-1',
                       !email.isRead ? 'font-medium text-foreground' : 'text-muted-foreground'
                     )}
                   >
                     {email.subject}
                   </p>
 
-                  <p className="truncate text-sm text-muted-foreground">{email.snippet}</p>
+                  {/* Snippet - 3 lines */}
+                  <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                    {email.snippet}
+                  </p>
 
-                  <div className="mt-1 flex items-center gap-2">
-                    {email.attachments && email.attachments.length > 0 && (
-                      <Paperclip className="h-3 w-3 text-muted-foreground" />
-                    )}
+                  {/* Labels and Actions Row */}
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {/* Star Button */}
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6"
+                      className="h-6 w-6 flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleStar(email.id)
@@ -128,6 +133,46 @@ export function EmailList(): JSX.Element {
                         )}
                       />
                     </Button>
+
+                    {/* Attachment Indicator */}
+                    {email.attachments && email.attachments.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Paperclip className="h-3 w-3" />
+                        <span>{email.attachments.length}</span>
+                      </div>
+                    )}
+
+                    {/* Labels */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {email.labels.map((label) => {
+                        const labelConfig = getLabelConfig(label)
+                        return (
+                          <span
+                            key={label}
+                            className={cn(
+                              'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                              labelConfig.bgColor,
+                              labelConfig.textColor
+                            )}
+                          >
+                            {labelConfig.name}
+                          </span>
+                        )
+                      })}
+
+                      {/* Show important indicator as a label if email is important */}
+                      {email.isImportant && (
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                            'bg-yellow-100 dark:bg-yellow-950',
+                            'text-yellow-700 dark:text-yellow-300'
+                          )}
+                        >
+                          Important
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -166,3 +211,4 @@ export function EmailList(): JSX.Element {
     </div>
   )
 }
+
