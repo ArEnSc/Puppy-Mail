@@ -18,7 +18,7 @@ export function EmailLayout() {
       </div>
       
       {/* Email Detail - Right Pane */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <EmailDetail />
       </div>
     </div>

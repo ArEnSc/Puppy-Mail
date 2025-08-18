@@ -58,11 +58,11 @@ export function EmailDetail() {
   }
   
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="flex h-full flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-6">
-        <h1 className="line-clamp-1 text-lg font-semibold">{email.subject}</h1>
-        <div className="flex items-center gap-1">
+      <div className="flex h-14 min-h-[3.5rem] flex-shrink-0 items-center justify-between border-b px-6">
+        <h1 className="line-clamp-1 flex-1 text-lg font-semibold pr-4">{email.subject}</h1>
+        <div className="flex flex-shrink-0 items-center gap-1">
           <Button
             size="sm"
             variant={viewMode === 'clean' ? 'secondary' : 'ghost'}
@@ -103,27 +103,28 @@ export function EmailDetail() {
       </div>
       
       {/* Email Content */}
-      <ScrollArea className="flex-1">
-        <div className="p-6">
+      <div className="flex-1 overflow-hidden" style={{ minWidth: 0 }}>
+        <ScrollArea className="h-full w-full">
+          <div className="p-6" style={{ maxWidth: '100%', overflow: 'hidden' }}>
           {/* Sender Info */}
-          <div className="mb-6 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <span className="text-sm font-medium">
                   {email.from.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div>
-                <p className="font-medium">{email.from.name}</p>
-                <p className="text-sm text-muted-foreground">&lt;{email.from.email}&gt;</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{email.from.name}</p>
+                <p className="truncate text-sm text-muted-foreground">&lt;{email.from.email}&gt;</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex-shrink-0 text-right">
+              <p className="text-sm text-muted-foreground whitespace-nowrap">
                 {format(new Date(email.date), 'MMM d, yyyy, h:mm a')}
               </p>
               {email.to.length > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 truncate text-xs text-muted-foreground max-w-xs">
                   to {email.to.map(t => t.name || t.email).join(', ')}
                 </p>
               )}
@@ -133,16 +134,32 @@ export function EmailDetail() {
           <Separator className="mb-6" />
           
           {/* Email Body */}
-          {viewMode === 'original' ? (
-            <div 
-              className="prose prose-sm max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-            />
-          ) : (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-              {sanitizedBody}
-            </div>
-          )}
+          <div className="relative overflow-hidden" style={{ maxWidth: '100%' }}>
+            {viewMode === 'original' ? (
+              <div 
+                className="text-sm leading-relaxed overflow-x-auto [&>*]:max-w-full [&_img]:max-w-full [&_table]:max-w-full"
+                style={{ 
+                  maxWidth: '100%', 
+                  wordWrap: 'break-word', 
+                  overflowWrap: 'break-word',
+                  width: '100%'
+                }}
+                dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+              />
+            ) : (
+              <div 
+                className="whitespace-pre-wrap text-sm leading-relaxed"
+                style={{ 
+                  wordBreak: 'break-word', 
+                  overflowWrap: 'anywhere',
+                  maxWidth: '100%',
+                  width: '100%'
+                }}
+              >
+                {sanitizedBody}
+              </div>
+            )}
+          </div>
           
           {/* Attachments */}
           {email.attachments && email.attachments.length > 0 && (
@@ -287,13 +304,14 @@ export function EmailDetail() {
               </div>
             </>
           )}
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      </div>
       
       <Separator />
       
       {/* Action Bar */}
-      <div className="flex gap-2 p-4">
+      <div className="flex flex-shrink-0 gap-2 p-4">
         <Button className="gap-2">
           <Reply className="h-4 w-4" />
           Reply
