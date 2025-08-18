@@ -63,12 +63,55 @@ app.whenReady().then(() => {
   setupAuthHandlers(gmailAuthService)
 
   // Initialize email service
-  const emailService = createEmailService()
+  createEmailService()
 
   // Handle the existing google-oauth-start event to bridge with new auth system
   ipcMain.on('google-oauth-start', async (event) => {
     try {
-      await ipcMain.handle('auth:start')
+      await new Promise((resolve, reject) => {
+        ipcMain.handleOnce('auth:start', async () => {
+          try {
+            const authUrl = await gmailAuthService.getAuthUrl()
+            
+            const authWindow = new BrowserWindow({
+              width: 600,
+              height: 800,
+              webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true
+              }
+            })
+
+            authWindow.loadURL(authUrl)
+
+            authWindow.webContents.on('will-redirect', async (event, url) => {
+              if (url.startsWith(process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback')) {
+                event.preventDefault()
+                
+                const urlParams = new URL(url)
+                const code = urlParams.searchParams.get('code')
+
+                authWindow.close()
+
+                if (code) {
+                  await gmailAuthService.handleAuthCallback(code)
+                  resolve({ success: true })
+                } else {
+                  reject(new Error('No authorization code received'))
+                }
+              }
+            })
+
+            authWindow.on('closed', () => {
+              reject(new Error('Authentication cancelled'))
+            })
+          } catch (error) {
+            reject(error)
+          }
+        })
+        
+        ipcMain.emit('auth:start')
+      })
       // For now, we'll just indicate success since tokens are stored securely
       // In a real implementation, you'd fetch user info after auth
       event.reply('google-oauth-complete', {

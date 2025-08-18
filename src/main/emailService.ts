@@ -2,6 +2,7 @@ import * as cron from 'node-cron'
 import { ipcMain, BrowserWindow } from 'electron'
 import { getEmailConfig, getPollInterval } from './config'
 import { pollEmails, formatEmail, FormattedEmail, Email } from './emailManager'
+import { getCleanEmail } from './utils/emailSanitizer'
 
 export class EmailService {
   private cronJob: cron.ScheduledTask | null = null
@@ -63,6 +64,15 @@ function transformEmailForStore(email: Email): any {
   const senderMatch = email.from.match(/(.*?)\s*<(.+?)>/) || [null, email.from, email.from]
   const [, senderName, senderEmail] = senderMatch
   
+  // Get clean version of the email
+  const attachmentsWithId = email.attachments.map(att => ({
+    id: att.attachmentId,
+    filename: att.filename,
+    mimeType: att.mimeType,
+    size: att.size
+  }))
+  const cleanEmail = getCleanEmail(email.body, attachmentsWithId)
+  
   return {
     id: email.id,
     threadId: email.threadId,
@@ -79,6 +89,7 @@ function transformEmailForStore(email: Email): any {
     date: email.date,
     snippet: email.snippet,
     body: email.body,
+    cleanBody: cleanEmail.text,
     isRead: false,
     isStarred: false,
     isImportant: false,
@@ -88,7 +99,8 @@ function transformEmailForStore(email: Email): any {
       filename: att.filename,
       mimeType: att.mimeType,
       size: att.size
-    }))
+    })),
+    categorizedAttachments: cleanEmail.attachments
   }
 }
 
@@ -112,7 +124,7 @@ export function setupEmailIPC(service: EmailService): void {
     service.stopPolling() // Stop any existing polling
     
     // Set up handler to broadcast new emails
-    service.onNewEmails((formattedEmails) => {
+    service.onNewEmails(() => {
       // Fetch full emails and transform them
       pollEmails(getEmailConfig(), 50).then(emails => {
         const transformedEmails = emails.map(transformEmailForStore)

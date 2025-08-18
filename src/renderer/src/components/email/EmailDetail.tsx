@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -16,12 +16,18 @@ import {
   Trash2,
   Download,
   Paperclip,
-  Mail
+  Mail,
+  FileText,
+  Code,
+  Image,
+  Film
 } from 'lucide-react'
+import { formatFileSize } from '@/utils/formatters'
 
 export function EmailDetail() {
   const { getSelectedEmail, toggleStar, moveToTrash } = useEmailStore()
   const email = getSelectedEmail()
+  const [viewMode, setViewMode] = useState<'clean' | 'original'>('clean')
   
   if (!email) {
     return (
@@ -37,10 +43,19 @@ export function EmailDetail() {
     )
   }
   
-  const sanitizedBody = DOMPurify.sanitize(email.body, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'div', 'span'],
-    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style']
-  })
+  const sanitizedBody = viewMode === 'original' 
+    ? DOMPurify.sanitize(email.body, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'div', 'span'],
+        ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style']
+      })
+    : email.cleanBody || email.body
+  
+  const getAttachmentIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) return Image
+    if (mimeType === 'application/pdf') return FileText
+    if (mimeType.startsWith('video/')) return Film
+    return Paperclip
+  }
   
   return (
     <div className="flex h-full flex-col bg-background">
@@ -48,6 +63,15 @@ export function EmailDetail() {
       <div className="flex h-14 items-center justify-between border-b px-6">
         <h1 className="line-clamp-1 text-lg font-semibold">{email.subject}</h1>
         <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={viewMode === 'clean' ? 'secondary' : 'ghost'}
+            onClick={() => setViewMode(viewMode === 'clean' ? 'original' : 'clean')}
+            className="mr-2"
+          >
+            <Code className="mr-2 h-3 w-3" />
+            {viewMode === 'clean' ? 'Clean' : 'Original'}
+          </Button>
           <Button
             size="icon"
             variant="ghost"
@@ -109,10 +133,16 @@ export function EmailDetail() {
           <Separator className="mb-6" />
           
           {/* Email Body */}
-          <div 
-            className="prose prose-sm max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-          />
+          {viewMode === 'original' ? (
+            <div 
+              className="prose prose-sm max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+            />
+          ) : (
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {sanitizedBody}
+            </div>
+          )}
           
           {/* Attachments */}
           {email.attachments && email.attachments.length > 0 && (
@@ -122,29 +152,138 @@ export function EmailDetail() {
                 <h3 className="mb-3 text-sm font-medium">
                   Attachments ({email.attachments.length})
                 </h3>
-                <div className="space-y-2">
-                  {email.attachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
-                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{attachment.filename}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(attachment.size / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                      </div>
-                      <Button size="icon" variant="ghost">
-                        <Download className="h-4 w-4" />
-                      </Button>
+                
+                {/* Images */}
+                {email.categorizedAttachments?.images && email.categorizedAttachments.images.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">Images</h4>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {email.categorizedAttachments.images.map((attachment) => {
+                        const Icon = getAttachmentIcon(attachment.mimeType)
+                        return (
+                          <div
+                            key={attachment.id}
+                            className="group relative overflow-hidden rounded-lg border bg-muted/30 p-3 hover:bg-muted/50"
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <Icon className="h-8 w-8 text-muted-foreground" />
+                              <p className="line-clamp-1 text-xs font-medium">{attachment.filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatFileSize(attachment.size)}
+                              </p>
+                            </div>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="absolute right-1 top-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+                
+                {/* PDFs */}
+                {email.categorizedAttachments?.pdfs && email.categorizedAttachments.pdfs.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">Documents</h4>
+                    <div className="space-y-2">
+                      {email.categorizedAttachments.pdfs.map((attachment) => {
+                        const Icon = getAttachmentIcon(attachment.mimeType)
+                        return (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center justify-between rounded-lg border p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded bg-red-100 dark:bg-red-900/20">
+                                <Icon className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{attachment.filename}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatFileSize(attachment.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="icon" variant="ghost">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Videos */}
+                {email.categorizedAttachments?.videos && email.categorizedAttachments.videos.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">Videos</h4>
+                    <div className="space-y-2">
+                      {email.categorizedAttachments.videos.map((attachment) => {
+                        const Icon = getAttachmentIcon(attachment.mimeType)
+                        return (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center justify-between rounded-lg border p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded bg-purple-100 dark:bg-purple-900/20">
+                                <Icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{attachment.filename}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatFileSize(attachment.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="icon" variant="ghost">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Others */}
+                {email.categorizedAttachments?.others && email.categorizedAttachments.others.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">Other Files</h4>
+                    <div className="space-y-2">
+                      {email.categorizedAttachments.others.map((attachment) => {
+                        const Icon = getAttachmentIcon(attachment.mimeType)
+                        return (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center justify-between rounded-lg border p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                                <Icon className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{attachment.filename}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatFileSize(attachment.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="icon" variant="ghost">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

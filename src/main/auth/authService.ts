@@ -9,7 +9,7 @@ interface AuthTokens {
   access_token?: string | null
   refresh_token?: string | null
   scope?: string
-  token_type?: string
+  token_type?: string | null
   expiry_date?: number | null
 }
 

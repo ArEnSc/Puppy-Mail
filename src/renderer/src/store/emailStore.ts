@@ -20,6 +20,7 @@ export interface Email {
   date: Date
   snippet: string
   body: string
+  cleanBody?: string
   isRead: boolean
   isStarred: boolean
   isImportant: boolean
@@ -30,6 +31,12 @@ export interface Email {
     mimeType: string
     size: number
   }[]
+  categorizedAttachments?: {
+    images: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    pdfs: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    videos: Array<{ id: string; filename: string; mimeType: string; size: number }>
+    others: Array<{ id: string; filename: string; mimeType: string; size: number }>
+  }
 }
 
 export interface EmailFolder {
