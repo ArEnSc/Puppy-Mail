@@ -19,7 +19,7 @@ function createWindow(): void {
     show: false,
     title: 'Chloe - Email Companion',
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -227,6 +227,11 @@ app.whenReady().then(async () => {
   })
 
   createWindow()
+
+  // Set dock icon for macOS in development
+  if (process.platform === 'darwin' && is.dev) {
+    app.dock.setIcon(icon)
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
