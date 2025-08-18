@@ -118,10 +118,14 @@ export function Settings(): JSX.Element {
     openai,
     anthropic,
     googleAuth,
+    lmStudio,
     setApiKey,
     validateApiKey,
     setGoogleAuth,
-    clearGoogleAuth
+    clearGoogleAuth,
+    setLMStudioUrl,
+    setLMStudioModel,
+    validateLMStudio
   } = useSettingsStore()
 
   // Listen for open-settings event
@@ -324,6 +328,75 @@ export function Settings(): JSX.Element {
                 onChange={(value) => setApiKey('anthropic', value)}
                 onValidate={() => validateApiKey('anthropic')}
               />
+
+              <Separator />
+
+              {/* LM Studio Local LLM */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">LM Studio (Local LLM)</h3>
+                <p className="text-sm text-muted-foreground">
+                  Connect to your local LM Studio instance for AI-powered features using locally running models.
+                </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="lmstudio-url">LM Studio Server URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="lmstudio-url"
+                      type="text"
+                      placeholder="http://localhost:1234/v1"
+                      value={lmStudio.url}
+                      onChange={(e) => setLMStudioUrl(e.target.value)}
+                      className={lmStudio.error ? 'border-destructive' : ''}
+                    />
+                    <Button
+                      type="button"
+                      variant={lmStudio.isConnected ? 'outline' : 'default'}
+                      size="default"
+                      onClick={validateLMStudio}
+                      disabled={lmStudio.isValidating || !lmStudio.url}
+                      className="min-w-[100px]"
+                    >
+                      {lmStudio.isValidating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing
+                        </>
+                      ) : lmStudio.isConnected ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Connected
+                        </>
+                      ) : (
+                        'Test'
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {lmStudio.model && lmStudio.isConnected && (
+                    <div className="mt-2">
+                      <Label htmlFor="lmstudio-model">Active Model</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {lmStudio.model}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {lmStudio.error && (
+                    <p className="flex items-center gap-1 text-sm text-destructive">
+                      <AlertCircle className="h-3 w-3" />
+                      {lmStudio.error}
+                    </p>
+                  )}
+                  
+                  {lmStudio.isConnected && !lmStudio.error && (
+                    <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                      <Check className="h-3 w-3" />
+                      Connected to LM Studio
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <Separator />
 

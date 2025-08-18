@@ -18,10 +18,20 @@ interface GoogleAuthConfig {
   error: string | null
 }
 
+interface LMStudioConfig {
+  url: string
+  isConnected: boolean
+  isValidating: boolean
+  error: string | null
+  lastValidated: Date | null
+  model: string
+}
+
 interface SettingsState {
   openai: ApiKeyConfig
   anthropic: ApiKeyConfig
   googleAuth: GoogleAuthConfig
+  lmStudio: LMStudioConfig
   isSettingsOpen: boolean
 
   // Actions
@@ -29,6 +39,9 @@ interface SettingsState {
   validateApiKey: (service: 'openai' | 'anthropic') => Promise<void>
   setGoogleAuth: (auth: Partial<GoogleAuthConfig>) => void
   clearGoogleAuth: () => void
+  setLMStudioUrl: (url: string) => void
+  setLMStudioModel: (model: string) => void
+  validateLMStudio: () => Promise<void>
   setSettingsOpen: (open: boolean) => void
   clearAllSettings: () => void
 }
@@ -48,6 +61,15 @@ const defaultGoogleAuth: GoogleAuthConfig = {
   userEmail: '',
   isAuthenticated: false,
   error: null
+}
+
+const defaultLMStudio: LMStudioConfig = {
+  url: 'http://localhost:1234/v1',
+  isConnected: false,
+  isValidating: false,
+  error: null,
+  lastValidated: null,
+  model: ''
 }
 
 // API validation functions
@@ -87,12 +109,48 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
   }
 }
 
+const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
+  try {
+    // Test the connection by fetching available models
+    const response = await fetch(`${url}/models`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`LM Studio returned status ${response.status}`)
+    }
+
+    const data = await response.json()
+    
+    if (!data.data || !Array.isArray(data.data)) {
+      throw new Error('Invalid response from LM Studio')
+    }
+
+    const models = data.data.map((model: any) => model.id || model.name).filter(Boolean)
+    
+    if (models.length === 0) {
+      throw new Error('No models found in LM Studio')
+    }
+
+    return { models }
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('Cannot connect to LM Studio. Make sure it is running.')
+    }
+    throw error
+  }
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       openai: defaultApiKeyConfig,
       anthropic: defaultApiKeyConfig,
       googleAuth: defaultGoogleAuth,
+      lmStudio: defaultLMStudio,
       isSettingsOpen: false,
 
       setApiKey: (service, key) =>
@@ -175,13 +233,84 @@ export const useSettingsStore = create<SettingsState>()(
         })
       },
 
+      setLMStudioUrl: (url) =>
+        set((state) => ({
+          lmStudio: {
+            ...state.lmStudio,
+            url,
+            error: null
+          }
+        })),
+
+      setLMStudioModel: (model) =>
+        set((state) => ({
+          lmStudio: {
+            ...state.lmStudio,
+            model,
+            error: null
+          }
+        })),
+
+      validateLMStudio: async () => {
+        const state = get()
+        const { url } = state.lmStudio
+
+        if (!url) {
+          set((state) => ({
+            lmStudio: {
+              ...state.lmStudio,
+              error: 'URL is required',
+              isConnected: false
+            }
+          }))
+          return
+        }
+
+        set((state) => ({
+          lmStudio: {
+            ...state.lmStudio,
+            isValidating: true,
+            error: null
+          }
+        }))
+
+        try {
+          const { models } = await validateLMStudio(url)
+          
+          // If no model is selected, select the first one
+          const selectedModel = state.lmStudio.model || models[0]
+
+          set((state) => ({
+            lmStudio: {
+              ...state.lmStudio,
+              isConnected: true,
+              isValidating: false,
+              error: null,
+              lastValidated: new Date(),
+              model: selectedModel
+            }
+          }))
+        } catch (error) {
+          set((state) => ({
+            lmStudio: {
+              ...state.lmStudio,
+              isConnected: false,
+              isValidating: false,
+              error: error instanceof Error ? error.message : 'Connection failed',
+              lastValidated: null
+            }
+          }))
+        }
+      },
+
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
 
       clearAllSettings: () =>
         set({
           openai: defaultApiKeyConfig,
           anthropic: defaultApiKeyConfig,
-          googleAuth: defaultGoogleAuth
+          googleAuth: defaultGoogleAuth,
+          lmStudio: defaultLMStudio
         })
     }),
     {
@@ -192,6 +321,10 @@ export const useSettingsStore = create<SettingsState>()(
         googleAuth: {
           refreshToken: state.googleAuth.refreshToken,
           userEmail: state.googleAuth.userEmail
+        },
+        lmStudio: {
+          url: state.lmStudio.url,
+          model: state.lmStudio.model
         }
       })
     }
