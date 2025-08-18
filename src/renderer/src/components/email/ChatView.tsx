@@ -10,6 +10,7 @@ interface Message {
   id: string
   role: 'assistant' | 'user'
   content: string
+  reasoning?: string
   timestamp: Date
 }
 
@@ -18,7 +19,7 @@ export function ChatView(): JSX.Element {
   const { lmStudio } = useSettingsStore()
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: crypto.randomUUID(),
       role: 'assistant',
       content: 'Hello! I\'m ready to help you with your automated tasks. What would you like to configure?',
       timestamp: new Date()
@@ -29,6 +30,7 @@ export function ChatView(): JSX.Element {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isMountedRef = useRef(false)
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -48,16 +50,35 @@ export function ChatView(): JSX.Element {
     }
   }, [inputValue])
 
+  // Use a ref to store the current streaming message ID to avoid closure issues
+  const streamingMessageIdRef = useRef<string | null>(null)
+  
   useEffect(() => {
+    streamingMessageIdRef.current = streamingMessageId
+  }, [streamingMessageId])
+
+  useEffect(() => {
+    // Track mounting
+    isMountedRef.current = true
+    
     if (!window.electron?.ipcRenderer) return
 
-    const handleStreamChunk = (_event: any, chunk: string) => {
-      if (streamingMessageId) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === streamingMessageId 
-            ? { ...msg, content: msg.content + chunk }
-            : msg
-        ))
+    const handleStreamChunk = (_event: any, data: { chunk: string; type: 'content' | 'reasoning' }) => {
+      console.log('Received stream chunk:', data)
+      if (streamingMessageIdRef.current && isMountedRef.current) {
+        const currentId = streamingMessageIdRef.current
+        const { chunk, type } = data
+        
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === currentId) {
+            if (type === 'reasoning') {
+              return { ...msg, reasoning: (msg.reasoning || '') + chunk }
+            } else {
+              return { ...msg, content: msg.content + chunk }
+            }
+          }
+          return msg
+        }))
       }
     }
 
@@ -65,10 +86,11 @@ export function ChatView(): JSX.Element {
       console.error('Stream error:', error)
       setIsStreaming(false)
       setStreamingMessageId(null)
+      streamingMessageIdRef.current = null
       
       // Add error message
       const errorMessage: Message = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: `Error: ${error}`,
         timestamp: new Date()
@@ -79,6 +101,7 @@ export function ChatView(): JSX.Element {
     const handleStreamComplete = () => {
       setIsStreaming(false)
       setStreamingMessageId(null)
+      streamingMessageIdRef.current = null
     }
 
     // Add listeners
@@ -92,12 +115,15 @@ export function ChatView(): JSX.Element {
       window.electron.ipcRenderer.off('lmstudio:stream:error', handleStreamError)
       window.electron.ipcRenderer.off('lmstudio:stream:complete', handleStreamComplete)
     }
-  }, [streamingMessageId])
+  }, []) // Empty dependency array - set up listeners only once
 
   const handleSend = async () => {
     if (inputValue.trim() && !isStreaming) {
+      // Clear any existing streaming state
+      setStreamingMessageId(null)
+      
       const userMessage: Message = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         role: 'user',
         content: inputValue.trim(),
         timestamp: new Date()
@@ -109,7 +135,7 @@ export function ChatView(): JSX.Element {
       // Check if LM Studio is connected
       if (!lmStudio.isConnected || !lmStudio.model) {
         const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: 'Please connect to LM Studio in the settings first.',
           timestamp: new Date()
@@ -118,16 +144,18 @@ export function ChatView(): JSX.Element {
         return
       }
 
-      // Create assistant message placeholder
-      const assistantMessageId = (Date.now() + 2).toString()
+      // Create assistant message placeholder with unique ID
+      const assistantMessageId = crypto.randomUUID()
       const assistantMessage: Message = {
         id: assistantMessageId,
         role: 'assistant',
         content: '',
+        reasoning: '',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, assistantMessage])
       setStreamingMessageId(assistantMessageId)
+      streamingMessageIdRef.current = assistantMessageId
       setIsStreaming(true)
 
       // Start streaming
@@ -174,26 +202,45 @@ export function ChatView(): JSX.Element {
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+            <div key={message.id} className="space-y-2">
+              {/* Reasoning cell - only show for assistant messages */}
+              {message.role === 'assistant' && message.reasoning !== undefined && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted/50 border border-border">
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">
+                      Reasoning
+                    </p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                      {message.reasoning || (isStreaming && message.id === streamingMessageId ? 'Thinking...' : '')}
+                      {isStreaming && message.id === streamingMessageId && message.reasoning && (
+                        <span className="inline-block ml-1 animate-pulse">▋</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Main message cell */}
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">
-                  {message.content}
-                  {isStreaming && message.id === streamingMessageId && (
-                    <span className="inline-block ml-1 animate-pulse">▋</span>
-                  )}
-                </p>
-                <p className="mt-1 text-xs opacity-70">
-                  {message.timestamp.toLocaleTimeString()}
-                </p>
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">
+                    {message.content || (isStreaming && message.id === streamingMessageId && !message.reasoning ? 'Thinking...' : '')}
+                    {isStreaming && message.id === streamingMessageId && message.content && (
+                      <span className="inline-block ml-1 animate-pulse">▋</span>
+                    )}
+                  </p>
+                  <p className="mt-1 text-xs opacity-70">
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
+                </div>
               </div>
             </div>
           ))}

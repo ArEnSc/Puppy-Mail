@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useEmailStore } from '@/store/emailStore'
+import { useEmailSync } from '@/hooks/useEmailSync'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +21,8 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
-  LogOut
+  LogOut,
+  Trash2
 } from 'lucide-react'
 
 interface ApiKeyFieldProps {
@@ -127,6 +131,11 @@ export function Settings(): JSX.Element {
     setLMStudioModel,
     validateLMStudio
   } = useSettingsStore()
+  
+  const { clearAllEmails } = useEmailStore()
+  const { syncEmails } = useEmailSync()
+  const [showClearDialog, setShowClearDialog] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
 
   // Listen for open-settings event
   useEffect(() => {
@@ -243,9 +252,28 @@ export function Settings(): JSX.Element {
     }
   }
 
+  const handleClearEmails = async (): Promise<void> => {
+    setIsClearing(true)
+    try {
+      // Clear from database
+      if (window.electron?.ipcRenderer) {
+        await window.electron.ipcRenderer.invoke('email:clearAll')
+      }
+      // Clear from store
+      clearAllEmails()
+      // Close dialog
+      setShowClearDialog(false)
+      // Sync new emails
+      await syncEmails()
+    } catch (error) {
+      console.error('Failed to clear emails:', error)
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   return (
     <>
-
       {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="w-[90vw] max-w-2xl h-[90vh] max-h-[600px] flex flex-col overflow-hidden">
@@ -400,6 +428,37 @@ export function Settings(): JSX.Element {
 
               <Separator />
 
+              {/* Data Management */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Data Management</h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage your locally stored email data.
+                </p>
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Trash2 className="h-5 w-5 text-destructive mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <h4 className="text-sm font-semibold">Clear Local Email Database</h4>
+                      <p className="text-sm text-muted-foreground">
+                        This will permanently delete all emails stored locally on your device. 
+                        Your emails will remain in Gmail and can be synced again.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowClearDialog(true)}
+                    className="w-full"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All Local Emails
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Info Section */}
               <div className="rounded-lg bg-muted p-4">
                 <h4 className="mb-2 text-sm font-semibold">About API Keys</h4>
@@ -412,6 +471,63 @@ export function Settings(): JSX.Element {
               </div>
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Emails Confirmation Dialog */}
+      <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear Local Email Database</DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                This action will permanently delete all emails stored locally on your device.
+              </p>
+              
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
+                <div className="flex gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                      Important: This only affects local storage
+                    </p>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+                      <li>• All locally saved emails will be deleted</li>
+                      <li>• Read/starred status will be lost</li>
+                      <li>• Your emails remain safe in Gmail</li>
+                      <li>• Fresh emails will be synced after clearing</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-sm font-medium">
+                This action cannot be undone. Are you sure you want to continue?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClearDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleClearEmails}
+              disabled={isClearing}
+            >
+              {isClearing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear Local Emails
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

@@ -153,7 +153,7 @@ export class LMStudioService {
     url: string, 
     model: string, 
     messages: Array<{ role: string; content: string }>,
-    onChunk: (chunk: string) => void,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
     onError: (error: string) => void,
     onComplete: () => void
   ): Promise<void> {
@@ -216,13 +216,20 @@ export class LMStudioService {
 
             try {
               const parsed = JSON.parse(data)
-              const content = parsed.choices?.[0]?.delta?.content
               
-              if (content) {
-                onChunk(content)
+              // Check for both 'content' and 'reasoning' fields
+              const delta = parsed.choices?.[0]?.delta
+              
+              if (delta?.reasoning) {
+                console.log('Sending reasoning chunk:', delta.reasoning)
+                onChunk(delta.reasoning, 'reasoning')
+              }
+              
+              if (delta?.content) {
+                console.log('Sending content chunk:', delta.content)
+                onChunk(delta.content, 'content')
               }
             } catch (e) {
-              // Ignore parse errors for incomplete JSON
               console.warn('Failed to parse SSE data:', e)
             }
           }
@@ -257,9 +264,9 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
       url,
       model,
       messages,
-      (chunk) => {
+      (chunk, type) => {
         if (!webContents.isDestroyed()) {
-          webContents.send('lmstudio:stream:chunk', chunk)
+          webContents.send('lmstudio:stream:chunk', { chunk, type: type || 'content' })
         }
       },
       (error) => {
