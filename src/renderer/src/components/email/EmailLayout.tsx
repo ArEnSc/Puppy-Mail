@@ -2,12 +2,14 @@ import { useRef, useEffect } from 'react'
 import { FolderList } from './FolderList'
 import { EmailList } from './EmailList'
 import { EmailDetail } from './EmailDetail'
+import { AutomatedTasksList } from './AutomatedTasksList'
+import { ChatView } from './ChatView'
 import { SyncStatus } from '@/components/SyncStatus'
 import { useEmailStore } from '@/store/emailStore'
 
 export function EmailLayout(): JSX.Element {
   // Get panel widths from store
-  const { folderListWidth, emailListWidth, setPanelSizes } = useEmailStore()
+  const { folderListWidth, emailListWidth, setPanelSizes, selectedAutomatedTask } = useEmailStore()
 
   // Refs for resize handles
   const folderResizeRef = useRef<HTMLDivElement>(null)
@@ -95,12 +97,12 @@ export function EmailLayout(): JSX.Element {
           <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
         </div>
 
-        {/* Email List - Middle Pane */}
+        {/* Email List / Automated Tasks - Middle Pane */}
         <div
           className="flex-shrink-0 border-r border-border"
           style={{ width: `${emailListWidth}px` }}
         >
-          <EmailList />
+          {selectedAutomatedTask ? <AutomatedTasksList /> : <EmailList />}
         </div>
 
         {/* Resize Handle between Email List and Detail */}
@@ -112,9 +114,9 @@ export function EmailLayout(): JSX.Element {
           <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
         </div>
 
-        {/* Email Detail - Right Pane */}
+        {/* Email Detail / Chat View - Right Pane */}
         <div className="flex-1 min-w-0 overflow-hidden">
-          <EmailDetail />
+          {selectedAutomatedTask ? <ChatView /> : <EmailDetail />}
         </div>
       </div>
     </div>

@@ -52,6 +52,7 @@ interface EmailState {
   folders: EmailFolder[]
   selectedFolderId: string
   selectedEmailId: string | null
+  selectedAutomatedTask: string | null
   searchQuery: string
   isLoading: boolean
   error: string | null
@@ -77,6 +78,7 @@ interface EmailState {
   setFolders: (folders: EmailFolder[]) => void
   selectFolder: (folderId: string) => void
   selectEmail: (emailId: string | null) => void
+  selectAutomatedTask: (taskId: string | null) => void
 
   markAsRead: (id: string) => void
   markAsUnread: (id: string) => void
@@ -118,6 +120,7 @@ export const useEmailStore = create<EmailState>()(
         folders: defaultFolders,
         selectedFolderId: 'inbox',
         selectedEmailId: null,
+        selectedAutomatedTask: null,
         searchQuery: '',
         isLoading: false,
         error: null,
@@ -171,10 +174,19 @@ export const useEmailStore = create<EmailState>()(
           set({
             selectedFolderId: folderId,
             selectedEmailId: null,
+            selectedAutomatedTask: null,
             currentPage: 1
           }),
 
         selectEmail: (emailId) => set({ selectedEmailId: emailId }),
+        
+        selectAutomatedTask: (taskId) =>
+          set({
+            selectedAutomatedTask: taskId,
+            selectedFolderId: '',
+            selectedEmailId: null,
+            currentPage: 1
+          }),
 
         markAsRead: (id) => {
           set((state) => ({
