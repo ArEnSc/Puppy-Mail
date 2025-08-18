@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Inbox, Star, Send, FileText, Trash2, Plus, Search } from 'lucide-react'
+import { Inbox, Star, Send, FileText, Trash2, Plus, Search, Settings } from 'lucide-react'
 
 const folderIcons = {
   inbox: Inbox,
@@ -120,6 +120,14 @@ export function FolderList(): JSX.Element {
               {googleAuth.userEmail || 'Not authenticated'}
             </p>
           </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => window.dispatchEvent(new CustomEvent('openSettings'))}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>

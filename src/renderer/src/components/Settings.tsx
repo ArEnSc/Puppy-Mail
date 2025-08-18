@@ -129,11 +129,9 @@ export function Settings(): JSX.Element {
     const handleOpenSettings = (): void => {
       setSettingsOpen(true)
     }
-
-    window.addEventListener('open-settings', handleOpenSettings)
-    return () => {
-      window.removeEventListener('open-settings', handleOpenSettings)
-    }
+    
+    window.addEventListener('openSettings', handleOpenSettings)
+    return () => window.removeEventListener('openSettings', handleOpenSettings)
   }, [setSettingsOpen])
 
   // Check auth status when dialog opens
@@ -243,15 +241,6 @@ export function Settings(): JSX.Element {
 
   return (
     <>
-      {/* Settings Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setSettingsOpen(true)}
-        className="fixed bottom-4 right-4 h-10 w-10 rounded-full shadow-lg"
-      >
-        <SettingsIcon className="h-5 w-5" />
-      </Button>
 
       {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setSettingsOpen}>
