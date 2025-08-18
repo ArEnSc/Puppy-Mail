@@ -192,14 +192,15 @@ export function EmailList(): JSX.Element {
             Page {currentPage} of {Math.max(1, totalPages)}
           </div>
         </div>
-        <div className="flex items-center justify-center gap-2 px-4 pb-2">
+        <div className="flex items-center gap-2 px-4 pb-2">
           <Button 
             size="sm" 
             variant="outline" 
             onClick={previousPage} 
             disabled={currentPage === 1}
+            className="flex-1 justify-center"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
           </Button>
           <Button
@@ -207,9 +208,10 @@ export function EmailList(): JSX.Element {
             variant="outline"
             onClick={nextPage}
             disabled={currentPage === totalPages || totalPages <= 1}
+            className="flex-1 justify-center"
           >
             Next
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </div>
