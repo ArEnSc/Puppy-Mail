@@ -55,14 +55,19 @@ export class GmailAuthService {
       const encrypted = await fs.readFile(this.tokenPath)
       const decrypted = safeStorage.decryptString(encrypted)
       return JSON.parse(decrypted)
-    } catch (error) {
+    } catch {
       return null
     }
   }
 
   async isAuthenticated(): Promise<boolean> {
     const tokens = await this.loadTokens()
-    console.log('Checking authentication, tokens exist:', !!tokens, 'has refresh token:', !!tokens?.refresh_token)
+    console.log(
+      'Checking authentication, tokens exist:',
+      !!tokens,
+      'has refresh token:',
+      !!tokens?.refresh_token
+    )
     if (!tokens || !tokens.refresh_token) {
       return false
     }
@@ -81,12 +86,20 @@ export class GmailAuthService {
 
   async getAuthUrl(): Promise<string> {
     // Check if OAuth credentials are configured
-    if (!this.config.clientId || this.config.clientId === 'your_client_id_here' || !this.config.clientId.includes('.apps.googleusercontent.com')) {
-      throw new Error('Gmail OAuth is not configured. Please set GMAIL_CLIENT_ID in your .env file. You need to create a Google Cloud project and enable Gmail API.')
+    if (
+      !this.config.clientId ||
+      this.config.clientId === 'your_client_id_here' ||
+      !this.config.clientId.includes('.apps.googleusercontent.com')
+    ) {
+      throw new Error(
+        'Gmail OAuth is not configured. Please set GMAIL_CLIENT_ID in your .env file. You need to create a Google Cloud project and enable Gmail API.'
+      )
     }
-    
+
     if (!this.config.clientSecret || this.config.clientSecret === 'your_client_secret_here') {
-      throw new Error('Gmail OAuth is not configured. Please set GMAIL_CLIENT_SECRET in your .env file.')
+      throw new Error(
+        'Gmail OAuth is not configured. Please set GMAIL_CLIENT_SECRET in your .env file.'
+      )
     }
 
     return this.oauth2Client.generateAuthUrl({
@@ -100,10 +113,10 @@ export class GmailAuthService {
     try {
       console.log('Exchanging auth code for tokens...')
       const { tokens } = await this.oauth2Client.getToken(code)
-      console.log('Received tokens:', { 
-        hasAccessToken: !!tokens.access_token, 
+      console.log('Received tokens:', {
+        hasAccessToken: !!tokens.access_token,
         hasRefreshToken: !!tokens.refresh_token,
-        expiryDate: tokens.expiry_date 
+        expiryDate: tokens.expiry_date
       })
       await this.saveTokens(tokens)
       this.oauth2Client.setCredentials(tokens)

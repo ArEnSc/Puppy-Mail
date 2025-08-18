@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   Dialog,
@@ -15,7 +15,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Settings as SettingsIcon,
   Check,
-  X,
   Loader2,
   AlertCircle,
   ExternalLink,
@@ -46,7 +45,7 @@ function ApiKeyField({
   onChange,
   onValidate,
   type = 'password'
-}: ApiKeyFieldProps) {
+}: ApiKeyFieldProps): JSX.Element {
   const [showKey, setShowKey] = useState(false)
 
   return (
@@ -112,7 +111,7 @@ function ApiKeyField({
   )
 }
 
-export function Settings() {
+export function Settings(): JSX.Element {
   const {
     isSettingsOpen,
     setSettingsOpen,
@@ -124,60 +123,73 @@ export function Settings() {
     setGoogleAuth,
     clearGoogleAuth
   } = useSettingsStore()
-  
+
   // Listen for open-settings event
   useEffect(() => {
-    const handleOpenSettings = () => {
+    const handleOpenSettings = (): void => {
       setSettingsOpen(true)
     }
-    
+
     window.addEventListener('open-settings', handleOpenSettings)
     return () => {
       window.removeEventListener('open-settings', handleOpenSettings)
     }
   }, [setSettingsOpen])
-  
+
   // Check auth status when dialog opens
   useEffect(() => {
     if (isSettingsOpen && window.electron?.ipcRenderer) {
       console.log('Checking auth status...')
-      window.electron.ipcRenderer.invoke('auth:check').then(isAuthenticated => {
-        console.log('Auth check result:', isAuthenticated)
-        if (isAuthenticated) {
-          // Get stored user info if available
-          const storedAuth = localStorage.getItem('googleAuth')
-          if (storedAuth) {
-            const authData = JSON.parse(storedAuth)
-            setGoogleAuth({
-              isAuthenticated: true,
-              userEmail: authData.userEmail || 'authenticated@gmail.com',
-              error: null
-            })
-          } else {
-            // Even if no stored auth, we're authenticated
-            setGoogleAuth({
-              isAuthenticated: true,
-              userEmail: 'authenticated@gmail.com',
-              error: null
-            })
+      window.electron.ipcRenderer
+        .invoke('auth:check')
+        .then((isAuthenticated) => {
+          console.log('Auth check result:', isAuthenticated)
+          if (isAuthenticated) {
+            // Get stored user info if available
+            const storedAuth = localStorage.getItem('googleAuth')
+            if (storedAuth) {
+              const authData = JSON.parse(storedAuth)
+              setGoogleAuth({
+                isAuthenticated: true,
+                userEmail: authData.userEmail || 'authenticated@gmail.com',
+                error: null
+              })
+            } else {
+              // Even if no stored auth, we're authenticated
+              setGoogleAuth({
+                isAuthenticated: true,
+                userEmail: 'authenticated@gmail.com',
+                error: null
+              })
+            }
           }
-        }
-      }).catch(error => {
-        console.error('Error checking auth:', error)
-      })
+        })
+        .catch((error) => {
+          console.error('Error checking auth:', error)
+        })
     }
   }, [isSettingsOpen, setGoogleAuth])
 
-  const handleGoogleAuth = async () => {
+  const handleGoogleAuth = async (): Promise<void> => {
     console.log('handleGoogleAuth called')
     try {
       if (window.electron?.ipcRenderer) {
         console.log('Electron IPC available, starting OAuth')
         // Clear any previous errors
-        setGoogleAuth(prev => ({ ...prev, error: null }))
-        
+        setGoogleAuth((prev) => ({ ...prev, error: null }))
+
         // Listen for the OAuth response BEFORE sending the start event
-        const handleOAuthComplete = (event: any, data: any) => {
+        const handleOAuthComplete = (
+          _event: unknown,
+          data: {
+            error?: string
+            accessToken?: string
+            refreshToken?: string
+            expiresAt?: number
+            userEmail?: string
+            isAuthenticated?: boolean
+          }
+        ): void => {
           console.log('OAuth complete event received:', data)
           if (data.error) {
             console.error('OAuth error received:', data.error)
@@ -192,21 +204,24 @@ export function Settings() {
               isAuthenticated: true,
               error: null
             })
-            
+
             // Save auth info to localStorage for persistence
-            localStorage.setItem('googleAuth', JSON.stringify({
-              userEmail: data.userEmail,
-              isAuthenticated: true
-            }))
-            
+            localStorage.setItem(
+              'googleAuth',
+              JSON.stringify({
+                userEmail: data.userEmail,
+                isAuthenticated: true
+              })
+            )
+
             // Show success notification (you could use a toast here)
             console.log('Successfully connected to Gmail!')
           }
         }
-        
+
         // Set up the listener first
         window.electron.ipcRenderer.once('google-oauth-complete', handleOAuthComplete)
-        
+
         // Then send the start event
         console.log('Sending google-oauth-start')
         window.electron.ipcRenderer.send('google-oauth-start')
@@ -328,7 +343,7 @@ export function Settings() {
                 <h4 className="mb-2 text-sm font-semibold">About API Keys</h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• API keys are stored locally and never sent to our servers</li>
-                  <li>• Keys are encrypted and stored in your browser's local storage</li>
+                  <li>• Keys are encrypted and stored in your browser&apos;s local storage</li>
                   <li>• You can revoke keys at any time from the respective platforms</li>
                   <li>• Test buttons verify keys by making minimal API requests</li>
                 </ul>

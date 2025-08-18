@@ -2,9 +2,9 @@
 
 interface ElectronAPI {
   ipcRenderer: {
-    send: (channel: string, ...args: any[]) => void
-    on: (channel: string, listener: (event: any, ...args: any[]) => void) => void
-    once: (channel: string, listener: (event: any, ...args: any[]) => void) => void
+    send: (channel: string, ...args: unknown[]) => void
+    on: (channel: string, listener: (event: unknown, ...args: unknown[]) => void) => void
+    once: (channel: string, listener: (event: unknown, ...args: unknown[]) => void) => void
   }
 }
 

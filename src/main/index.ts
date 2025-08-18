@@ -97,91 +97,102 @@ app.whenReady().then(async () => {
       authWindow.loadURL(authUrl)
 
       let authCompleted = false
-      
+
       // Add a timeout to prevent hanging
       const authTimeout = setTimeout(() => {
         if (!authCompleted) {
           authWindow.close()
         }
       }, 120000) // 2 minute timeout
-      
-      const result = await new Promise<{ success: boolean; userEmail?: string }>((resolve, reject) => {
-        // Handle redirects
-        authWindow.webContents.on('will-redirect', async (navEvent, url) => {
-          console.log('Redirect detected:', url)
-          
-          // Check if this is our callback URL with a code parameter
-          const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
-          if (url.startsWith(redirectUri) && url.includes('code=')) {
-            navEvent.preventDefault()
-            authCompleted = true
 
-            const urlParams = new URL(url)
-            const code = urlParams.searchParams.get('code')
+      const result = await new Promise<{ success: boolean; userEmail?: string }>(
+        (resolve, reject) => {
+          // Handle redirects
+          authWindow.webContents.on('will-redirect', async (navEvent, url) => {
+            console.log('Redirect detected:', url)
 
-            if (code) {
-              try {
-                await gmailAuthService.handleAuthCallback(code)
-                
-                // Get user info after successful auth
-                const gmail = await gmailAuthService.getGmailClient()
-                const profile = await gmail.users.getProfile({ userId: 'me' })
-                
-                authWindow.close()
-                clearTimeout(authTimeout)
-                resolve({ success: true, userEmail: profile.data.emailAddress || 'authenticated@gmail.com' })
-              } catch (authError) {
-                authWindow.close()
-                reject(authError)
-              }
-            } else {
-              authWindow.close()
-              reject(new Error('No authorization code received'))
-            }
-          }
-          // Don't do anything for other redirects - let the OAuth flow continue
-        })
+            // Check if this is our callback URL with a code parameter
+            const redirectUri =
+              process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+            if (url.startsWith(redirectUri) && url.includes('code=')) {
+              navEvent.preventDefault()
+              authCompleted = true
 
-        // Also handle navigation for apps that don't trigger will-redirect
-        authWindow.webContents.on('will-navigate', (navEvent, url) => {
-          console.log('Navigation detected:', url)
-          
-          // Check if this is our callback URL with a code parameter
-          const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
-          if (url.startsWith(redirectUri) && url.includes('code=')) {
-            navEvent.preventDefault()
-            authCompleted = true
+              const urlParams = new URL(url)
+              const code = urlParams.searchParams.get('code')
 
-            const urlParams = new URL(url)
-            const code = urlParams.searchParams.get('code')
+              if (code) {
+                try {
+                  await gmailAuthService.handleAuthCallback(code)
 
-            if (code) {
-              gmailAuthService.handleAuthCallback(code)
-                .then(async () => {
+                  // Get user info after successful auth
                   const gmail = await gmailAuthService.getGmailClient()
                   const profile = await gmail.users.getProfile({ userId: 'me' })
+
                   authWindow.close()
                   clearTimeout(authTimeout)
-                  resolve({ success: true, userEmail: profile.data.emailAddress || 'authenticated@gmail.com' })
-                })
-                .catch(authError => {
+                  resolve({
+                    success: true,
+                    userEmail: profile.data.emailAddress || 'authenticated@gmail.com'
+                  })
+                } catch (authError) {
                   authWindow.close()
                   reject(authError)
-                })
-            } else {
-              authWindow.close()
-              reject(new Error('No authorization code received'))
+                }
+              } else {
+                authWindow.close()
+                reject(new Error('No authorization code received'))
+              }
             }
-          }
-          // Don't do anything for other navigations - let the OAuth flow continue
-        })
+            // Don't do anything for other redirects - let the OAuth flow continue
+          })
 
-        authWindow.on('closed', () => {
-          if (!authCompleted) {
-            reject(new Error('Authentication cancelled'))
-          }
-        })
-      })
+          // Also handle navigation for apps that don't trigger will-redirect
+          authWindow.webContents.on('will-navigate', (navEvent, url) => {
+            console.log('Navigation detected:', url)
+
+            // Check if this is our callback URL with a code parameter
+            const redirectUri =
+              process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+            if (url.startsWith(redirectUri) && url.includes('code=')) {
+              navEvent.preventDefault()
+              authCompleted = true
+
+              const urlParams = new URL(url)
+              const code = urlParams.searchParams.get('code')
+
+              if (code) {
+                gmailAuthService
+                  .handleAuthCallback(code)
+                  .then(async () => {
+                    const gmail = await gmailAuthService.getGmailClient()
+                    const profile = await gmail.users.getProfile({ userId: 'me' })
+                    authWindow.close()
+                    clearTimeout(authTimeout)
+                    resolve({
+                      success: true,
+                      userEmail: profile.data.emailAddress || 'authenticated@gmail.com'
+                    })
+                  })
+                  .catch((authError) => {
+                    authWindow.close()
+                    reject(authError)
+                  })
+              } else {
+                authWindow.close()
+                reject(new Error('No authorization code received'))
+              }
+            }
+            // Don't do anything for other navigations - let the OAuth flow continue
+          })
+
+          authWindow.on('closed', () => {
+            if (!authCompleted) {
+              reject(new Error('Authentication cancelled'))
+            }
+          })
+        }
+      )
 
       // Send success response
       event.reply('google-oauth-complete', {

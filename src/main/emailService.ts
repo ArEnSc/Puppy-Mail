@@ -29,11 +29,11 @@ export class EmailService {
   async fetchLatestEmails(maxResults: number = 10): Promise<FormattedEmail[]> {
     try {
       console.log(`fetchLatestEmails called with maxResults: ${maxResults}`)
-      
+
       // Check if authenticated
       const isAuth = await this.gmailAuthService.isAuthenticated()
       console.log('Authentication check result:', isAuth)
-      
+
       if (!isAuth) {
         throw new Error('Not authenticated with Gmail')
       }
@@ -47,7 +47,7 @@ export class EmailService {
       try {
         const config = getEmailConfig()
         whitelistedEmails = config.whitelistedEmails || []
-      } catch (e) {
+      } catch {
         // Config might not be available if using OAuth, that's ok
       }
 

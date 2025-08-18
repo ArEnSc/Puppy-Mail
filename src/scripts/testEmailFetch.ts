@@ -4,7 +4,7 @@ import { pollEmails, formatEmail, type EmailConfig } from '../main/emailManager'
 
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 
-async function testEmailFetch() {
+async function testEmailFetch(): Promise<void> {
   console.log('🧪 Testing Gmail Email Fetch')
   console.log('===========================\n')
 
@@ -85,6 +85,7 @@ async function testEmailFetch() {
   }
 }
 
-if (require.main === module) {
+// Run main function
+{
   testEmailFetch()
 }

@@ -1,5 +1,4 @@
 import { createRxDatabase, RxDatabase, RxCollection, RxDocument, addRxPlugin } from 'rxdb'
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie'
 import { getRxStorageMemory } from 'rxdb/plugins/storage-memory'
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder'
 import { RxDBMigrationPlugin } from 'rxdb/plugins/migration-schema'
@@ -90,16 +89,16 @@ export async function createDatabase(): Promise<EmailDatabase> {
     dbInstance = db
     console.log('Database created successfully')
     return db
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating database:', error)
-    
+
     // If database already exists, we shouldn't get here with ignoreDuplicate: true
     // But if we do, let's handle it gracefully
-    if (error?.code === 'DB9') {
+    if ((error as Error & { code?: string })?.code === 'DB9') {
       console.log('Database conflict detected, this should not happen with ignoreDuplicate: true')
       throw new Error('Database initialization failed due to conflict')
     }
-    
+
     throw error
   }
 }

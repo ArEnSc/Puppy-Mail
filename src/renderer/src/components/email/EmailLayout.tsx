@@ -1,10 +1,9 @@
-import React from 'react'
 import { FolderList } from './FolderList'
 import { EmailList } from './EmailList'
 import { EmailDetail } from './EmailDetail'
 import { SyncStatus } from '@/components/SyncStatus'
 
-export function EmailLayout() {
+export function EmailLayout(): JSX.Element {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-background text-foreground">
       {/* Sync Status Bar */}

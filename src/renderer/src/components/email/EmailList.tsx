@@ -1,10 +1,8 @@
-import React from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Star, Paperclip, Circle, MoreHorizontal } from 'lucide-react'
 
 function formatEmailDate(date: Date): string {
@@ -17,7 +15,7 @@ function formatEmailDate(date: Date): string {
   }
 }
 
-export function EmailList() {
+export function EmailList(): JSX.Element {
   const { selectedEmailId, selectEmail, getFilteredEmails, markAsRead, toggleStar } =
     useEmailStore()
 

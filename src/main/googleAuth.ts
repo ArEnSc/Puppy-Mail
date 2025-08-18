@@ -13,7 +13,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify'
 ]
 
-export function setupGoogleAuth(mainWindow: BrowserWindow) {
+export function setupGoogleAuth(mainWindow: BrowserWindow): void {
   ipcMain.on('google-oauth-start', async (event) => {
     try {
       // Generate the auth URL
@@ -60,7 +60,7 @@ export function setupGoogleAuth(mainWindow: BrowserWindow) {
               })
 
               authWindow.close()
-            } catch (error) {
+            } catch {
               mainWindow.webContents.send('google-oauth-complete', {
                 error: 'Failed to exchange authorization code'
               })
@@ -76,7 +76,7 @@ export function setupGoogleAuth(mainWindow: BrowserWindow) {
           error: 'Authentication cancelled'
         })
       })
-    } catch (error) {
+    } catch {
       event.reply('google-oauth-complete', {
         error: 'Failed to start authentication'
       })

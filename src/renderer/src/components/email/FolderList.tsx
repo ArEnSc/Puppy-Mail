@@ -1,4 +1,3 @@
-import React from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,7 +14,7 @@ const folderIcons = {
   trash: Trash2
 }
 
-export function FolderList() {
+export function FolderList(): JSX.Element {
   const { folders, selectedFolderId, selectFolder, searchQuery, setSearchQuery } = useEmailStore()
 
   return (

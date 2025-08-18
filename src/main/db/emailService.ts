@@ -7,20 +7,20 @@ export class EmailService {
       const db = await getDatabase()
 
       const bulkData = emails.map((email) => ({
-      id: email.id!,
-      threadId: email.threadId || '',
-      from: this.extractFrom(email),
-      to: this.extractTo(email),
-      subject: this.extractSubject(email),
-      body: email.snippet || '',
-      snippet: email.snippet || '',
-      date: new Date(parseInt(email.internalDate || '0')),
-      labels: email.labelIds || [],
-      attachments: this.extractAttachments(email),
-      isRead: !email.labelIds?.includes('UNREAD'),
-      isStarred: email.labelIds?.includes('STARRED') || false,
-      syncedAt: new Date()
-    }))
+        id: email.id!,
+        threadId: email.threadId || '',
+        from: this.extractFrom(email),
+        to: this.extractTo(email),
+        subject: this.extractSubject(email),
+        body: email.snippet || '',
+        snippet: email.snippet || '',
+        date: new Date(parseInt(email.internalDate || '0')),
+        labels: email.labelIds || [],
+        attachments: this.extractAttachments(email),
+        isRead: !email.labelIds?.includes('UNREAD'),
+        isStarred: email.labelIds?.includes('STARRED') || false,
+        syncedAt: new Date()
+      }))
 
       await db.emails.bulkUpsert(bulkData)
     } catch (error) {
@@ -43,15 +43,15 @@ export class EmailService {
       const db = await getDatabase()
       let query = db.emails.find()
 
-    if (filters?.isRead !== undefined) {
-      query = query.where('isRead').eq(filters.isRead)
-    }
-    if (filters?.isStarred !== undefined) {
-      query = query.where('isStarred').eq(filters.isStarred)
-    }
-    if (filters?.from) {
-      query = query.where('from').regex(new RegExp(filters.from, 'i'))
-    }
+      if (filters?.isRead !== undefined) {
+        query = query.where('isRead').eq(filters.isRead)
+      }
+      if (filters?.isStarred !== undefined) {
+        query = query.where('isStarred').eq(filters.isStarred)
+      }
+      if (filters?.from) {
+        query = query.where('from').regex(new RegExp(filters.from, 'i'))
+      }
 
       const results = await query.sort({ date: 'desc' }).skip(offset).limit(limit).exec()
 

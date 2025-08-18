@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 
 interface EmailWebviewProps {
   htmlContent: string
   className?: string
 }
 
-export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps) {
+export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps): JSX.Element {
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps)
         iframeDoc.close()
 
         // Adjust iframe height to content
-        const adjustHeight = () => {
+        const adjustHeight = (): void => {
           if (iframe.contentWindow && iframeDoc.body) {
             const height = iframeDoc.body.scrollHeight
             iframe.style.height = `${height + 32}px` // Add padding

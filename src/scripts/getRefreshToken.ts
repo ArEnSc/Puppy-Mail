@@ -131,7 +131,7 @@ async function updateEnvFile(refreshToken: string): Promise<void> {
   fs.writeFileSync(envPath, envContent)
 }
 
-async function main() {
+async function main(): Promise<void> {
   try {
     console.log('Starting Gmail authentication...')
     const result = await getRefreshToken()
@@ -142,7 +142,7 @@ async function main() {
       console.log(`\n${result.refreshToken}\n`)
 
       const answer = await new Promise<string>((resolve) => {
-        const readline = require('readline').createInterface({
+        const readline = (await import('readline')).createInterface({
           input: process.stdin,
           output: process.stdout
         })
@@ -174,6 +174,7 @@ async function main() {
   }
 }
 
-if (require.main === module) {
+// Run main function
+{
   main()
 }

@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 
-export function useEmailSync() {
+export function useEmailSync(): { syncEmails: () => Promise<void> } {
   const { setEmails, setLoading, setError, setLastSyncTime } = useEmailStore()
 
   // Manual sync function
@@ -29,7 +29,7 @@ export function useEmailSync() {
 
   useEffect(() => {
     // Fetch emails on mount
-    const fetchEmails = async () => {
+    const fetchEmails = async (): Promise<void> => {
       setLoading(true)
       setError(null)
 
@@ -52,12 +52,15 @@ export function useEmailSync() {
     fetchEmails()
 
     // Listen for new emails
-    const handleNewEmails = (_event: any, emails: any[]) => {
+    const handleNewEmails = (_event: unknown, emails: unknown[]): void => {
       setEmails(emails)
     }
 
     // Listen for sync complete events
-    const handleSyncComplete = (_event: any, data: { timestamp: string; count: number }) => {
+    const handleSyncComplete = (
+      _event: unknown,
+      data: { timestamp: string; count: number }
+    ): void => {
       setLastSyncTime(new Date(data.timestamp))
     }
 

@@ -51,8 +51,10 @@ export async function pollEmailsWithClient(
   whitelistedEmails: string[] = []
 ): Promise<Email[]> {
   try {
-    console.log(`pollEmailsWithClient called with maxResults: ${maxResults}, whitelisted: ${whitelistedEmails}`)
-    
+    console.log(
+      `pollEmailsWithClient called with maxResults: ${maxResults}, whitelisted: ${whitelistedEmails}`
+    )
+
     // Build query for whitelisted emails
     const fromQuery =
       whitelistedEmails.length > 0
@@ -68,7 +70,7 @@ export async function pollEmailsWithClient(
       q: query,
       maxResults
     })
-    
+
     console.log(`Gmail API response: ${response.data.messages?.length || 0} messages found`)
 
     if (!response.data.messages) {
