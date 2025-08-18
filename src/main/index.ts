@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { createEmailService } from './emailService'
 import { createDatabase, closeDatabase } from './db/database'
+import { LMStudioService, setupLMStudioHandlers } from './lmStudioService'
 
 // Load environment variables
 dotenv.config()
@@ -90,6 +91,10 @@ app.whenReady().then(async () => {
 
   // Initialize email service
   createEmailService(gmailAuthService)
+
+  // Initialize LM Studio service
+  const lmStudioService = new LMStudioService()
+  setupLMStudioHandlers(lmStudioService)
 
   // Handle the existing google-oauth-start event to bridge with new auth system
   ipcMain.on('google-oauth-start', async (event) => {

@@ -16,7 +16,9 @@ const customIpcRenderer = {
       'auth:start',
       'auth:logout',
       'settings:get',
-      'settings:set'
+      'settings:set',
+      'lmstudio:validate',
+      'lmstudio:chat'
     ]
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args)

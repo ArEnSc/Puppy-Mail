@@ -111,36 +111,23 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
 
 const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
   try {
-    // Test the connection by fetching available models
-    const response = await fetch(`${url}/models`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
+    // Use IPC to validate connection through main process
+    if (window.electron?.ipcRenderer) {
+      const result = await window.electron.ipcRenderer.invoke('lmstudio:validate', url)
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to connect to LM Studio')
       }
-    })
-
-    if (!response.ok) {
-      throw new Error(`LM Studio returned status ${response.status}`)
+      
+      return { models: result.models || [] }
+    } else {
+      throw new Error('Electron IPC not available')
     }
-
-    const data = await response.json()
-    
-    if (!data.data || !Array.isArray(data.data)) {
-      throw new Error('Invalid response from LM Studio')
-    }
-
-    const models = data.data.map((model: any) => model.id || model.name).filter(Boolean)
-    
-    if (models.length === 0) {
-      throw new Error('No models found in LM Studio')
-    }
-
-    return { models }
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('Cannot connect to LM Studio. Make sure it is running.')
+    if (error instanceof Error) {
+      throw error
     }
-    throw error
+    throw new Error('Failed to validate LM Studio connection')
   }
 }
 
