@@ -62,6 +62,10 @@ interface EmailState {
   pageSize: number
   totalPages: number
 
+  // Panel sizes
+  folderListWidth: number
+  emailListWidth: number
+
   // Actions
   setEmails: (emails: Email[]) => void
   setLastSyncTime: (time: Date) => void
@@ -88,6 +92,9 @@ interface EmailState {
   setPageSize: (size: number) => void
   nextPage: () => void
   previousPage: () => void
+
+  // Panel size actions
+  setPanelSizes: (folderListWidth: number, emailListWidth: number) => void
 
   // Computed
   getFilteredEmails: () => Email[]
@@ -120,6 +127,10 @@ export const useEmailStore = create<EmailState>()(
         currentPage: 1,
         pageSize: 50,
         totalPages: 1,
+
+        // Panel sizes
+        folderListWidth: 256,
+        emailListWidth: 384,
 
         setEmails: (emails) => {
           const pageSize = get().pageSize
@@ -228,6 +239,10 @@ export const useEmailStore = create<EmailState>()(
           }
         },
 
+        setPanelSizes: (folderListWidth, emailListWidth) => {
+          set({ folderListWidth, emailListWidth })
+        },
+
         getFilteredEmails: () => {
           const state = get()
           let filtered = state.emails
@@ -292,7 +307,9 @@ export const useEmailStore = create<EmailState>()(
         name: 'email-store',
         partialize: (state) => ({
           selectedFolderId: state.selectedFolderId,
-          searchQuery: state.searchQuery
+          searchQuery: state.searchQuery,
+          folderListWidth: state.folderListWidth,
+          emailListWidth: state.emailListWidth
         })
       }
     )
