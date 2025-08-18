@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface Message {
   id: string
@@ -29,6 +29,7 @@ export function ChatView(): JSX.Element {
   const [inputValue, setInputValue] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(false)
@@ -190,6 +191,18 @@ export function ChatView(): JSX.Element {
     }
   }
 
+  const toggleReasoning = (messageId: string) => {
+    setExpandedReasonings(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border p-4">
@@ -206,30 +219,14 @@ export function ChatView(): JSX.Element {
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message) => (
-            <div key={message.id} className="space-y-2">
-              {/* Reasoning cell - only show for assistant messages */}
-              {message.role === 'assistant' && message.reasoning !== undefined && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted/50 border border-border">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Reasoning</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                      {message.reasoning ||
-                        (isStreaming && message.id === streamingMessageId ? 'Thinking...' : '')}
-                      {isStreaming && message.id === streamingMessageId && message.reasoning && (
-                        <span className="inline-block ml-1 animate-pulse">▋</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Main message cell */}
+            <div key={message.id}>
               <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                   }`}
                 >
+                  {/* Message content */}
                   <p className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
                       (isStreaming && message.id === streamingMessageId && !message.reasoning
@@ -239,6 +236,46 @@ export function ChatView(): JSX.Element {
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
                   </p>
+                  
+                  {/* Reasoning section - collapsible, only for assistant messages */}
+                  {message.role === 'assistant' && message.reasoning !== undefined && message.reasoning && (
+                    <div className="mt-2 border-t border-border/50 pt-2">
+                      <button
+                        onClick={() => toggleReasoning(message.id)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {expandedReasonings.has(message.id) ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        <span className="font-medium">Reasoning</span>
+                      </button>
+                      
+                      {expandedReasonings.has(message.id) && (
+                        <div className="mt-2 pl-4">
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                            {message.reasoning}
+                            {isStreaming && message.id === streamingMessageId && (
+                              <span className="inline-block ml-1 animate-pulse">▋</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Show reasoning indicator while streaming but no content yet */}
+                  {message.role === 'assistant' && 
+                   isStreaming && 
+                   message.id === streamingMessageId && 
+                   !message.content && 
+                   message.reasoning && (
+                    <div className="mt-2 text-xs text-muted-foreground italic">
+                      Processing reasoning...
+                    </div>
+                  )}
+                  
                   <p className="mt-1 text-xs opacity-70">
                     {message.timestamp.toLocaleTimeString()}
                   </p>
