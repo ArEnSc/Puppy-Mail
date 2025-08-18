@@ -28,14 +28,19 @@ export class EmailService {
 
   async fetchLatestEmails(maxResults: number = 10): Promise<FormattedEmail[]> {
     try {
+      console.log(`fetchLatestEmails called with maxResults: ${maxResults}`)
+      
       // Check if authenticated
       const isAuth = await this.gmailAuthService.isAuthenticated()
+      console.log('Authentication check result:', isAuth)
+      
       if (!isAuth) {
         throw new Error('Not authenticated with Gmail')
       }
 
       // Get authenticated Gmail client
       const gmail = await this.gmailAuthService.getGmailClient()
+      console.log('Gmail client obtained successfully')
 
       // Get whitelisted emails from config if available
       let whitelistedEmails: string[] = []
@@ -46,11 +51,20 @@ export class EmailService {
         // Config might not be available if using OAuth, that's ok
       }
 
+      console.log(`Calling pollEmailsWithClient with whitelisted emails: ${whitelistedEmails}`)
       const emails = await pollEmailsWithClient(gmail, maxResults, whitelistedEmails)
+      console.log(`pollEmailsWithClient returned ${emails.length} emails`)
 
       // Save to database - RxDB will handle duplicates via primary key
       if (emails.length > 0) {
-        await DBEmailService.syncEmails('default', emails)
+        console.log('Saving emails to database...')
+        try {
+          await DBEmailService.syncEmails('default', emails)
+          console.log('Emails saved to database successfully')
+        } catch (dbError) {
+          console.error('Failed to save emails to database:', dbError)
+          // Continue anyway - the emails are still fetched
+        }
         this.lastSyncTime = new Date()
 
         // Notify renderer about sync completion
@@ -60,6 +74,9 @@ export class EmailService {
             count: emails.length
           })
         })
+        console.log('Sync complete notification sent')
+      } else {
+        console.log('No emails returned from poll')
       }
 
       return emails.map(formatEmail)
@@ -211,15 +228,18 @@ export function setupEmailIPC(service: EmailService): void {
         })
       )
     } catch (error) {
-      console.error('Error fetching emails:', error)
-      throw error
+      console.error('Error fetching emails from database:', error)
+      // Return empty array instead of throwing to keep the app functional
+      return []
     }
   })
 
   // Sync emails from Gmail and save to database
   ipcMain.handle('email:sync', async () => {
     try {
-      await service.fetchLatestEmails(50)
+      console.log('Email sync requested')
+      const emails = await service.fetchLatestEmails(50)
+      console.log(`Sync completed: fetched ${emails.length} emails`)
       return { success: true, timestamp: service.lastSyncTime }
     } catch (error) {
       console.error('Error syncing emails:', error)

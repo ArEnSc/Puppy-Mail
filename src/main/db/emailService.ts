@@ -3,9 +3,10 @@ import { gmail_v1 } from 'googleapis'
 
 export class EmailService {
   static async syncEmails(accountId: string, emails: gmail_v1.Schema$Message[]): Promise<void> {
-    const db = await getDatabase()
+    try {
+      const db = await getDatabase()
 
-    const bulkData = emails.map((email) => ({
+      const bulkData = emails.map((email) => ({
       id: email.id!,
       threadId: email.threadId || '',
       from: this.extractFrom(email),
@@ -21,7 +22,11 @@ export class EmailService {
       syncedAt: new Date()
     }))
 
-    await db.emails.bulkUpsert(bulkData)
+      await db.emails.bulkUpsert(bulkData)
+    } catch (error) {
+      console.error('Error syncing emails to database:', error)
+      // Don't throw - we want the app to continue working even if DB fails
+    }
   }
 
   static async getEmails(
@@ -34,8 +39,9 @@ export class EmailService {
       label?: string
     }
   ): Promise<EmailDocument[]> {
-    const db = await getDatabase()
-    let query = db.emails.find()
+    try {
+      const db = await getDatabase()
+      let query = db.emails.find()
 
     if (filters?.isRead !== undefined) {
       query = query.where('isRead').eq(filters.isRead)
@@ -47,9 +53,13 @@ export class EmailService {
       query = query.where('from').regex(new RegExp(filters.from, 'i'))
     }
 
-    const results = await query.sort({ date: 'desc' }).skip(offset).limit(limit).exec()
+      const results = await query.sort({ date: 'desc' }).skip(offset).limit(limit).exec()
 
-    return results
+      return results
+    } catch (error) {
+      console.error('Error getting emails from database:', error)
+      return []
+    }
   }
 
   static async markAsRead(emailId: string): Promise<void> {
