@@ -4,13 +4,21 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Loader2, ChevronDown, ChevronRight, Code } from 'lucide-react'
+import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap } from 'lucide-react'
+
+interface FunctionCall {
+  name: string
+  arguments: Record<string, unknown>
+  result?: unknown
+  error?: string
+}
 
 interface Message {
   id: string
   role: 'assistant' | 'user'
   content: string
   reasoning?: string
+  functionCalls?: FunctionCall[]
   timestamp: Date
 }
 
@@ -30,6 +38,7 @@ export function ChatView(): JSX.Element {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
+  const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [enableFunctions, setEnableFunctions] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -204,6 +213,18 @@ export function ChatView(): JSX.Element {
     })
   }
 
+  const toggleFunctionCalls = (messageId: string): void => {
+    setExpandedFunctionCalls((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border p-4">
@@ -263,6 +284,59 @@ export function ChatView(): JSX.Element {
                                 <span className="inline-block ml-1 animate-pulse">▋</span>
                               )}
                             </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  {/* Function calls section - collapsible, only for assistant messages */}
+                  {message.role === 'assistant' &&
+                    message.functionCalls &&
+                    message.functionCalls.length > 0 && (
+                      <div className="mt-2 border-t border-border/50 pt-2">
+                        <button
+                          onClick={() => toggleFunctionCalls(message.id)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {expandedFunctionCalls.has(message.id) ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          <Zap className="h-3 w-3" />
+                          <span className="font-medium">
+                            Function Calls ({message.functionCalls.length})
+                          </span>
+                        </button>
+
+                        {expandedFunctionCalls.has(message.id) && (
+                          <div className="mt-2 space-y-2">
+                            {message.functionCalls.map((call, index) => (
+                              <div
+                                key={index}
+                                className="pl-4 text-xs font-mono bg-muted/50 rounded p-2"
+                              >
+                                <div className="font-semibold text-primary mb-1">
+                                  {call.name}({JSON.stringify(call.arguments, null, 2)})
+                                </div>
+                                {call.result !== undefined && (
+                                  <div className="mt-1">
+                                    <span className="text-green-600 dark:text-green-400">→ </span>
+                                    <span className="text-muted-foreground">
+                                      {JSON.stringify(call.result, null, 2)}
+                                    </span>
+                                  </div>
+                                )}
+                                {call.error && (
+                                  <div className="mt-1">
+                                    <span className="text-red-600 dark:text-red-400">✗ </span>
+                                    <span className="text-red-600 dark:text-red-400">
+                                      {call.error}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
