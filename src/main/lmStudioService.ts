@@ -221,20 +221,18 @@ export class LMStudioService {
       }
 
       let buffer = ''
-      let accumulatedContent = ''
+      let inFunctionCall = false
+      let functionCallBuffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
 
         if (done) {
-          // Check if accumulated content contains a function call
-          if (
-            enableFunctions &&
-            (accumulatedContent.includes('to=functions.') ||
-              accumulatedContent.includes('"function_call"'))
-          ) {
+          // Check if we have a buffered function call
+          if (inFunctionCall && functionCallBuffer) {
+            console.log('Processing buffered function call:', functionCallBuffer)
             await this.handleFunctionCall(
-              accumulatedContent,
+              functionCallBuffer,
               url,
               model,
               modifiedMessages,
@@ -258,14 +256,11 @@ export class LMStudioService {
             const data = line.slice(6)
 
             if (data === '[DONE]') {
-              // Check if accumulated content contains a function call
-              if (
-                enableFunctions &&
-                (accumulatedContent.includes('to=functions.') ||
-                  accumulatedContent.includes('"function_call"'))
-              ) {
+              // Check if we have a buffered function call
+              if (inFunctionCall && functionCallBuffer) {
+                console.log('Processing buffered function call at stream end:', functionCallBuffer)
                 await this.handleFunctionCall(
-                  accumulatedContent,
+                  functionCallBuffer,
                   url,
                   model,
                   modifiedMessages,
@@ -290,9 +285,24 @@ export class LMStudioService {
               }
 
               if (delta?.content) {
-                console.log('Sending content chunk:', delta.content)
-                onChunk(delta.content, 'content')
-                accumulatedContent += delta.content
+                console.log('Raw content chunk:', delta.content)
+
+                // Check if we're entering a function call
+                if (
+                  !inFunctionCall &&
+                  delta.content.includes('<|start|>assistant<|channel|>commentary to=functions.')
+                ) {
+                  console.log('Detected function call start token')
+                  inFunctionCall = true
+                  functionCallBuffer = delta.content
+                } else if (inFunctionCall) {
+                  // We're in a function call, buffer the content
+                  functionCallBuffer += delta.content
+                  console.log('Buffering function call content:', delta.content)
+                } else {
+                  // Normal content, send it through
+                  onChunk(delta.content, 'content')
+                }
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', e)
@@ -403,9 +413,8 @@ export class LMStudioService {
       })
     }
 
-    // Send function result as a message
-    const resultMessage = `\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}`
-    onChunk(resultMessage, 'content')
+    // Don't send function result as content - it's handled by the LLM's response
+    // after the function call completes
 
     // Continue the conversation with the function result
     const updatedMessages = [
