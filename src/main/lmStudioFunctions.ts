@@ -30,52 +30,6 @@ export interface FunctionCall {
 
 // Define available functions
 export const availableFunctions: FunctionDefinition[] = [
-  // Math functions
-  {
-    name: 'add',
-    description: 'Add two numbers together',
-    parameters: {
-      type: 'object',
-      properties: {
-        a: {
-          type: 'number',
-          description: 'The first number to add'
-        },
-        b: {
-          type: 'number',
-          description: 'The second number to add'
-        }
-      },
-      required: ['a', 'b']
-    }
-  },
-  {
-    name: 'multiply',
-    description: 'Multiply two numbers',
-    parameters: {
-      type: 'object',
-      properties: {
-        a: {
-          type: 'number',
-          description: 'The first number'
-        },
-        b: {
-          type: 'number',
-          description: 'The second number'
-        }
-      },
-      required: ['a', 'b']
-    }
-  },
-  {
-    name: 'getCurrentTime',
-    description: 'Get the current date and time',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: []
-    }
-  },
   // Email send operations
   {
     name: 'sendEmail',
@@ -149,148 +103,6 @@ export const availableFunctions: FunctionDefinition[] = [
       required: ['to', 'subject', 'body', 'scheduledTime']
     }
   },
-  // Email draft operations
-  {
-    name: 'createDraft',
-    description: 'Create a new email draft',
-    parameters: {
-      type: 'object',
-      properties: {
-        to: {
-          type: 'array',
-          description: 'Array of recipient email addresses',
-          items: {
-            type: 'string'
-          }
-        },
-        subject: {
-          type: 'string',
-          description: 'Email subject line'
-        },
-        body: {
-          type: 'string',
-          description: 'Email body content'
-        }
-      },
-      required: ['to', 'subject', 'body']
-    }
-  },
-  // Email read operations
-  {
-    name: 'searchEmails',
-    description: 'Search for emails',
-    parameters: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Search query string'
-        },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of results (default: 10)'
-        }
-      },
-      required: ['query']
-    }
-  },
-  {
-    name: 'readEmail',
-    description: 'Get a specific email by ID',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'The ID of the email to retrieve'
-        }
-      },
-      required: ['emailId']
-    }
-  },
-  {
-    name: 'getLatestEmails',
-    description: 'Get the latest emails from the database',
-    parameters: {
-      type: 'object',
-      properties: {
-        limit: {
-          type: 'number',
-          description: 'Number of emails to retrieve (default: 10)'
-        },
-        isRead: {
-          type: 'boolean',
-          description: 'Filter by read/unread status'
-        },
-        isStarred: {
-          type: 'boolean',
-          description: 'Filter by starred status'
-        },
-        label: {
-          type: 'string',
-          description: 'Filter by label'
-        }
-      },
-      required: []
-    }
-  },
-  // Email management operations
-  {
-    name: 'markAsRead',
-    description: 'Mark an email as read',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email to mark as read'
-        }
-      },
-      required: ['emailId']
-    }
-  },
-  {
-    name: 'markAsUnread',
-    description: 'Mark an email as unread',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email to mark as unread'
-        }
-      },
-      required: ['emailId']
-    }
-  },
-  {
-    name: 'toggleStar',
-    description: 'Toggle the star status of an email',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email to star/unstar'
-        }
-      },
-      required: ['emailId']
-    }
-  },
-  {
-    name: 'deleteEmail',
-    description: 'Delete an email',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email to delete'
-        }
-      },
-      required: ['emailId']
-    }
-  },
   // Label operations
   {
     name: 'addLabels',
@@ -342,21 +154,6 @@ export const availableFunctions: FunctionDefinition[] = [
       properties: {},
       required: []
     }
-  },
-  // Thread operations
-  {
-    name: 'getThread',
-    description: 'Get all emails in a conversation thread',
-    parameters: {
-      type: 'object',
-      properties: {
-        threadId: {
-          type: 'string',
-          description: 'ID of the email thread'
-        }
-      },
-      required: ['threadId']
-    }
   }
 ]
 
@@ -365,21 +162,6 @@ const mailActionService = getMailActionService()
 
 // Function implementations
 export const functionImplementations: Record<string, (args: unknown) => unknown> = {
-  // Math functions
-  add: (args: unknown) => {
-    const params = args as { a: number; b: number }
-    console.log('[Function Call] add:', params)
-    return params.a + params.b
-  },
-  multiply: (args: unknown) => {
-    const params = args as { a: number; b: number }
-    console.log('[Function Call] multiply:', params)
-    return params.a * params.b
-  },
-  getCurrentTime: () => {
-    console.log('[Function Call] getCurrentTime')
-    return new Date().toLocaleString()
-  },
   // Email send operations
   sendEmail: async (args: unknown) => {
     const params = args as { to: string[]; subject: string; body: string; cc?: string[]; bcc?: string[]; isHtml?: boolean }
@@ -508,12 +290,6 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
   getLabels: async () => {
     console.log('[Function Call] getLabels')
     return await mailActionService.getLabels()
-  },
-  // Thread operations
-  getThread: async (args: unknown) => {
-    const params = args as { threadId: string }
-    console.log('[Function Call] getThread:', params)
-    return await mailActionService.getThread(params.threadId)
   }
 }
 
@@ -591,5 +367,6 @@ Examples:
 Remember: Always ask for missing information before executing functions!`
 
   console.log('[formatFunctionsForPrompt] Generated prompt of length:', prompt.length)
+  console.log('[formatFunctionsForPrompt] Full prompt:\n', prompt)
   return prompt
 }
