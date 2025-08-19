@@ -427,7 +427,6 @@ export class LMStudioService {
     ]
 
     // Make another call to get the final response
-    onChunk('\n\n', 'content')
     await this.streamMessage(
       url,
       model,
