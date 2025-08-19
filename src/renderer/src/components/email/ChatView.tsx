@@ -11,13 +11,6 @@ interface Message {
   role: 'assistant' | 'user'
   content: string
   reasoning?: string
-  functionCalls?: Array<{
-    name: string
-    args: unknown
-    result: unknown
-    error?: string
-    timestamp: Date
-  }>
   timestamp: Date
 }
 
@@ -37,7 +30,6 @@ export function ChatView(): JSX.Element {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
-  const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [enableFunctions, setEnableFunctions] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -77,10 +69,7 @@ export function ChatView(): JSX.Element {
     if (!window.electron?.ipcRenderer) return
 
     const handleStreamChunk = (
-      ...[, data]: [
-        unknown,
-        { chunk: string; type: 'content' | 'reasoning' | 'function_call' }
-      ]
+      ...[_event, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
     ): void => {
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
@@ -91,16 +80,6 @@ export function ChatView(): JSX.Element {
             if (msg.id === currentId) {
               if (type === 'reasoning') {
                 return { ...msg, reasoning: (msg.reasoning || '') + chunk }
-              } else if (type === 'function_call') {
-                // Parse function call data
-                try {
-                  const functionCallData = JSON.parse(chunk)
-                  const updatedFunctionCalls = [...(msg.functionCalls || []), functionCallData]
-                  return { ...msg, functionCalls: updatedFunctionCalls }
-                } catch (e) {
-                  console.error('Failed to parse function call data:', e)
-                  return msg
-                }
               } else {
                 return { ...msg, content: msg.content + chunk }
               }
@@ -111,7 +90,7 @@ export function ChatView(): JSX.Element {
       }
     }
 
-    const handleStreamError = (...[, error]: [unknown, string]): void => {
+    const handleStreamError = (...[_event, error]: [unknown, string]): void => {
       console.error('Stream error:', error)
       setIsStreaming(false)
       setStreamingMessageId(null)
@@ -289,74 +268,14 @@ export function ChatView(): JSX.Element {
                       </div>
                     )}
 
-                  {/* Function calls section - collapsible, only for assistant messages */}
-                  {message.role === 'assistant' &&
-                    message.functionCalls &&
-                    message.functionCalls.length > 0 && (
-                      <div className="mt-2 border-t border-border/50 pt-2">
-                        <button
-                          onClick={() => {
-                            setExpandedFunctionCalls((prev) => {
-                              const newSet = new Set(prev)
-                              if (newSet.has(message.id)) {
-                                newSet.delete(message.id)
-                              } else {
-                                newSet.add(message.id)
-                              }
-                              return newSet
-                            })
-                          }}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {expandedFunctionCalls.has(message.id) ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                          <span className="font-medium">
-                            Function Calls ({message.functionCalls.length})
-                          </span>
-                        </button>
-
-                        {expandedFunctionCalls.has(message.id) && (
-                          <div className="mt-2 pl-4 space-y-2">
-                            {message.functionCalls.map((call, index) => (
-                              <div key={index} className="text-xs bg-muted/50 rounded p-2">
-                                <div className="font-mono">
-                                  <span className="text-primary">{call.name}</span>
-                                  <span className="text-muted-foreground">(</span>
-                                  <span className="text-foreground">
-                                    {JSON.stringify(call.args)}
-                                  </span>
-                                  <span className="text-muted-foreground">)</span>
-                                </div>
-                                <div className="mt-1 text-muted-foreground">
-                                  →{' '}
-                                  {call.error ? (
-                                    <span className="text-red-500">Error: {call.error}</span>
-                                  ) : (
-                                    <span className="text-foreground">
-                                      {JSON.stringify(call.result)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                  {/* Show shimmering effect while reasoning but no content yet */}
+                  {/* Show reasoning indicator while streaming but no content yet */}
                   {message.role === 'assistant' &&
                     isStreaming &&
                     message.id === streamingMessageId &&
                     !message.content &&
-                    (message.reasoning || message.functionCalls?.length) && (
-                      <div className="space-y-1 mt-2">
-                        <div className="h-3 bg-muted rounded animate-pulse w-full" />
-                        <div className="h-3 bg-muted rounded animate-pulse w-4/5" />
-                        <div className="h-3 bg-muted rounded animate-pulse w-3/5" />
+                    message.reasoning && (
+                      <div className="mt-2 text-xs text-muted-foreground italic">
+                        Processing reasoning...
                       </div>
                     )}
 
