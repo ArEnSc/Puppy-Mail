@@ -286,12 +286,12 @@ export class LMStudioService {
               const delta = parsed.choices?.[0]?.delta
 
               if (delta?.reasoning) {
-                console.log('Sending reasoning chunk:', delta.reasoning)
+                // console.log('Sending reasoning chunk:', delta.reasoning)
                 onChunk(delta.reasoning, 'reasoning')
               }
 
               if (delta?.content) {
-                console.log('Raw content chunk:', delta.content)
+                // console.log('Raw content chunk:', delta.content)
 
                 // Check if we're entering a function call
                 if (
