@@ -398,13 +398,13 @@ export class LMStudioService {
       { role: 'assistant', content: assistantContent },
       {
         role: 'user',
-        content: `The function ${functionCall.name} returned: ${JSON.stringify(result.result)}. Please provide a natural response to the user based on this result.`
+        content: `The function ${functionCall.name} returned: ${JSON.stringify(result.result)}. You can now either call another function if needed, or provide a natural response to the user based on this result.`
       }
     ]
 
     // Make another call to get the final response
     onChunk('\n\n', 'content')
-    await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, false)
+    await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, true)
   }
 }
 
