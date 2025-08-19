@@ -379,7 +379,7 @@ export class LMStudioService {
           name: functionName,
           arguments: argsJson
         }
-        
+
         console.log('Executing function call:', functionCall)
 
         await this.executeFunctionAndContinue(
