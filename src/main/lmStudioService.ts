@@ -230,7 +230,10 @@ export class LMStudioService {
         if (done) {
           // Check if we have a buffered function call
           if (inFunctionCall && functionCallBuffer) {
-            console.log('Processing buffered function call:', functionCallBuffer)
+            console.log('=== PROCESSING BUFFERED FUNCTION CALL ===')
+            console.log('Buffer content:', functionCallBuffer)
+            console.log('Buffer length:', functionCallBuffer.length)
+            console.log('=========================================')
             await this.handleFunctionCall(
               functionCallBuffer,
               url,
@@ -258,7 +261,10 @@ export class LMStudioService {
             if (data === '[DONE]') {
               // Check if we have a buffered function call
               if (inFunctionCall && functionCallBuffer) {
-                console.log('Processing buffered function call at stream end:', functionCallBuffer)
+                console.log('=== PROCESSING BUFFERED FUNCTION CALL AT STREAM END ===')
+                console.log('Buffer content:', functionCallBuffer)
+                console.log('Buffer length:', functionCallBuffer.length)
+                console.log('=======================================================')
                 await this.handleFunctionCall(
                   functionCallBuffer,
                   url,
@@ -334,19 +340,23 @@ export class LMStudioService {
       console.log('Checking for function call in content:', content)
 
       // Check for LM Studio's function calling format
-      // Pattern: to=functions.functionName ... {"param": value}
-      const functionPattern = /to=functions\.(\w+).*?(\{[^}]+\})/s
+      // Pattern: to=functions.functionName ... {"param": value} or {}
+      const functionPattern = /to=functions\.(\w+).*?(\{[^}]*\})/s
       const match = content.match(functionPattern)
 
       if (!match) {
+        console.log('No LM Studio format match found, trying JSON format...')
         // Also try the original JSON format
         const functionCallMatch = content.match(/\{[\s\S]*"function_call"[\s\S]*\}/m)
         if (!functionCallMatch) {
+          console.log('No function call found in content')
           return
         }
 
+        console.log('Found JSON function call:', functionCallMatch[0])
         const functionCallJson = JSON.parse(functionCallMatch[0])
         const functionCall: FunctionCall = functionCallJson.function_call
+        console.log('Parsed function call:', functionCall)
         await this.executeFunctionAndContinue(
           functionCall,
           url,
@@ -359,6 +369,7 @@ export class LMStudioService {
         )
       } else {
         // Parse LM Studio format
+        console.log('Found LM Studio format match:', match[0])
         const functionName = match[1]
         const argsJson = match[2]
 
@@ -368,6 +379,8 @@ export class LMStudioService {
           name: functionName,
           arguments: argsJson
         }
+        
+        console.log('Executing function call:', functionCall)
 
         await this.executeFunctionAndContinue(
           functionCall,
