@@ -14,54 +14,54 @@ export function MailActionTest() {
   const [body, setBody] = useState('This is a test email from the Mail Action Service')
   const [result, setResult] = useState<string>('')
   const [listenerId, setListenerId] = useState<string | null>(null)
-  
+
   const testSendEmail = async () => {
     const response = await mailActions.sendEmail({
       to: [{ email: to }],
       subject,
       body
     })
-    
+
     if (response) {
       setResult(`Email sent successfully! Message ID: ${response.messageId}`)
     }
   }
-  
+
   const testScheduleEmail = async () => {
     const scheduledTime = new Date()
     scheduledTime.setMinutes(scheduledTime.getMinutes() + 5)
-    
+
     const response = await mailActions.scheduleEmail({
       to: [{ email: to }],
       subject: `${subject} (Scheduled)`,
       body,
       scheduledTime
     })
-    
+
     if (response) {
       setResult(`Email scheduled! ID: ${response.scheduledId}`)
     }
   }
-  
+
   const testCreateDraft = async () => {
     const response = await mailActions.createDraft({
       to: [{ email: to }],
       subject: `${subject} (Draft)`,
       body
     })
-    
+
     if (response) {
       setResult(`Draft created! ID: ${response.draftId}`)
     }
   }
-  
+
   const testGetLabels = async () => {
     const labels = await mailActions.getLabels()
     if (labels) {
-      setResult(`Found ${labels.length} labels: ${labels.map(l => l.name).join(', ')}`)
+      setResult(`Found ${labels.length} labels: ${labels.map((l) => l.name).join(', ')}`)
     }
   }
-  
+
   const testCheckInbox = async () => {
     const emails = await mailActions.checkInbox()
     if (emails) {
@@ -72,7 +72,7 @@ export function MailActionTest() {
       }
     }
   }
-  
+
   const testReadEmail = async () => {
     const emailId = window.localStorage.getItem('testEmailId') || 'mock-1'
     const email = await mailActions.readEmail(emailId)
@@ -80,29 +80,26 @@ export function MailActionTest() {
       setResult(`Read email: "${email.subject}" from ${email.from.email}`)
     }
   }
-  
+
   const testSearchEmails = async () => {
     const results = await mailActions.searchEmails('test', 10)
     if (results) {
       setResult(`Search found ${results.length} emails containing "test"`)
     }
   }
-  
+
   const testListenToInbox = async () => {
-    const response = await mailActions.listenToInbox(
-      { subject: 'test' },
-      (email) => {
-        console.log('New email received:', email)
-        setResult(`New email: ${email.subject} from ${email.from.email}`)
-      }
-    )
-    
+    const response = await mailActions.listenToInbox({ subject: 'test' }, (email) => {
+      console.log('New email received:', email)
+      setResult(`New email: ${email.subject} from ${email.from.email}`)
+    })
+
     if (response) {
       setListenerId(response.listenerId)
       setResult(`Started listening to inbox (ID: ${response.listenerId})`)
     }
   }
-  
+
   const testStopListening = async () => {
     if (listenerId) {
       await mailActions.stopListening(listenerId)
@@ -110,7 +107,7 @@ export function MailActionTest() {
       setResult('Stopped listening to inbox')
     }
   }
-  
+
   return (
     <div className="p-6 space-y-6">
       <Card>
@@ -129,7 +126,7 @@ export function MailActionTest() {
               placeholder="recipient@example.com"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="subject">Subject:</Label>
             <Input
@@ -139,7 +136,7 @@ export function MailActionTest() {
               placeholder="Email subject"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="body">Body:</Label>
             <Textarea
@@ -150,46 +147,46 @@ export function MailActionTest() {
               rows={4}
             />
           </div>
-          
+
           {/* Test buttons */}
           <div className="grid grid-cols-2 gap-4">
             <Button onClick={testSendEmail} disabled={mailActions.isLoading}>
               Test Send Email
             </Button>
-            
+
             <Button onClick={testScheduleEmail} disabled={mailActions.isLoading}>
               Test Schedule Email
             </Button>
-            
+
             <Button onClick={testCreateDraft} disabled={mailActions.isLoading}>
               Test Create Draft
             </Button>
-            
+
             <Button onClick={testGetLabels} disabled={mailActions.isLoading}>
               Test Get Labels
             </Button>
-            
+
             <Button onClick={testCheckInbox} disabled={mailActions.isLoading}>
               Test Check Inbox
             </Button>
-            
+
             <Button onClick={testReadEmail} disabled={mailActions.isLoading}>
               Test Read Email
             </Button>
-            
+
             <Button onClick={testSearchEmails} disabled={mailActions.isLoading}>
               Test Search Emails
             </Button>
-            
-            <Button 
-              onClick={listenerId ? testStopListening : testListenToInbox} 
+
+            <Button
+              onClick={listenerId ? testStopListening : testListenToInbox}
               disabled={mailActions.isLoading}
-              variant={listenerId ? "destructive" : "default"}
+              variant={listenerId ? 'destructive' : 'default'}
             >
               {listenerId ? 'Stop Listening' : 'Test Listen to Inbox'}
             </Button>
           </div>
-          
+
           {/* Status display */}
           <div className="mt-6 space-y-2">
             {mailActions.isLoading && (
@@ -198,14 +195,14 @@ export function MailActionTest() {
                 <span>Processing...</span>
               </div>
             )}
-            
+
             {mailActions.error && (
               <div className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-4 w-4" />
                 <span>{mailActions.error}</span>
               </div>
             )}
-            
+
             {result && !mailActions.error && (
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-4 w-4" />

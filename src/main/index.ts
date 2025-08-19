@@ -96,7 +96,7 @@ app.whenReady().then(async () => {
   // Initialize LM Studio service
   const lmStudioService = new LMStudioService()
   setupLMStudioHandlers(lmStudioService)
-  
+
   // Initialize Mail Action handlers
   setupMailActionHandlers()
 

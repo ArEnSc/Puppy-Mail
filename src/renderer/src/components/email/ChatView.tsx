@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Send, Loader2, ChevronDown, ChevronRight, Code } from 'lucide-react'
 
 interface Message {
   id: string
@@ -30,6 +30,7 @@ export function ChatView(): JSX.Element {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
+  const [enableFunctions, setEnableFunctions] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(false)
@@ -178,7 +179,8 @@ export function ChatView(): JSX.Element {
           'lmstudio:stream',
           lmStudio.url,
           lmStudio.model,
-          conversationMessages
+          conversationMessages,
+          enableFunctions
         )
       }
     }
@@ -289,6 +291,22 @@ export function ChatView(): JSX.Element {
       </ScrollArea>
 
       <div className="border-t border-border p-4">
+        <div className="flex items-center justify-between mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEnableFunctions(!enableFunctions)}
+            className={`flex items-center gap-2 ${enableFunctions ? 'text-primary' : 'text-muted-foreground'}`}
+          >
+            <Code className="h-4 w-4" />
+            <span>Function Calling {enableFunctions ? 'ON' : 'OFF'}</span>
+          </Button>
+          {enableFunctions && (
+            <span className="text-xs text-muted-foreground">
+              Try: "What's 5 + 7?"
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           <Textarea
             ref={textareaRef}

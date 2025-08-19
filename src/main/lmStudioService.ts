@@ -1,4 +1,10 @@
 import { ipcMain } from 'electron'
+import {
+  availableFunctions,
+  executeFunction,
+  formatFunctionsForPrompt,
+  FunctionCall
+} from './lmStudioFunctions'
 
 interface LMStudioModel {
   id: string
@@ -161,11 +167,29 @@ export class LMStudioService {
     messages: Array<{ role: string; content: string }>,
     onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
     onError: (error: string) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    enableFunctions: boolean = false
   ): Promise<void> {
     try {
       // Remove trailing slash if present
       const cleanUrl = url.replace(/\/$/, '')
+
+      // Modify messages to include function definitions if enabled
+      let modifiedMessages = [...messages]
+      if (enableFunctions && messages.length > 0) {
+        // Add function definitions to the system message or create one
+        const systemMessageIndex = modifiedMessages.findIndex(m => m.role === 'system')
+        const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
+        
+        if (systemMessageIndex >= 0) {
+          modifiedMessages[systemMessageIndex].content += '\n\n' + functionsPrompt
+        } else {
+          modifiedMessages.unshift({
+            role: 'system',
+            content: functionsPrompt
+          })
+        }
+      }
 
       const response = await fetch(`${cleanUrl}/chat/completions`, {
         method: 'POST',
@@ -174,7 +198,7 @@ export class LMStudioService {
         },
         body: JSON.stringify({
           model,
-          messages,
+          messages: modifiedMessages,
           temperature: 0.7,
           max_tokens: 2000,
           stream: true
@@ -196,11 +220,16 @@ export class LMStudioService {
       }
 
       let buffer = ''
+      let accumulatedContent = ''
 
       while (true) {
         const { done, value } = await reader.read()
 
         if (done) {
+          // Check if accumulated content contains a function call
+          if (enableFunctions && accumulatedContent.includes('"function_call"')) {
+            await this.handleFunctionCall(accumulatedContent, url, model, modifiedMessages, onChunk, onError)
+          }
           onComplete()
           break
         }
@@ -216,6 +245,10 @@ export class LMStudioService {
             const data = line.slice(6)
 
             if (data === '[DONE]') {
+              // Check if accumulated content contains a function call
+              if (enableFunctions && accumulatedContent.includes('"function_call"')) {
+                await this.handleFunctionCall(accumulatedContent, url, model, modifiedMessages, onChunk, onError)
+              }
               onComplete()
               return
             }
@@ -234,6 +267,7 @@ export class LMStudioService {
               if (delta?.content) {
                 console.log('Sending content chunk:', delta.content)
                 onChunk(delta.content, 'content')
+                accumulatedContent += delta.content
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', e)
@@ -249,6 +283,52 @@ export class LMStudioService {
       } else {
         onError('Failed to stream message from LM Studio')
       }
+    }
+  }
+
+  private async handleFunctionCall(
+    content: string,
+    url: string,
+    model: string,
+    messages: Array<{ role: string; content: string }>,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
+    onError: (error: string) => void
+  ): Promise<void> {
+    try {
+      // Try to extract function call from the content
+      const functionCallMatch = content.match(/\{[\s\S]*"function_call"[\s\S]*\}/m)
+      if (!functionCallMatch) {
+        return
+      }
+
+      const functionCallJson = JSON.parse(functionCallMatch[0])
+      const functionCall: FunctionCall = functionCallJson.function_call
+
+      // Execute the function
+      const result = await executeFunction(functionCall)
+      
+      if (!result.success) {
+        onError(`Function execution failed: ${result.error}`)
+        return
+      }
+
+      // Send function result as a message
+      onChunk(`\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}\n\n`, 'content')
+
+      // Continue the conversation with the function result
+      const updatedMessages = [
+        ...messages,
+        { role: 'assistant', content: content },
+        { 
+          role: 'function', 
+          content: `Function ${functionCall.name} returned: ${JSON.stringify(result.result)}` 
+        }
+      ]
+
+      // Make another call to get the final response
+      await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, false)
+    } catch (error) {
+      console.error('Error handling function call:', error)
     }
   }
 }
@@ -277,7 +357,8 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
       event,
       url: string,
       model: string,
-      messages: Array<{ role: string; content: string }>
+      messages: Array<{ role: string; content: string }>,
+      enableFunctions?: boolean
     ) => {
       const webContents = event.sender
 
@@ -299,7 +380,8 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
           if (!webContents.isDestroyed()) {
             webContents.send('lmstudio:stream:complete')
           }
-        }
+        },
+        enableFunctions || false
       )
     }
   )
