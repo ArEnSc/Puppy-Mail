@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap,AlertCircle} from 'lucide-react'
+import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap, AlertCircle, MessageSquare } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 
@@ -35,7 +35,14 @@ export function ChatView(): JSX.Element {
       role: 'assistant',
       content:
         "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
-      timestamp: new Date()
+      timestamp: new Date(),
+      prompt: "You are an AI assistant helping users with email automation tasks. Be helpful, concise, and professional.",
+      contextMessages: [
+        {
+          role: 'system',
+          content: 'You are an AI assistant helping users with email automation tasks. Be helpful, concise, and professional.'
+        }
+      ]
     }
   ])
   const [inputValue, setInputValue] = useState('')
@@ -43,6 +50,7 @@ export function ChatView(): JSX.Element {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
   const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
+  const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
   const [enableFunctions, setEnableFunctions] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -252,6 +260,18 @@ export function ChatView(): JSX.Element {
     })
   }
 
+  const togglePrompt = (messageId: string): void => {
+    setExpandedPrompts((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="relative flex h-full flex-col">
       <FlickeringGrid
@@ -386,6 +406,63 @@ export function ChatView(): JSX.Element {
                                 )}
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  {/* Prompt and Context section - collapsible, only for assistant messages */}
+                  {message.role === 'assistant' &&
+                    message.prompt &&
+                    message.contextMessages && (
+                      <div className="mt-2 border-t border-border/50 pt-2">
+                        <button
+                          onClick={() => togglePrompt(message.id)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {expandedPrompts.has(message.id) ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          <MessageSquare className="h-3 w-3" />
+                          <span className="font-medium">Prompt & Context</span>
+                        </button>
+
+                        {expandedPrompts.has(message.id) && (
+                          <div className="mt-2 space-y-2">
+                            <div className="pl-4">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">System Prompt:</div>
+                              <div className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap break-words">
+                                {message.prompt}
+                              </div>
+                            </div>
+                            <div className="pl-4">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">
+                                Context Messages ({message.contextMessages.length}):
+                              </div>
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {message.contextMessages.map((msg, idx) => (
+                                  <div
+                                    key={idx}
+                                    className={`text-xs rounded p-2 ${
+                                      msg.role === 'user'
+                                        ? 'bg-primary/10'
+                                        : msg.role === 'assistant'
+                                          ? 'bg-muted/50'
+                                          : 'bg-secondary/50'
+                                    }`}
+                                  >
+                                    <div className="font-medium capitalize mb-1">{msg.role}:</div>
+                                    <div className="whitespace-pre-wrap break-words">
+                                      {msg.content.length > 200
+                                        ? msg.content.substring(0, 200) + '...'
+                                        : msg.content}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
