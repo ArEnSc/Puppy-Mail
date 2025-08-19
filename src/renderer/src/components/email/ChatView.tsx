@@ -4,9 +4,11 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap } from 'lucide-react'
+
+import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap,AlertCircle} from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
+
 
 interface FunctionCall {
   name: string
@@ -17,7 +19,7 @@ interface FunctionCall {
 
 interface Message {
   id: string
-  role: 'assistant' | 'user'
+  role: 'assistant' | 'user' | 'error'
   content: string
   reasoning?: string
   functionCalls?: FunctionCall[]
@@ -107,11 +109,11 @@ export function ChatView(): JSX.Element {
       setStreamingMessageId(null)
       streamingMessageIdRef.current = null
 
-      // Add error message
+      // Add error as a message in the chat
       const errorMessage: Message = {
         id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Error: ${error}`,
+        role: 'error',
+        content: error,
         timestamp: new Date()
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -278,9 +280,21 @@ export function ChatView(): JSX.Element {
               <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : message.role === 'error'
+                        ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                        : 'bg-muted'
                   }`}
                 >
+                  {/* Error icon for error messages */}
+                  {message.role === 'error' && (
+                    <div className="flex items-start gap-2 mb-2">
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                      <span className="font-semibold text-sm">LM Studio Error</span>
+                    </div>
+                  )}
+
                   {/* Message content */}
                   <p className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
@@ -415,6 +429,25 @@ export function ChatView(): JSX.Element {
             </span>
           )}
         </div>
+
+        {/* Temporary error test button */}
+        {/* <Button
+          onClick={() => {
+            const mockError: Message = {
+              id: crypto.randomUUID(),
+              role: 'error',
+              content:
+                'The number of tokens to keep from the initial prompt is greater than the context length. Try to load the model with a larger context length, or provide a shorter input.',
+              timestamp: new Date()
+            }
+            setMessages((prev) => [...prev, mockError])
+          }}
+          className="mb-2 w-full"
+          variant="destructive"
+        >
+          Test Error Message
+        </Button> */}
+
         <div className="flex gap-2">
           <Textarea
             ref={textareaRef}

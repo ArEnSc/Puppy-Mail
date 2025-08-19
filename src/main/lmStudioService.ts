@@ -208,7 +208,16 @@ export class LMStudioService {
       })
 
       if (!response.ok) {
-        onError(`LM Studio returned status ${response.status}`)
+        let errorMessage = `LM Studio returned status ${response.status}`
+        try {
+          const errorBody = await response.text()
+          if (errorBody) {
+            errorMessage += `: ${errorBody}`
+          }
+        } catch {
+          // Ignore error reading body
+        }
+        onError(errorMessage)
         return
       }
 
@@ -286,12 +295,12 @@ export class LMStudioService {
               const delta = parsed.choices?.[0]?.delta
 
               if (delta?.reasoning) {
-                console.log('Sending reasoning chunk:', delta.reasoning)
+                // console.log('Sending reasoning chunk:', delta.reasoning)
                 onChunk(delta.reasoning, 'reasoning')
               }
 
               if (delta?.content) {
-                console.log('Raw content chunk:', delta.content)
+                // console.log('Raw content chunk:', delta.content)
 
                 // Check if we're entering a function call
                 if (
@@ -312,6 +321,7 @@ export class LMStudioService {
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', e)
+              // Don't send parse errors to UI - they're usually just incomplete chunks
             }
           }
         }
@@ -395,6 +405,7 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('Error handling function call:', error)
+      onError(`Failed to process function call: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -408,18 +419,22 @@ export class LMStudioService {
     onError: (error: string) => void,
     onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
+    console.log('[executeFunctionAndContinue] Starting function execution:', functionCall.name)
+
     // Execute the function
     const result = await executeFunction(functionCall)
 
     if (!result.success) {
+      console.error('[executeFunctionAndContinue] Function failed:', result.error)
       onError(`Function execution failed: ${result.error}`)
       return
     }
 
-    console.log('Function execution result:', result)
+    console.log('[executeFunctionAndContinue] Function execution result:', result)
 
     // Emit the function call with its result
     if (onFunctionCall) {
+      console.log('[executeFunctionAndContinue] Emitting function call to UI')
       onFunctionCall({
         ...functionCall,
         result: result.result
@@ -439,6 +454,9 @@ export class LMStudioService {
       }
     ]
 
+    console.log('[executeFunctionAndContinue] Making recursive call to continue conversation')
+    console.log('[executeFunctionAndContinue] Updated messages count:', updatedMessages.length)
+
     // Make another call to get the final response
     await this.streamMessage(
       url,
@@ -446,10 +464,14 @@ export class LMStudioService {
       updatedMessages,
       onChunk,
       onError,
-      () => {},
+      () => {
+        console.log('[executeFunctionAndContinue] Recursive stream completed')
+      },
       true,
       onFunctionCall
     )
+
+    console.log('[executeFunctionAndContinue] Finished recursive call')
   }
 }
 
