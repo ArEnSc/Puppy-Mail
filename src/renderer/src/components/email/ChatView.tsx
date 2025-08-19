@@ -69,9 +69,8 @@ export function ChatView(): JSX.Element {
     if (!window.electron?.ipcRenderer) return
 
     const handleStreamChunk = (
-      _event: any,
-      data: { chunk: string; type: 'content' | 'reasoning' }
-    ) => {
+      ...[_event, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
+    ): void => {
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
         const { chunk, type } = data
@@ -91,7 +90,7 @@ export function ChatView(): JSX.Element {
       }
     }
 
-    const handleStreamError = (_event: any, error: string) => {
+    const handleStreamError = (...[_event, error]: [unknown, string]): void => {
       console.error('Stream error:', error)
       setIsStreaming(false)
       setStreamingMessageId(null)
@@ -107,7 +106,7 @@ export function ChatView(): JSX.Element {
       setMessages((prev) => [...prev, errorMessage])
     }
 
-    const handleStreamComplete = () => {
+    const handleStreamComplete = (): void => {
       setIsStreaming(false)
       setStreamingMessageId(null)
       streamingMessageIdRef.current = null
@@ -127,7 +126,7 @@ export function ChatView(): JSX.Element {
     }
   }, []) // Empty dependency array - set up listeners only once
 
-  const handleSend = async () => {
+  const handleSend = async (): Promise<void> => {
     if (inputValue.trim() && !isStreaming) {
       // Clear any existing streaming state
       setStreamingMessageId(null)
@@ -186,14 +185,14 @@ export function ChatView(): JSX.Element {
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
   }
 
-  const toggleReasoning = (messageId: string) => {
+  const toggleReasoning = (messageId: string): void => {
     setExpandedReasonings((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(messageId)) {
