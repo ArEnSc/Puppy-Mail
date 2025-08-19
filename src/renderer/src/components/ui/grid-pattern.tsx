@@ -58,4 +58,3 @@ export function GridPattern({
 }
 
 export type { GridPatternProps }
-

@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
+import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 
 interface FunctionCall {
   name: string
@@ -283,9 +284,11 @@ export function ChatView(): JSX.Element {
                   {/* Message content */}
                   <p className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
-                      (isStreaming && message.id === streamingMessageId && !message.reasoning
-                        ? 'Thinking...'
-                        : '')}
+                      (isStreaming && message.id === streamingMessageId && !message.reasoning ? (
+                        <AnimatedShinyText className="text-sm">Thinking...</AnimatedShinyText>
+                      ) : (
+                        ''
+                      ))}
                     {isStreaming && message.id === streamingMessageId && message.content && (
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
