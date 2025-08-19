@@ -208,7 +208,16 @@ export class LMStudioService {
       })
 
       if (!response.ok) {
-        onError(`LM Studio returned status ${response.status}`)
+        let errorMessage = `LM Studio returned status ${response.status}`
+        try {
+          const errorBody = await response.text()
+          if (errorBody) {
+            errorMessage += `: ${errorBody}`
+          }
+        } catch {
+          // Ignore error reading body
+        }
+        onError(errorMessage)
         return
       }
 
@@ -312,6 +321,7 @@ export class LMStudioService {
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', e)
+              // Don't send parse errors to UI - they're usually just incomplete chunks
             }
           }
         }
@@ -395,6 +405,7 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('Error handling function call:', error)
+      onError(`Failed to process function call: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
