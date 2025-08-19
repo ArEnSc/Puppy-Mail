@@ -131,9 +131,15 @@ To use a function, you can either:
 1. Use the special format: <|channel|>commentary to=functions.functionName <|message|>{"param1": value1, "param2": value2}
 2. Or respond with: {"function_call": {"name": "function_name", "arguments": "{\\"param1\\": value1, \\"param2\\": value2}"}}
 
-For example, to add 5 and 7:
-- Method 1: <|channel|>commentary to=functions.add <|message|>{"a": 5, "b": 7}
-- Method 2: {"function_call": {"name": "add", "arguments": "{\\"a\\": 5, \\"b\\": 7}"}}
+Examples:
+- To add 5 and 7: <|channel|>commentary to=functions.add <|message|>{"a": 5, "b": 7}
+- To multiply 6 and 8: <|channel|>commentary to=functions.multiply <|message|>{"a": 6, "b": 8}
+- To get current time: <|channel|>commentary to=functions.getCurrentTime <|message|>{}
+
+Or using JSON format:
+- {"function_call": {"name": "add", "arguments": "{\\"a\\": 5, \\"b\\": 7}"}}
+- {"function_call": {"name": "multiply", "arguments": "{\\"a\\": 6, \\"b\\": 8}"}}
+- {"function_call": {"name": "getCurrentTime", "arguments": "{}"}}
 
 After I execute the function, I'll provide you with the result and you can continue the conversation.`
 }

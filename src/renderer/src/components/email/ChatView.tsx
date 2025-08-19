@@ -30,7 +30,7 @@ export function ChatView(): JSX.Element {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
-  const [enableFunctions, setEnableFunctions] = useState(false)
+  const [enableFunctions, setEnableFunctions] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(false)
