@@ -4,7 +4,11 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap, AlertCircle } from 'lucide-react'
+
+import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap,AlertCircle} from 'lucide-react'
+import { FlickeringGrid } from '@/components/ui/flickering-grid'
+import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
+
 
 interface FunctionCall {
   name: string
@@ -78,7 +82,7 @@ export function ChatView(): JSX.Element {
     if (!window.electron?.ipcRenderer) return
 
     const handleStreamChunk = (
-      ...[_event, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
+      ...[, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
     ): void => {
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
@@ -99,7 +103,7 @@ export function ChatView(): JSX.Element {
       }
     }
 
-    const handleStreamError = (...[_event, error]: [unknown, string]): void => {
+    const handleStreamError = (...[, error]: [unknown, string]): void => {
       console.error('Stream error:', error)
       setIsStreaming(false)
       setStreamingMessageId(null)
@@ -122,7 +126,7 @@ export function ChatView(): JSX.Element {
     }
 
     const handleFunctionCall = (
-      ...[_event, functionCall]: [unknown, FunctionCall & { result?: unknown }]
+      ...[, functionCall]: [unknown, FunctionCall & { result?: unknown }]
     ): void => {
       if (streamingMessageIdRef.current && isMountedRef.current) {
         const currentId = streamingMessageIdRef.current
@@ -249,8 +253,16 @@ export function ChatView(): JSX.Element {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border p-4">
+    <div className="relative flex h-full flex-col">
+      <FlickeringGrid
+        className="absolute inset-0 z-0"
+        squareSize={5}
+        gridGap={6}
+        color="rgb(64, 64, 64)"
+        maxOpacity={0.15}
+        flickerChance={0.1}
+      />
+      <div className="relative z-10 border-b border-border p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <h2 className="text-lg font-semibold">
           {selectedAutomatedTask === 'daily-summary' && 'Daily Summary Configuration'}
           {selectedAutomatedTask === 'email-cleanup' && 'Email Cleanup Configuration'}
@@ -261,7 +273,7 @@ export function ChatView(): JSX.Element {
         )}
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+      <ScrollArea ref={scrollAreaRef} className="relative z-10 flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message) => (
             <div key={message.id}>
@@ -286,9 +298,11 @@ export function ChatView(): JSX.Element {
                   {/* Message content */}
                   <p className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
-                      (isStreaming && message.id === streamingMessageId && !message.reasoning
-                        ? 'Thinking...'
-                        : '')}
+                      (isStreaming && message.id === streamingMessageId && !message.reasoning ? (
+                        <AnimatedShinyText className="text-sm">Thinking...</AnimatedShinyText>
+                      ) : (
+                        ''
+                      ))}
                     {isStreaming && message.id === streamingMessageId && message.content && (
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
@@ -398,7 +412,7 @@ export function ChatView(): JSX.Element {
         </div>
       </ScrollArea>
 
-      <div className="border-t border-border p-4">
+      <div className="relative z-10 border-t border-border p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between mb-2">
           <Button
             variant="ghost"
