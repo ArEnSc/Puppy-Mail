@@ -165,7 +165,7 @@ export class LMStudioService {
     url: string,
     model: string,
     messages: Array<{ role: string; content: string }>,
-    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning' | 'function_call') => void,
     onError: (error: string) => void,
     onComplete: () => void,
     enableFunctions: boolean = false
@@ -220,20 +220,18 @@ export class LMStudioService {
       }
 
       let buffer = ''
-      let accumulatedContent = ''
+      let functionCallBuffer = ''
+      let isInFunctionCall = false
+      let functionCallDepth = 0
 
       while (true) {
         const { done, value } = await reader.read()
 
         if (done) {
-          // Check if accumulated content contains a function call
-          if (
-            enableFunctions &&
-            (accumulatedContent.includes('to=functions.') ||
-              accumulatedContent.includes('"function_call"'))
-          ) {
+          // Process any remaining content
+          if (functionCallBuffer && enableFunctions) {
             await this.handleFunctionCall(
-              accumulatedContent,
+              functionCallBuffer,
               url,
               model,
               modifiedMessages,
@@ -256,14 +254,10 @@ export class LMStudioService {
             const data = line.slice(6)
 
             if (data === '[DONE]') {
-              // Check if accumulated content contains a function call
-              if (
-                enableFunctions &&
-                (accumulatedContent.includes('to=functions.') ||
-                  accumulatedContent.includes('"function_call"'))
-              ) {
+              // Process any remaining function call
+              if (functionCallBuffer && enableFunctions) {
                 await this.handleFunctionCall(
-                  accumulatedContent,
+                  functionCallBuffer,
                   url,
                   model,
                   modifiedMessages,
@@ -277,8 +271,6 @@ export class LMStudioService {
 
             try {
               const parsed = JSON.parse(data)
-
-              // Check for both 'content' and 'reasoning' fields
               const delta = parsed.choices?.[0]?.delta
 
               if (delta?.reasoning) {
@@ -287,9 +279,55 @@ export class LMStudioService {
               }
 
               if (delta?.content) {
-                console.log('Sending content chunk:', delta.content)
-                onChunk(delta.content, 'content')
-                accumulatedContent += delta.content
+                // Check if we're entering a function call
+                if (
+                  !isInFunctionCall &&
+                  delta.content.includes('<|start|>assistant<|channel|>commentary')
+                ) {
+                  isInFunctionCall = true
+                  functionCallDepth = 0
+                  functionCallBuffer = delta.content
+                  console.log('Function call detected, starting buffer')
+                } else if (isInFunctionCall) {
+                  // Continue buffering function call content
+                  functionCallBuffer += delta.content
+
+                  // Track JSON depth to know when function call ends
+                  for (const char of delta.content) {
+                    if (char === '{') functionCallDepth++
+                    else if (char === '}') {
+                      functionCallDepth--
+                      if (functionCallDepth === 0 && functionCallBuffer.includes('{')) {
+                        // Function call complete
+                        console.log('Function call complete, processing...')
+                        console.log('Function call buffer:', functionCallBuffer)
+
+                        if (enableFunctions) {
+                          await this.handleFunctionCall(
+                            functionCallBuffer,
+                            url,
+                            model,
+                            modifiedMessages,
+                            onChunk,
+                            onError
+                          )
+                        }
+
+                        // Reset state
+                        isInFunctionCall = false
+                        functionCallBuffer = ''
+                        functionCallDepth = 0
+                      }
+                    }
+                  }
+                  console.log(
+                    `Buffering function call: depth=${functionCallDepth}, buffer length=${functionCallBuffer.length}`
+                  )
+                } else {
+                  // Normal content - send it through
+                  console.log('Sending normal content chunk:', delta.content)
+                  onChunk(delta.content, 'content')
+                }
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', e)
@@ -313,15 +351,15 @@ export class LMStudioService {
     url: string,
     model: string,
     messages: Array<{ role: string; content: string }>,
-    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning' | 'function_call') => void,
     onError: (error: string) => void
   ): Promise<void> {
     try {
       console.log('Checking for function call in content:', content)
 
       // Check for LM Studio's function calling format
-      // Pattern: to=functions.functionName ... {"param": value}
-      const functionPattern = /to=functions\.(\w+).*?(\{[^}]+\})/s
+      // Pattern: <|start|>assistant<|channel|>commentary to=functions.functionName ... {"param": value}
+      const functionPattern = /<\|start\|>assistant<\|channel\|>commentary\s+to=functions\.(\w+).*?(\{[^}]+\})/s
       const match = content.match(functionPattern)
 
       if (!match) {
@@ -359,7 +397,7 @@ export class LMStudioService {
           url,
           model,
           messages,
-          content,
+          content, // Keep original for context
           onChunk,
           onError
         )
@@ -375,22 +413,34 @@ export class LMStudioService {
     model: string,
     messages: Array<{ role: string; content: string }>,
     assistantContent: string,
-    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning' | 'function_call') => void,
     onError: (error: string) => void
   ): Promise<void> {
     // Execute the function
     const result = await executeFunction(functionCall)
 
-    if (!result.success) {
-      onError(`Function execution failed: ${result.error}`)
-      return
+    // Send function call info as a special chunk type
+    const functionCallData = {
+      name: functionCall.name,
+      args: JSON.parse(functionCall.arguments),
+      result: result.success ? result.result : null,
+      error: result.success ? null : result.error,
+      timestamp: new Date()
     }
 
-    console.log('Function execution result:', result)
+    // Send as function_call type chunk
+    onChunk(JSON.stringify(functionCallData), 'function_call')
 
-    // Send function result as a message
-    const resultMessage = `\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}`
-    onChunk(resultMessage, 'content')
+    if (!result.success) {
+      console.error('Function execution failed:', {
+        name: functionCall.name,
+        args: functionCall.arguments,
+        error: result.error
+      })
+      // Don't return early - let the model handle the error
+    } else {
+      console.log('Function execution result:', result)
+    }
 
     // Continue the conversation with the function result
     const updatedMessages = [

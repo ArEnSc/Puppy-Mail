@@ -80,7 +80,7 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
     const params = args as { a: number; b: number }
     return params.a * params.b
   },
-  getCurrentTime: () => {
+  getCurrentTime: (_args: unknown) => {
     return new Date().toLocaleString()
   }
 }
