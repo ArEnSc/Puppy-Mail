@@ -379,7 +379,7 @@ export class LMStudioService {
           name: functionName,
           arguments: argsJson
         }
-        
+
         console.log('Executing function call:', functionCall)
 
         await this.executeFunctionAndContinue(
@@ -409,7 +409,7 @@ export class LMStudioService {
     onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
     console.log('[executeFunctionAndContinue] Starting function execution:', functionCall.name)
-    
+
     // Execute the function
     const result = await executeFunction(functionCall)
 
@@ -459,7 +459,7 @@ export class LMStudioService {
       true,
       onFunctionCall
     )
-    
+
     console.log('[executeFunctionAndContinue] Finished recursive call')
   }
 }

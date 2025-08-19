@@ -1,5 +1,5 @@
 // Function definitions for LM Studio function calling
-import type { EmailAddress, EmailComposition, LabelOperation } from '../types/mailActions'
+import type { EmailComposition, LabelOperation } from '../types/mailActions'
 import { EmailService } from './db/emailService'
 import { getMailActionService } from './services/mailActionServiceManager'
 
@@ -164,45 +164,52 @@ const mailActionService = getMailActionService()
 export const functionImplementations: Record<string, (args: unknown) => unknown> = {
   // Email send operations
   sendEmail: async (args: unknown) => {
-    const params = args as { to: string[]; subject: string; body: string; cc?: string[]; bcc?: string[]; isHtml?: boolean }
+    const params = args as {
+      to: string[]
+      subject: string
+      body: string
+      cc?: string[]
+      bcc?: string[]
+      isHtml?: boolean
+    }
     console.log('[Function Call] sendEmail:', params)
-    
+
     // Convert string arrays to EmailAddress arrays
     const composition: EmailComposition = {
-      to: params.to.map(email => ({ email })),
-      cc: params.cc?.map(email => ({ email })),
-      bcc: params.bcc?.map(email => ({ email })),
+      to: params.to.map((email) => ({ email })),
+      cc: params.cc?.map((email) => ({ email })),
+      bcc: params.bcc?.map((email) => ({ email })),
       subject: params.subject,
       body: params.body,
       isHtml: params.isHtml
     }
-    
+
     return await mailActionService.sendEmail(composition)
   },
   scheduleEmail: async (args: unknown) => {
     const params = args as { to: string[]; subject: string; body: string; scheduledTime: string }
     console.log('[Function Call] scheduleEmail:', params)
-    
+
     const scheduledEmail = {
-      to: params.to.map(email => ({ email })),
+      to: params.to.map((email) => ({ email })),
       subject: params.subject,
       body: params.body,
       scheduledTime: new Date(params.scheduledTime)
     }
-    
+
     return await mailActionService.scheduleEmail(scheduledEmail)
   },
   // Email draft operations
   createDraft: async (args: unknown) => {
     const params = args as { to: string[]; subject: string; body: string }
     console.log('[Function Call] createDraft:', params)
-    
+
     const composition: EmailComposition = {
-      to: params.to.map(email => ({ email })),
+      to: params.to.map((email) => ({ email })),
       subject: params.subject,
       body: params.body
     }
-    
+
     return await mailActionService.createDraft(composition)
   },
   // Email read operations
@@ -219,21 +226,21 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
   getLatestEmails: async (args: unknown) => {
     const params = args as { limit?: number; isRead?: boolean; isStarred?: boolean; label?: string }
     console.log('[Function Call] getLatestEmails:', params)
-    
+
     // Use checkInbox with filters for now
     const filter = {
       labels: params.label ? [params.label] : undefined
     }
-    
+
     const result = await mailActionService.checkInbox(filter)
     if (result.success && result.data) {
       // Filter by read/starred status if specified
       let emails = result.data
       if (params.isRead !== undefined) {
-        emails = emails.filter(e => e.isRead === params.isRead)
+        emails = emails.filter((e) => e.isRead === params.isRead)
       }
       if (params.isStarred !== undefined) {
-        emails = emails.filter(e => e.isStarred === params.isStarred)
+        emails = emails.filter((e) => e.isStarred === params.isStarred)
       }
       // Limit results
       emails = emails.slice(0, params.limit || 10)
@@ -327,7 +334,7 @@ export async function executeFunction(functionCall: FunctionCall): Promise<{
 // Format functions for the LM Studio prompt
 export function formatFunctionsForPrompt(functions: FunctionDefinition[]): string {
   console.log('[formatFunctionsForPrompt] Called with', functions.length, 'functions')
-  
+
   const prompt = `You have access to the following functions:
 
 ${functions
