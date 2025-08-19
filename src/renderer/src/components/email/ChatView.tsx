@@ -121,16 +121,39 @@ export function ChatView(): JSX.Element {
       streamingMessageIdRef.current = null
     }
 
+    const handleFunctionCall = (
+      ...[_event, functionCall]: [unknown, FunctionCall & { result?: unknown }]
+    ): void => {
+      if (streamingMessageIdRef.current && isMountedRef.current) {
+        const currentId = streamingMessageIdRef.current
+
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === currentId) {
+              const existingCalls = msg.functionCalls || []
+              return {
+                ...msg,
+                functionCalls: [...existingCalls, functionCall]
+              }
+            }
+            return msg
+          })
+        )
+      }
+    }
+
     // Add listeners
     window.electron.ipcRenderer.on('lmstudio:stream:chunk', handleStreamChunk)
     window.electron.ipcRenderer.on('lmstudio:stream:error', handleStreamError)
     window.electron.ipcRenderer.on('lmstudio:stream:complete', handleStreamComplete)
+    window.electron.ipcRenderer.on('lmstudio:stream:functionCall', handleFunctionCall)
 
     // Cleanup
     return () => {
       window.electron.ipcRenderer.off('lmstudio:stream:chunk', handleStreamChunk)
       window.electron.ipcRenderer.off('lmstudio:stream:error', handleStreamError)
       window.electron.ipcRenderer.off('lmstudio:stream:complete', handleStreamComplete)
+      window.electron.ipcRenderer.off('lmstudio:stream:functionCall', handleFunctionCall)
       isMountedRef.current = false
     }
   }, []) // Empty dependency array - set up listeners only once

@@ -168,7 +168,8 @@ export class LMStudioService {
     onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
     onError: (error: string) => void,
     onComplete: () => void,
-    enableFunctions: boolean = false
+    enableFunctions: boolean = false,
+    onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
     try {
       // Remove trailing slash if present
@@ -238,7 +239,8 @@ export class LMStudioService {
               model,
               modifiedMessages,
               onChunk,
-              onError
+              onError,
+              onFunctionCall
             )
           }
           onComplete()
@@ -268,7 +270,8 @@ export class LMStudioService {
                   model,
                   modifiedMessages,
                   onChunk,
-                  onError
+                  onError,
+                  onFunctionCall
                 )
               }
               onComplete()
@@ -314,7 +317,8 @@ export class LMStudioService {
     model: string,
     messages: Array<{ role: string; content: string }>,
     onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
-    onError: (error: string) => void
+    onError: (error: string) => void,
+    onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
     try {
       console.log('Checking for function call in content:', content)
@@ -340,7 +344,8 @@ export class LMStudioService {
           messages,
           content,
           onChunk,
-          onError
+          onError,
+          onFunctionCall
         )
       } else {
         // Parse LM Studio format
@@ -361,7 +366,8 @@ export class LMStudioService {
           messages,
           content,
           onChunk,
-          onError
+          onError,
+          onFunctionCall
         )
       }
     } catch (error) {
@@ -376,7 +382,8 @@ export class LMStudioService {
     messages: Array<{ role: string; content: string }>,
     assistantContent: string,
     onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
-    onError: (error: string) => void
+    onError: (error: string) => void,
+    onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
     // Execute the function
     const result = await executeFunction(functionCall)
@@ -387,6 +394,14 @@ export class LMStudioService {
     }
 
     console.log('Function execution result:', result)
+
+    // Emit the function call with its result
+    if (onFunctionCall) {
+      onFunctionCall({
+        ...functionCall,
+        result: result.result
+      })
+    }
 
     // Send function result as a message
     const resultMessage = `\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}`
@@ -404,7 +419,16 @@ export class LMStudioService {
 
     // Make another call to get the final response
     onChunk('\n\n', 'content')
-    await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, true)
+    await this.streamMessage(
+      url,
+      model,
+      updatedMessages,
+      onChunk,
+      onError,
+      () => {},
+      true,
+      onFunctionCall
+    )
   }
 }
 
@@ -456,7 +480,13 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
             webContents.send('lmstudio:stream:complete')
           }
         },
-        enableFunctions || false
+        enableFunctions || false,
+        // Add function call callback
+        (functionCall) => {
+          if (!webContents.isDestroyed()) {
+            webContents.send('lmstudio:stream:functionCall', functionCall)
+          }
+        }
       )
     }
   )
