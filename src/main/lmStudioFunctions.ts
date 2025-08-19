@@ -5,10 +5,13 @@ export interface FunctionDefinition {
   description: string
   parameters: {
     type: 'object'
-    properties: Record<string, {
-      type: string
-      description: string
-    }>
+    properties: Record<
+      string,
+      {
+        type: string
+        description: string
+      }
+    >
     required?: string[]
   }
 }
@@ -37,20 +40,55 @@ export const availableFunctions: FunctionDefinition[] = [
       },
       required: ['a', 'b']
     }
+  },
+  {
+    name: 'multiply',
+    description: 'Multiply two numbers',
+    parameters: {
+      type: 'object',
+      properties: {
+        a: {
+          type: 'number',
+          description: 'The first number'
+        },
+        b: {
+          type: 'number',
+          description: 'The second number'
+        }
+      },
+      required: ['a', 'b']
+    }
+  },
+  {
+    name: 'getCurrentTime',
+    description: 'Get the current date and time',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
   }
 ]
 
 // Function implementations
-export const functionImplementations: Record<string, (args: any) => any> = {
-  add: (args: { a: number; b: number }) => {
-    return args.a + args.b
+export const functionImplementations: Record<string, (args: unknown) => unknown> = {
+  add: (args: unknown) => {
+    const params = args as { a: number; b: number }
+    return params.a + params.b
+  },
+  multiply: (args: unknown) => {
+    const params = args as { a: number; b: number }
+    return params.a * params.b
+  },
+  getCurrentTime: () => {
+    return new Date().toLocaleString()
   }
 }
 
 // Execute a function call
 export async function executeFunction(functionCall: FunctionCall): Promise<{
   success: boolean
-  result?: any
+  result?: unknown
   error?: string
 }> {
   try {
@@ -81,17 +119,21 @@ export async function executeFunction(functionCall: FunctionCall): Promise<{
 export function formatFunctionsForPrompt(functions: FunctionDefinition[]): string {
   return `You have access to the following functions:
 
-${functions.map(f => `Function: ${f.name}
+${functions
+  .map(
+    (f) => `Function: ${f.name}
 Description: ${f.description}
-Parameters: ${JSON.stringify(f.parameters, null, 2)}`).join('\n\n')}
+Parameters: ${JSON.stringify(f.parameters, null, 2)}`
+  )
+  .join('\n\n')}
 
-To use a function, respond with a JSON object in the following format:
-{
-  "function_call": {
-    "name": "function_name",
-    "arguments": "{\"param1\": value1, \"param2\": value2}"
-  }
-}
+To use a function, you can either:
+1. Use the special format: <|channel|>commentary to=functions.functionName <|message|>{"param1": value1, "param2": value2}
+2. Or respond with: {"function_call": {"name": "function_name", "arguments": "{\\"param1\\": value1, \\"param2\\": value2}"}}
+
+For example, to add 5 and 7:
+- Method 1: <|channel|>commentary to=functions.add <|message|>{"a": 5, "b": 7}
+- Method 2: {"function_call": {"name": "add", "arguments": "{\\"a\\": 5, \\"b\\": 7}"}}
 
 After I execute the function, I'll provide you with the result and you can continue the conversation.`
 }

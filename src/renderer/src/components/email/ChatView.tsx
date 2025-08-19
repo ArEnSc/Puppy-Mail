@@ -303,7 +303,7 @@ export function ChatView(): JSX.Element {
           </Button>
           {enableFunctions && (
             <span className="text-xs text-muted-foreground">
-              Try: "What's 5 + 7?"
+              Try: &quot;What&apos;s 5 + 7?&quot; or &quot;What time is it?&quot;
             </span>
           )}
         </div>

@@ -40,6 +40,7 @@ $ npm run auth:gmail
 ```
 
 This will:
+
 1. Open your browser for Google authentication
 2. Generate a refresh token for Gmail API access
 3. Optionally update your `.env` file automatically

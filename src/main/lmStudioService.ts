@@ -175,12 +175,12 @@ export class LMStudioService {
       const cleanUrl = url.replace(/\/$/, '')
 
       // Modify messages to include function definitions if enabled
-      let modifiedMessages = [...messages]
+      const modifiedMessages = [...messages]
       if (enableFunctions && messages.length > 0) {
         // Add function definitions to the system message or create one
-        const systemMessageIndex = modifiedMessages.findIndex(m => m.role === 'system')
+        const systemMessageIndex = modifiedMessages.findIndex((m) => m.role === 'system')
         const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
-        
+
         if (systemMessageIndex >= 0) {
           modifiedMessages[systemMessageIndex].content += '\n\n' + functionsPrompt
         } else {
@@ -227,8 +227,19 @@ export class LMStudioService {
 
         if (done) {
           // Check if accumulated content contains a function call
-          if (enableFunctions && accumulatedContent.includes('"function_call"')) {
-            await this.handleFunctionCall(accumulatedContent, url, model, modifiedMessages, onChunk, onError)
+          if (
+            enableFunctions &&
+            (accumulatedContent.includes('to=functions.') ||
+              accumulatedContent.includes('"function_call"'))
+          ) {
+            await this.handleFunctionCall(
+              accumulatedContent,
+              url,
+              model,
+              modifiedMessages,
+              onChunk,
+              onError
+            )
           }
           onComplete()
           break
@@ -246,8 +257,19 @@ export class LMStudioService {
 
             if (data === '[DONE]') {
               // Check if accumulated content contains a function call
-              if (enableFunctions && accumulatedContent.includes('"function_call"')) {
-                await this.handleFunctionCall(accumulatedContent, url, model, modifiedMessages, onChunk, onError)
+              if (
+                enableFunctions &&
+                (accumulatedContent.includes('to=functions.') ||
+                  accumulatedContent.includes('"function_call"'))
+              ) {
+                await this.handleFunctionCall(
+                  accumulatedContent,
+                  url,
+                  model,
+                  modifiedMessages,
+                  onChunk,
+                  onError
+                )
               }
               onComplete()
               return
@@ -295,41 +317,94 @@ export class LMStudioService {
     onError: (error: string) => void
   ): Promise<void> {
     try {
-      // Try to extract function call from the content
-      const functionCallMatch = content.match(/\{[\s\S]*"function_call"[\s\S]*\}/m)
-      if (!functionCallMatch) {
-        return
-      }
+      console.log('Checking for function call in content:', content)
 
-      const functionCallJson = JSON.parse(functionCallMatch[0])
-      const functionCall: FunctionCall = functionCallJson.function_call
+      // Check for LM Studio's function calling format
+      // Pattern: to=functions.functionName ... {"param": value}
+      const functionPattern = /to=functions\.(\w+).*?(\{[^}]+\})/s
+      const match = content.match(functionPattern)
 
-      // Execute the function
-      const result = await executeFunction(functionCall)
-      
-      if (!result.success) {
-        onError(`Function execution failed: ${result.error}`)
-        return
-      }
-
-      // Send function result as a message
-      onChunk(`\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}\n\n`, 'content')
-
-      // Continue the conversation with the function result
-      const updatedMessages = [
-        ...messages,
-        { role: 'assistant', content: content },
-        { 
-          role: 'function', 
-          content: `Function ${functionCall.name} returned: ${JSON.stringify(result.result)}` 
+      if (!match) {
+        // Also try the original JSON format
+        const functionCallMatch = content.match(/\{[\s\S]*"function_call"[\s\S]*\}/m)
+        if (!functionCallMatch) {
+          return
         }
-      ]
 
-      // Make another call to get the final response
-      await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, false)
+        const functionCallJson = JSON.parse(functionCallMatch[0])
+        const functionCall: FunctionCall = functionCallJson.function_call
+        await this.executeFunctionAndContinue(
+          functionCall,
+          url,
+          model,
+          messages,
+          content,
+          onChunk,
+          onError
+        )
+      } else {
+        // Parse LM Studio format
+        const functionName = match[1]
+        const argsJson = match[2]
+
+        console.log('Detected function call:', functionName, 'with args:', argsJson)
+
+        const functionCall: FunctionCall = {
+          name: functionName,
+          arguments: argsJson
+        }
+
+        await this.executeFunctionAndContinue(
+          functionCall,
+          url,
+          model,
+          messages,
+          content,
+          onChunk,
+          onError
+        )
+      }
     } catch (error) {
       console.error('Error handling function call:', error)
     }
+  }
+
+  private async executeFunctionAndContinue(
+    functionCall: FunctionCall,
+    url: string,
+    model: string,
+    messages: Array<{ role: string; content: string }>,
+    assistantContent: string,
+    onChunk: (chunk: string, type?: 'content' | 'reasoning') => void,
+    onError: (error: string) => void
+  ): Promise<void> {
+    // Execute the function
+    const result = await executeFunction(functionCall)
+
+    if (!result.success) {
+      onError(`Function execution failed: ${result.error}`)
+      return
+    }
+
+    console.log('Function execution result:', result)
+
+    // Send function result as a message
+    const resultMessage = `\n\nFunction ${functionCall.name} returned: ${JSON.stringify(result.result)}`
+    onChunk(resultMessage, 'content')
+
+    // Continue the conversation with the function result
+    const updatedMessages = [
+      ...messages,
+      { role: 'assistant', content: assistantContent },
+      {
+        role: 'user',
+        content: `The function ${functionCall.name} returned: ${JSON.stringify(result.result)}. Please provide a natural response to the user based on this result.`
+      }
+    ]
+
+    // Make another call to get the final response
+    onChunk('\n\n', 'content')
+    await this.streamMessage(url, model, updatedMessages, onChunk, onError, () => {}, false)
   }
 }
 
