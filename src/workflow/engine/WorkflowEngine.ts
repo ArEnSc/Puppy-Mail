@@ -150,7 +150,7 @@ export class WorkflowEngine {
 
         const stepResult = await this.executeStep(step, context)
         execution.stepResults.push(stepResult)
-        
+
         // Log step result
         const emoji = stepResult.status === 'success' ? '✅' : '❌'
         this.logger.info(
@@ -162,7 +162,7 @@ export class WorkflowEngine {
           },
           { ...logContext, stepId: step.id }
         )
-        
+
         if (stepResult.status === 'success') {
           context.stepOutputs.set(step.id, stepResult.output)
         } else if (step.onError?.action === 'stop') {
@@ -174,7 +174,7 @@ export class WorkflowEngine {
       if (execution.status === 'running') {
         execution.status = 'completed'
       }
-      
+
       // Log workflow completion
       const duration = Date.now() - startTime
       if (execution.status === 'completed') {
@@ -203,7 +203,7 @@ export class WorkflowEngine {
     } catch (error) {
       const duration = Date.now() - startTime
       execution.status = 'failed'
-      
+
       this.logger.error(
         '💥 Workflow execution crashed',
         {
@@ -213,7 +213,7 @@ export class WorkflowEngine {
         },
         logContext
       )
-      
+
       console.error('Workflow execution failed:', error)
     } finally {
       execution.completedAt = new Date()

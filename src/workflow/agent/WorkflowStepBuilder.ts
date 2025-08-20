@@ -1,4 +1,4 @@
-import { WorkflowStep, WorkflowFunction } from '../types/workflow'
+import { WorkflowStep } from '../types/workflow'
 
 /**
  * Helper class for AI agents to build workflow steps
@@ -33,12 +33,14 @@ export class WorkflowStepBuilder {
       id: `send-${++this.stepCounter}`,
       functionName: 'sendEmail',
       inputs: {
-        composition: {
-          to: to.map(email => ({ email })),
-          subject,
-          body: typeof body === 'string' ? body : body,
-          isHtml: false
-        }
+        composition: typeof body === 'string' 
+          ? {
+              to: to.map((email) => ({ email })),
+              subject,
+              body,
+              isHtml: false
+            }
+          : body
       }
     }
 
@@ -111,7 +113,7 @@ export class WorkflowStepBuilder {
    */
   parseNaturalLanguage(description: string): WorkflowStep[] {
     const steps: WorkflowStep[] = []
-    
+
     // Simple pattern matching for common requests
     if (description.includes('analyze') || description.includes('extract')) {
       const prompt = this.extractPrompt(description)
@@ -127,12 +129,14 @@ export class WorkflowStepBuilder {
     if (description.includes('send') || description.includes('notify')) {
       const emailDetails = this.extractEmailDetails(description)
       const previousStep = steps.length > 0 ? steps[steps.length - 1].id : undefined
-      steps.push(this.createSendEmailStep(
-        emailDetails.to,
-        emailDetails.subject,
-        emailDetails.body,
-        previousStep ? { previousStep } : undefined
-      ))
+      steps.push(
+        this.createSendEmailStep(
+          emailDetails.to,
+          emailDetails.subject,
+          emailDetails.body,
+          previousStep ? { previousStep } : undefined
+        )
+      )
     }
 
     return steps
@@ -166,7 +170,8 @@ export class WorkflowStepBuilder {
     subject: string
     body: string | { fromPreviousStep: string }
   } {
-    // Simple extraction - in real implementation, use NLP
+    // Simple extraction - in real implementation, use NLP to parse description
+    // For now, return defaults with reference to previous analysis step
     return {
       to: ['user@example.com'], // Would extract from description
       subject: 'Workflow Notification',

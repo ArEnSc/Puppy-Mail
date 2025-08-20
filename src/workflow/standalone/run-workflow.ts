@@ -4,7 +4,18 @@ import { WorkflowEngine } from '../engine/WorkflowEngine'
 import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
 import { WorkflowPlan } from '../types/workflow'
-import { MailActionService } from '../../types/mailActions'
+import {
+  MailActionService,
+  EmailComposition,
+  ScheduledEmail,
+  LabelOperation,
+  EmailMessage,
+  SendEmailResult,
+  ScheduleEmailResult,
+  LabelOperationResult,
+  ListenInboxResult,
+  AnalysisResult
+} from '../../types/mailActions'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 
@@ -14,7 +25,7 @@ import * as path from 'path'
 class StandaloneMockMailService implements MailActionService {
   private logs: string[] = []
 
-  async sendEmail(composition: any): Promise<any> {
+  async sendEmail(composition: EmailComposition): Promise<SendEmailResult> {
     this.log('sendEmail', composition)
     return {
       success: true,
@@ -22,7 +33,7 @@ class StandaloneMockMailService implements MailActionService {
     }
   }
 
-  async scheduleEmail(scheduledEmail: any): Promise<any> {
+  async scheduleEmail(scheduledEmail: ScheduledEmail): Promise<ScheduleEmailResult> {
     this.log('scheduleEmail', scheduledEmail)
     return {
       success: true,
@@ -30,17 +41,24 @@ class StandaloneMockMailService implements MailActionService {
     }
   }
 
-  async addLabels(operation: any): Promise<any> {
+  async addLabels(operation: LabelOperation): Promise<LabelOperationResult> {
     this.log('addLabels', operation)
     return { success: true }
   }
 
-  async removeLabels(operation: any): Promise<any> {
+  async removeLabels(operation: LabelOperation): Promise<LabelOperationResult> {
     this.log('removeLabels', operation)
     return { success: true }
   }
 
-  async listenForEmails(senders: string[], options?: any): Promise<any> {
+  async listenForEmails(
+    senders: string[],
+    options?: {
+      subject?: string
+      labels?: string[]
+      callback?: (email: EmailMessage) => void
+    }
+  ): Promise<ListenInboxResult> {
     this.log('listenForEmails', { senders, options })
     return {
       success: true,
@@ -48,7 +66,13 @@ class StandaloneMockMailService implements MailActionService {
     }
   }
 
-  async analysis(prompt: string, context?: any): Promise<any> {
+  async analysis(
+    prompt: string,
+    context?: {
+      emails?: EmailMessage[]
+      data?: Record<string, unknown>
+    }
+  ): Promise<AnalysisResult> {
     this.log('analysis', { prompt, context })
 
     // Simulate AI analysis
@@ -60,7 +84,7 @@ class StandaloneMockMailService implements MailActionService {
     }
   }
 
-  private log(method: string, data: any): void {
+  private log(method: string, data: unknown): void {
     const logEntry = `[${new Date().toISOString()}] ${method}: ${JSON.stringify(data, null, 2)}`
     this.logs.push(logEntry)
     console.log(`📧 Mock ${method} called`)

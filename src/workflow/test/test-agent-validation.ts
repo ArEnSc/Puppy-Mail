@@ -61,7 +61,7 @@ async function testAgentValidation(): Promise<void> {
           composition: {
             to: [{ email: 'assistant@company.com' }],
             subject: 'Urgent Email Alert',
-            body: { fromPreviousStep: 'analyze.data' }
+            body: 'Analysis results from previous step'
           }
         }
       }
@@ -95,10 +95,8 @@ async function testAgentValidation(): Promise<void> {
         functionName: 'sendEmail',
         inputs: {
           composition: {
-            to: [{ email: 'user@example.com' }],
-            subject: 'Summary',
             // ERROR: References non-existent step
-            body: { fromPreviousStep: 'analyze.data' }
+            fromPreviousStep: 'analyze.data'
           }
         }
       },

@@ -8,6 +8,7 @@ import {
   ScheduleEmailInputs,
   ListenInputs
 } from '../types/workflow'
+import { EmailComposition, ScheduledEmail } from '../../types/mailActions'
 
 interface ValidationResult {
   valid: boolean
@@ -299,11 +300,11 @@ export class WorkflowValidator {
           message: 'Email composition requires a subject'
         })
       }
-      if (!comp.body && !comp.fromPreviousStep) {
+      if (!comp.body) {
         errors.push({
           stepId: step.id,
           field: 'inputs.composition.body',
-          message: 'Email composition requires a body or fromPreviousStep reference'
+          message: 'Email composition requires a body'
         })
       }
     }
@@ -332,23 +333,34 @@ export class WorkflowValidator {
 
     const op = inputs.operation
 
-    // Check email ID reference
-    if (op.emailIdFromPreviousStep && op.emailIdFromPreviousStep !== 'trigger') {
-      const stepId = op.emailIdFromPreviousStep
-      if (!availableOutputs.has(stepId)) {
+    // Check if it's the extended operation type with emailIdFromPreviousStep
+    if ('emailIdFromPreviousStep' in op) {
+      if (op.emailIdFromPreviousStep && op.emailIdFromPreviousStep !== 'trigger') {
+        const stepId = op.emailIdFromPreviousStep
+        if (!availableOutputs.has(stepId)) {
+          errors.push({
+            stepId: step.id,
+            field: 'inputs.operation.emailIdFromPreviousStep',
+            message: `Referenced step "${stepId}" not found`,
+            suggestion: 'Use "trigger" or a valid step ID'
+          })
+        }
+      } else if (!op.emailId && !op.emailIdFromPreviousStep) {
         errors.push({
           stepId: step.id,
-          field: 'inputs.operation.emailIdFromPreviousStep',
-          message: `Referenced step "${stepId}" not found`,
-          suggestion: 'Use "trigger" or a valid step ID'
+          field: 'inputs.operation',
+          message: 'Label operation requires emailId or emailIdFromPreviousStep'
         })
       }
-    } else if (!op.emailId && !op.emailIdFromPreviousStep) {
-      errors.push({
-        stepId: step.id,
-        field: 'inputs.operation',
-        message: 'Label operation requires emailId or emailIdFromPreviousStep'
-      })
+    } else {
+      // It's a regular LabelOperation, must have emailId
+      if (!op.emailId) {
+        errors.push({
+          stepId: step.id,
+          field: 'inputs.operation.emailId',
+          message: 'Label operation requires emailId'
+        })
+      }
     }
 
     if (!op.labelIds || op.labelIds.length === 0) {

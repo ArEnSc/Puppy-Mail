@@ -25,7 +25,63 @@
       "presentation": {
         "hidden": true
       }
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Workflow Engine",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/workflow/debug/debug-runner.ts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Simple Workflow",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/workflow/standalone/run-workflow.ts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node"],
+      "args": [],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Validation Test",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/workflow/test/test-agent-validation.ts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Simple Validation Test",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/workflow/test/simple-validation-test.ts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Test With All Logs",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/workflow/test/test-with-all-logs.ts",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
   ],
   "compounds": [
     {

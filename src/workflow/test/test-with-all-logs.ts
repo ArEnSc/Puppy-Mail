@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 
+/**
+ * Test workflow with verbose logging enabled
+ * 
+ * DEBUGGING:
+ * 1. Set breakpoint on line 49 (engine.executeWorkflow)
+ * 2. Set breakpoints in WorkflowEngine.ts:
+ *    - executeStep() to see each step execution
+ *    - evaluateCondition() to see condition evaluation
+ *    - resolveStepInputs() to see input processing
+ * 3. Watch the logger output in console for detailed flow
+ */
+
 import { WorkflowEngine } from '../engine/WorkflowEngine'
 import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
@@ -22,8 +34,7 @@ async function runWithAllLogs(): Promise<void> {
   const engine = new WorkflowEngine(mailService, logger)
 
   // Load workflow
-  const workflowPath =
-    process.argv[2] || path.join(__dirname, 'fixtures', 'correct-workflow.json')
+  const workflowPath = process.argv[2] || path.join(__dirname, 'fixtures', 'correct-workflow.json')
   const content = await fs.readFile(workflowPath, 'utf-8')
   const workflow = JSON.parse(content)
   workflow.createdAt = new Date(workflow.createdAt)
@@ -46,7 +57,7 @@ async function runWithAllLogs(): Promise<void> {
   console.log('━'.repeat(60))
 
   try {
-    // Execute workflow
+    // 🎯 BREAKPOINT: Set here to step through workflow execution
     const execution = await engine.executeWorkflow(workflow, triggerData)
 
     console.log('━'.repeat(60))

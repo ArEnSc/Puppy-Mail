@@ -10,7 +10,7 @@ export const FUNCTION_IO_MAP = {
       emailId: 'string',
       email: {
         id: 'string',
-        from: { email: 'string', name?: 'string' },
+        from: { email: 'string', name: 'string | undefined' },
         to: 'EmailAddress[]',
         subject: 'string',
         body: 'string',

@@ -126,7 +126,8 @@ async function runDebugWorkflow(): Promise<void> {
   const engine = new WorkflowEngine(mailService, logger)
 
   // 4. Load workflow
-  const workflowPath = process.argv[2] || path.join(__dirname, '..', 'test', 'fixtures', 'simple-test.json')
+  const workflowPath =
+    process.argv[2] || path.join(__dirname, '..', 'test', 'fixtures', 'simple-test.json')
   console.log(`\n📁 Loading workflow: ${path.basename(workflowPath)}`)
 
   const content = await fs.readFile(workflowPath, 'utf-8')
