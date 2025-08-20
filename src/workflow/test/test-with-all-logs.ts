@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { DebugWorkflowEngine } from '../engine/DebugWorkflowEngine'
+import { WorkflowEngine } from '../engine/WorkflowEngine'
 import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
 import { ExecutionVisualizer } from '../debug/ExecutionVisualizer'
@@ -19,11 +19,11 @@ async function runWithAllLogs(): Promise<void> {
 
   // Create services
   const mailService = new StandaloneMockMailService()
-  const engine = new DebugWorkflowEngine(mailService, logger)
+  const engine = new WorkflowEngine(mailService, logger)
 
   // Load workflow
   const workflowPath =
-    process.argv[2] || path.join(__dirname, '..', 'examples', 'correct-workflow.json')
+    process.argv[2] || path.join(__dirname, 'fixtures', 'correct-workflow.json')
   const content = await fs.readFile(workflowPath, 'utf-8')
   const workflow = JSON.parse(content)
   workflow.createdAt = new Date(workflow.createdAt)

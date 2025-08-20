@@ -15,7 +15,7 @@ The Workflow Engine allows you to create automated workflows that trigger on ema
 
 ```
 WorkflowService (Main API)
-├── WorkflowEngine (Executes workflows)
+├── WorkflowEngine (Executes workflows with built-in logging)
 ├── TriggerManager (Monitors for triggers)
 └── WorkflowStorage (Persists workflows)
 ```
@@ -23,10 +23,10 @@ WorkflowService (Main API)
 ### Core Components
 
 - **WorkflowService**: Main API for managing workflows
-- **WorkflowEngine**: Executes workflow plans step by step
+- **WorkflowEngine**: Executes workflow plans step by step with integrated logging
 - **TriggerManager**: Monitors for email/timer events
 - **WorkflowStorage**: Persists workflows to disk/database
-- **WorkflowLogger**: Structured logging system
+- **WorkflowLogger**: Structured logging system (integrated into engine)
 - **WorkflowDebugger**: Validation and visualization tools
 
 ## Workflow Structure
@@ -96,6 +96,8 @@ Interactive menu for:
 - Exporting logs
 
 ## Example Workflows
+
+> **Note**: Example workflow JSON files can be found in `src/workflow/test/fixtures/`
 
 ### Simple Email Analyzer
 
@@ -236,12 +238,14 @@ Actions:
 
 ### Debug Engine
 
-Use `DebugWorkflowEngine` for comprehensive logging:
+Enable comprehensive logging by passing a logger to the engine:
 
 ```typescript
-import { DebugWorkflowEngine } from './engine/DebugWorkflowEngine'
+import { WorkflowEngine } from './engine/WorkflowEngine'
+import { WorkflowLogger } from './engine/WorkflowLogger'
 
-const engine = new DebugWorkflowEngine(mailService)
+const logger = new WorkflowLogger({ logToConsole: true })
+const engine = new WorkflowEngine(mailService, logger)
 const execution = await engine.executeWorkflow(workflow, triggerData)
 
 // Get execution logs

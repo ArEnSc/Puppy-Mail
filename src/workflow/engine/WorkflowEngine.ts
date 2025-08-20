@@ -66,7 +66,7 @@ function isLabelOperationWithRef(obj: unknown): obj is {
 export class WorkflowEngine {
   private mailActions: MailActionService
   private runningWorkflows: Map<string, WorkflowExecution> = new Map()
-  private logger: WorkflowLogger
+  protected logger: WorkflowLogger
 
   constructor(mailActions: MailActionService, logger?: WorkflowLogger) {
     this.mailActions = mailActions
@@ -74,6 +74,7 @@ export class WorkflowEngine {
   }
 
   async executeWorkflow(plan: WorkflowPlan, triggerData?: TriggerData): Promise<WorkflowExecution> {
+    const startTime = Date.now()
     const execution: WorkflowExecution = {
       id: `exec-${Date.now()}`,
       workflowId: plan.id,
@@ -88,6 +89,26 @@ export class WorkflowEngine {
 
     this.runningWorkflows.set(execution.id, execution)
 
+    // Log workflow start
+    const logContext = {
+      workflowId: plan.id,
+      executionId: execution.id
+    }
+
+    this.logger.info(
+      '🚀 Starting workflow execution',
+      {
+        workflowName: plan.name,
+        workflowId: plan.id,
+        triggerType: plan.trigger.type,
+        triggerConfig: plan.trigger.config,
+        triggerData,
+        totalSteps: plan.steps.length,
+        enabled: plan.enabled
+      },
+      logContext
+    )
+
     try {
       const context: WorkflowContext = {
         trigger: {
@@ -100,8 +121,24 @@ export class WorkflowEngine {
       }
 
       for (const step of plan.steps) {
+        this.logger.debug(
+          `Evaluating step ${step.id}`,
+          {
+            stepId: step.id,
+            functionName: step.functionName,
+            hasCondition: !!step.condition,
+            condition: step.condition
+          },
+          { ...logContext, stepId: step.id }
+        )
+
         const shouldExecute = await this.evaluateCondition(step, context)
         if (!shouldExecute) {
+          this.logger.info(
+            `⏭️ Skipping step ${step.id}: condition not met`,
+            { stepId: step.id },
+            { ...logContext, stepId: step.id }
+          )
           execution.stepResults.push({
             stepId: step.id,
             status: 'skipped',
@@ -113,6 +150,19 @@ export class WorkflowEngine {
 
         const stepResult = await this.executeStep(step, context)
         execution.stepResults.push(stepResult)
+        
+        // Log step result
+        const emoji = stepResult.status === 'success' ? '✅' : '❌'
+        this.logger.info(
+          `${emoji} Step ${step.id}: ${stepResult.status}`,
+          {
+            duration: stepResult.completedAt.getTime() - stepResult.startedAt.getTime() + 'ms',
+            output: stepResult.output,
+            error: stepResult.error?.message
+          },
+          { ...logContext, stepId: step.id }
+        )
+        
         if (stepResult.status === 'success') {
           context.stepOutputs.set(step.id, stepResult.output)
         } else if (step.onError?.action === 'stop') {
@@ -124,8 +174,46 @@ export class WorkflowEngine {
       if (execution.status === 'running') {
         execution.status = 'completed'
       }
+      
+      // Log workflow completion
+      const duration = Date.now() - startTime
+      if (execution.status === 'completed') {
+        this.logger.info(
+          '✅ Workflow completed successfully',
+          {
+            duration: `${duration}ms`,
+            stepsExecuted: execution.stepResults.length,
+            successfulSteps: execution.stepResults.filter((r) => r.status === 'success').length,
+            failedSteps: execution.stepResults.filter((r) => r.status === 'failed').length,
+            skippedSteps: execution.stepResults.filter((r) => r.status === 'skipped').length
+          },
+          logContext
+        )
+      } else {
+        this.logger.error(
+          '❌ Workflow failed',
+          {
+            duration: `${duration}ms`,
+            stepsExecuted: execution.stepResults.length,
+            lastFailedStep: execution.stepResults.find((r) => r.status === 'failed')
+          },
+          logContext
+        )
+      }
     } catch (error) {
+      const duration = Date.now() - startTime
       execution.status = 'failed'
+      
+      this.logger.error(
+        '💥 Workflow execution crashed',
+        {
+          duration: `${duration}ms`,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        },
+        logContext
+      )
+      
       console.error('Workflow execution failed:', error)
     } finally {
       execution.completedAt = new Date()
@@ -209,7 +297,7 @@ export class WorkflowEngine {
     inputs: SendEmailInputs | ScheduleEmailInputs | LabelInputs | ListenInputs | AnalysisInputs,
     context: WorkflowContext
   ): ProcessedInputs {
-    if (!inputs) return inputs
+    if (!inputs) return {}
 
     const processed: ProcessedInputs = {}
 
@@ -375,5 +463,28 @@ Time: ${new Date().toISOString()}
     } catch (notifyError) {
       console.error('Failed to send error notification:', notifyError)
     }
+  }
+
+  // Log access methods
+  getLogger(): WorkflowLogger {
+    return this.logger
+  }
+
+  getExecutionLogs(executionId: string): string {
+    const logs = this.logger.getLogsForExecution(executionId)
+    return JSON.stringify(logs, null, 2)
+  }
+
+  getWorkflowLogs(workflowId: string): string {
+    const logs = this.logger.getLogsForWorkflow(workflowId)
+    return JSON.stringify(logs, null, 2)
+  }
+
+  exportAllLogs(): string {
+    return this.logger.exportLogs()
+  }
+
+  clearLogs(): void {
+    this.logger.clearLogs()
   }
 }

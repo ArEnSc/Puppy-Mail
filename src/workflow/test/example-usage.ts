@@ -1,5 +1,5 @@
 import { WorkflowPlan } from '../types/workflow'
-import { DebugWorkflowEngine } from '../engine/DebugWorkflowEngine'
+import { WorkflowEngine } from '../engine/WorkflowEngine'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
 import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { MailActionService } from '../../types/mailActions'
@@ -95,9 +95,9 @@ export async function debugWorkflowExample(mailActions: MailActionService): Prom
   console.log('Trigger data:', JSON.stringify(triggerData, null, 2))
   console.log('\n')
 
-  // 4. Create debug engine with logger
+  // 4. Create engine with logger
   const logger = new WorkflowLogger({ logToConsole: true })
-  const debugEngine = new DebugWorkflowEngine(mailActions, logger)
+  const debugEngine = new WorkflowEngine(mailActions, logger)
 
   // 5. Execute workflow with debugging
   console.log('4. Executing workflow with debug logging...\n')

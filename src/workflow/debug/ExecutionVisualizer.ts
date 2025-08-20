@@ -32,8 +32,9 @@ export class ExecutionVisualizer {
     if (execution.triggeredBy.data) {
       const triggerData = execution.triggeredBy.data as Record<string, unknown>
       if (triggerData.email) {
+        const email = triggerData.email as { from?: { email?: string }; subject?: string }
         lines.push(
-          `${this.INDENT}Email: ${triggerData.email.from.email} → ${triggerData.email.subject}`
+          `${this.INDENT}Email: ${email.from?.email || 'unknown'} → ${email.subject || 'no subject'}`
         )
       }
     }
@@ -179,7 +180,7 @@ export class ExecutionVisualizer {
       if (log.message.includes(stepId) && log.data) {
         const data = log.data as Record<string, unknown>
         if (data.condition !== undefined || data.shouldExecute !== undefined) {
-          return data.condition || data.shouldExecute
+          return Boolean(data.condition || data.shouldExecute)
         }
       }
     }

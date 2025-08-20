@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { DebugWorkflowEngine } from '../engine/DebugWorkflowEngine'
+import { WorkflowEngine } from '../engine/WorkflowEngine'
+import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
 import { WorkflowPlan } from '../types/workflow'
 import { MailActionService } from '../../types/mailActions'
@@ -93,8 +94,9 @@ async function runStandaloneWorkflow(): Promise<void> {
   // 1. Create mock mail service
   const mailService = new StandaloneMockMailService()
 
-  // 2. Create debug engine
-  const engine = new DebugWorkflowEngine(mailService)
+  // 2. Create engine with logging
+  const logger = new WorkflowLogger({ logToConsole: true })
+  const engine = new WorkflowEngine(mailService, logger)
 
   // 3. Load or create test workflow
   let workflow: WorkflowPlan
@@ -196,7 +198,7 @@ function createTestWorkflow(): WorkflowPlan {
         functionName: 'addLabels',
         inputs: {
           operation: {
-            emailIdFromPreviousStep: true,
+            emailIdFromPreviousStep: 'step-1-analyze',
             labelIds: ['analyzed', 'test'],
             operation: 'add'
           }

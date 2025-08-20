@@ -2,7 +2,8 @@
 
 import * as readline from 'readline'
 import { WorkflowPlan } from '../types/workflow'
-import { DebugWorkflowEngine } from '../engine/DebugWorkflowEngine'
+import { WorkflowEngine } from '../engine/WorkflowEngine'
+import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from '../debug/WorkflowDebugger'
 import { StandaloneMockMailService } from './run-workflow'
 import * as fs from 'fs/promises'
@@ -19,13 +20,14 @@ const question = (prompt: string): Promise<string> => {
 }
 
 class WorkflowCLI {
-  private engine: DebugWorkflowEngine
+  private engine: WorkflowEngine
   private mailService: StandaloneMockMailService
   private loadedWorkflow?: WorkflowPlan
 
   constructor() {
     this.mailService = new StandaloneMockMailService()
-    this.engine = new DebugWorkflowEngine(this.mailService)
+    const logger = new WorkflowLogger({ logToConsole: true })
+    this.engine = new WorkflowEngine(this.mailService, logger)
   }
 
   async run(): Promise<void> {

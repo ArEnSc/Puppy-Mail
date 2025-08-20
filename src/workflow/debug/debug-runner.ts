@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { DebugWorkflowEngine } from '../engine/DebugWorkflowEngine'
+import { WorkflowEngine } from '../engine/WorkflowEngine'
 import { WorkflowLogger } from '../engine/WorkflowLogger'
 import { WorkflowDebugger } from './WorkflowDebugger'
 import { ExecutionVisualizer } from './ExecutionVisualizer'
@@ -122,11 +122,11 @@ async function runDebugWorkflow(): Promise<void> {
   // 2. Create mock mail service
   const mailService = new DebugMockMailService()
 
-  // 3. Create debug engine
-  const engine = new DebugWorkflowEngine(mailService, logger)
+  // 3. Create engine with logger
+  const engine = new WorkflowEngine(mailService, logger)
 
   // 4. Load workflow
-  const workflowPath = process.argv[2] || path.join(__dirname, '..', 'examples', 'simple-test.json')
+  const workflowPath = process.argv[2] || path.join(__dirname, '..', 'test', 'fixtures', 'simple-test.json')
   console.log(`\n📁 Loading workflow: ${path.basename(workflowPath)}`)
 
   const content = await fs.readFile(workflowPath, 'utf-8')

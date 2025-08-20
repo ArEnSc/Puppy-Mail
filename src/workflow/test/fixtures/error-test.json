@@ -28,7 +28,7 @@
       "functionName": "addLabels",
       "inputs": {
         "operation": {
-          "emailIdFromPreviousStep": true,
+          "emailIdFromPreviousStep": "send-without-composition",
           "labelIds": ["error-handled"],
           "operation": "add"
         }
