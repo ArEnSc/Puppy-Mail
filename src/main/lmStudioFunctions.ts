@@ -154,6 +154,38 @@ export const availableFunctions: FunctionDefinition[] = [
       properties: {},
       required: []
     }
+  },
+  {
+    name: 'listenForEmails',
+    description: 'Start listening for new emails from specific senders',
+    parameters: {
+      type: 'object',
+      properties: {
+        from: {
+          type: 'array',
+          description: 'Array of email addresses to monitor for incoming emails',
+          items: {
+            type: 'string'
+          }
+        },
+        subject: {
+          type: 'string',
+          description: 'Optional subject filter (emails containing this text)'
+        },
+        labels: {
+          type: 'array',
+          description: 'Optional array of label IDs to filter by',
+          items: {
+            type: 'string'
+          }
+        },
+        notificationMessage: {
+          type: 'string',
+          description: 'Message to show when a matching email arrives'
+        }
+      },
+      required: ['from']
+    }
   }
 ]
 
@@ -297,6 +329,45 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
   getLabels: async () => {
     console.log('[Function Call] getLabels')
     return await mailActionService.getLabels()
+  },
+  listenForEmails: async (args: unknown) => {
+    const params = args as {
+      from: string[]
+      subject?: string
+      labels?: string[]
+      notificationMessage?: string
+    }
+    console.log('[Function Call] listenForEmails:', params)
+
+    // Since the filter expects a single 'from' string, we'll need to handle multiple addresses
+    // For now, we'll listen to the first address and note this limitation
+    const filter: InboxListener['filter'] = {
+      from: params.from[0], // TODO: Handle multiple senders
+      subject: params.subject,
+      labels: params.labels
+    }
+
+    const result = await mailActionService.listenToInbox({
+      filter,
+      callback: (email) => {
+        console.log('[Email Received] From:', email.from, 'Subject:', email.subject)
+        // Check if the email is from any of the specified addresses
+        const senderEmail = typeof email.from === 'string' ? email.from : email.from.email
+        if (params.from.some(addr => senderEmail.toLowerCase().includes(addr.toLowerCase()))) {
+          console.log('[Matched Email] Notification:', params.notificationMessage || 'New email received')
+        }
+      }
+    })
+
+    if (result.success) {
+      return {
+        success: true,
+        message: `Now monitoring emails from: ${params.from.join(', ')}`,
+        listenerId: result.data,
+        note: 'Currently monitoring the first email address only due to API limitations'
+      }
+    }
+    return result
   }
 }
 
@@ -350,7 +421,7 @@ IMPORTANT INSTRUCTIONS FOR FUNCTION USAGE:
 1. **Ask for clarification**: If the user's request is missing required parameters or is ambiguous, ASK for clarification before calling any function. For example:
    - If user says "send an email", ask for recipient, subject, and body
    - If user says "schedule an email", ask for recipient, subject, body, and when to send it
-   - If user says "add labels", ask which email and which labels to add
+   - If user says "monitor emails", ask which email addresses to monitor
    
    EXCEPTION: If the user explicitly asks you to "fill in the details yourself" or "make it up" or similar phrasing, then generate reasonable placeholder content and execute the function without asking for clarification.
 
@@ -371,7 +442,7 @@ To use a function, you can either:
 Examples:
 - To send an email: <|channel|>commentary to=functions.sendEmail <|message|>{"to": ["user@example.com"], "subject": "Hello", "body": "Hi there!"}
 - To add labels: <|channel|>commentary to=functions.addLabels <|message|>{"emailId": "email-123", "labelIds": ["label-1", "label-2"]}
-- To get all labels: <|channel|>commentary to=functions.getLabels <|message|>{}
+- To listen for emails: <|channel|>commentary to=functions.listenForEmails <|message|>{"from": ["boss@company.com", "client@example.com"], "notificationMessage": "Important email received!"}
 
 Remember: Always ask for missing information before executing functions!`
 

@@ -1,15 +1,23 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap, AlertCircle, MessageSquare } from 'lucide-react'
+import {
+  Send,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Code,
+  Zap,
+  AlertCircle,
+  MessageSquare
+} from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 import { availableFunctions, formatFunctionsForPrompt } from '@/lib/functionDefinitions'
-
 
 interface FunctionCall {
   name: string
@@ -19,6 +27,8 @@ interface FunctionCall {
 }
 
 interface Message {
+  prompt: string
+  contextMessages: [object]
   id: string
   role: 'assistant' | 'user' | 'error'
   content: string
@@ -30,7 +40,8 @@ interface Message {
 export function ChatView(): JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
   const { lmStudio } = useSettingsStore()
-  const prompt = "You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise."
+  const prompt =
+    'You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise.'
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -124,7 +135,9 @@ export function ChatView(): JSX.Element {
         id: crypto.randomUUID(),
         role: 'error',
         content: error,
-        timestamp: new Date()
+        timestamp: new Date(),
+        prompt: false,
+        contextMessages: undefined
       }
       setMessages((prev) => [...prev, errorMessage])
     }
@@ -208,11 +221,11 @@ export function ChatView(): JSX.Element {
 
         // Build the system prompt that will be sent
         let systemPrompt = prompt
-        const systemMessage = conversationMessages.find(msg => msg.role === 'system')
+        const systemMessage = conversationMessages.find((msg) => msg.role === 'system')
         if (systemMessage) {
           systemPrompt = systemMessage.content
         }
-        
+
         // Add function definitions if enabled
         if (enableFunctions) {
           const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
@@ -429,61 +442,61 @@ export function ChatView(): JSX.Element {
                     )}
 
                   {/* Prompt and Context section - collapsible, only for assistant messages */}
-                  {message.role === 'assistant' &&
-                    message.prompt &&
-                    message.contextMessages && (
-                      <div className="mt-2 border-t border-border/50 pt-2">
-                        <button
-                          onClick={() => togglePrompt(message.id)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {expandedPrompts.has(message.id) ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                          <MessageSquare className="h-3 w-3" />
-                          <span className="font-medium">Prompt & Context</span>
-                        </button>
+                  {message.role === 'assistant' && message.prompt && message.contextMessages && (
+                    <div className="mt-2 border-t border-border/50 pt-2">
+                      <button
+                        onClick={() => togglePrompt(message.id)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {expandedPrompts.has(message.id) ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        <MessageSquare className="h-3 w-3" />
+                        <span className="font-medium">Prompt & Context</span>
+                      </button>
 
-                        {expandedPrompts.has(message.id) && (
-                          <div className="mt-2 space-y-2">
-                            <div className="pl-4">
-                              <div className="text-xs font-medium text-muted-foreground mb-1">System Prompt:</div>
-                              <div className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap break-words">
-                                {message.prompt}
-                              </div>
+                      {expandedPrompts.has(message.id) && (
+                        <div className="mt-2 space-y-2">
+                          <div className="pl-4">
+                            <div className="text-xs font-medium text-muted-foreground mb-1">
+                              System Prompt:
                             </div>
-                            <div className="pl-4">
-                              <div className="text-xs font-medium text-muted-foreground mb-1">
-                                Context Messages ({message.contextMessages.length}):
-                              </div>
-                              <div className="space-y-1 max-h-48 overflow-y-auto">
-                                {message.contextMessages.map((msg, idx) => (
-                                  <div
-                                    key={idx}
-                                    className={`text-xs rounded p-2 ${
-                                      msg.role === 'user'
-                                        ? 'bg-primary/10'
-                                        : msg.role === 'assistant'
-                                          ? 'bg-muted/50'
-                                          : 'bg-secondary/50'
-                                    }`}
-                                  >
-                                    <div className="font-medium capitalize mb-1">{msg.role}:</div>
-                                    <div className="whitespace-pre-wrap break-words">
-                                      {msg.content.length > 200
-                                        ? msg.content.substring(0, 200) + '...'
-                                        : msg.content}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                            <div className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap break-words">
+                              {message.prompt}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )}
+                          <div className="pl-4">
+                            <div className="text-xs font-medium text-muted-foreground mb-1">
+                              Context Messages ({message.contextMessages.length}):
+                            </div>
+                            <div className="space-y-1 max-h-48 overflow-y-auto">
+                              {message.contextMessages.map((msg, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`text-xs rounded p-2 ${
+                                    msg.role === 'user'
+                                      ? 'bg-primary/10'
+                                      : msg.role === 'assistant'
+                                        ? 'bg-muted/50'
+                                        : 'bg-secondary/50'
+                                  }`}
+                                >
+                                  <div className="font-medium capitalize mb-1">{msg.role}:</div>
+                                  <div className="whitespace-pre-wrap break-words">
+                                    {msg.content.length > 200
+                                      ? msg.content.substring(0, 200) + '...'
+                                      : msg.content}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Show reasoning indicator while streaming but no content yet */}
                   {message.role === 'assistant' &&
