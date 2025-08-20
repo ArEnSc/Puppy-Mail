@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Loader2, ChevronDown, ChevronRight, Code, Zap, AlertCircle, MessageSquare } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
+import { availableFunctions, formatFunctionsForPrompt } from '@/lib/functionDefinitions'
 
 
 interface FunctionCall {
@@ -197,26 +198,41 @@ export function ChatView(): JSX.Element {
         return
       }
 
-      // Create assistant message placeholder with unique ID
-      const assistantMessageId = crypto.randomUUID()
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-        reasoning: '',
-        timestamp: new Date()
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-      setStreamingMessageId(assistantMessageId)
-      streamingMessageIdRef.current = assistantMessageId
-      setIsStreaming(true)
-
       // Start streaming
       if (window.electron?.ipcRenderer) {
         const conversationMessages = messages.concat(userMessage).map((msg) => ({
           role: msg.role,
           content: msg.content
         }))
+
+        // Build the system prompt that will be sent
+        let systemPrompt = 'You are an AI assistant helping users with email automation tasks.'
+        const systemMessage = conversationMessages.find(msg => msg.role === 'system')
+        if (systemMessage) {
+          systemPrompt = systemMessage.content
+        }
+        
+        // Add function definitions if enabled
+        if (enableFunctions) {
+          const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
+          systemPrompt += '\n\n' + functionsPrompt
+        }
+
+        // Create assistant message placeholder with prompt info
+        const assistantMessageId = crypto.randomUUID()
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: '',
+          reasoning: '',
+          timestamp: new Date(),
+          prompt: systemPrompt,
+          contextMessages: conversationMessages
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        setStreamingMessageId(assistantMessageId)
+        streamingMessageIdRef.current = assistantMessageId
+        setIsStreaming(true)
 
         window.electron.ipcRenderer.send(
           'lmstudio:stream',
