@@ -349,8 +349,10 @@ IMPORTANT INSTRUCTIONS FOR FUNCTION USAGE:
 
 1. **Ask for clarification**: If the user's request is missing required parameters or is ambiguous, ASK for clarification before calling any function. For example:
    - If user says "send an email", ask for recipient, subject, and body
-   - If user says "search emails", ask what they want to search for
-   - If user says "mark as read", ask which email they want to mark
+   - If user says "schedule an email", ask for recipient, subject, body, and when to send it
+   - If user says "add labels", ask which email and which labels to add
+   
+   EXCEPTION: If the user explicitly asks you to "fill in the details yourself" or "make it up" or similar phrasing, then generate reasonable placeholder content and execute the function without asking for clarification.
 
 2. **Validate before execution**: Check that you have all required parameters before calling a function.
 
@@ -368,8 +370,8 @@ To use a function, you can either:
 
 Examples:
 - To send an email: <|channel|>commentary to=functions.sendEmail <|message|>{"to": ["user@example.com"], "subject": "Hello", "body": "Hi there!"}
-- To search emails: <|channel|>commentary to=functions.searchEmails <|message|>{"query": "project update", "limit": 10}
-- To mark as read: <|channel|>commentary to=functions.markAsRead <|message|>{"emailId": "email-123"}
+- To add labels: <|channel|>commentary to=functions.addLabels <|message|>{"emailId": "email-123", "labelIds": ["label-1", "label-2"]}
+- To get all labels: <|channel|>commentary to=functions.getLabels <|message|>{}
 
 Remember: Always ask for missing information before executing functions!`
 

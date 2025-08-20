@@ -30,6 +30,7 @@ interface Message {
 export function ChatView(): JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
   const { lmStudio } = useSettingsStore()
+  const prompt = "You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise."
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -37,11 +38,11 @@ export function ChatView(): JSX.Element {
       content:
         "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
       timestamp: new Date(),
-      prompt: "You are an AI assistant helping users with email automation tasks. Be helpful, concise, and professional.",
+      prompt: prompt,
       contextMessages: [
         {
           role: 'system',
-          content: 'You are an AI assistant helping users with email automation tasks. Be helpful, concise, and professional.'
+          content: prompt
         }
       ]
     }
@@ -206,7 +207,7 @@ export function ChatView(): JSX.Element {
         }))
 
         // Build the system prompt that will be sent
-        let systemPrompt = 'You are an AI assistant helping users with email automation tasks.'
+        let systemPrompt = prompt
         const systemMessage = conversationMessages.find(msg => msg.role === 'system')
         if (systemMessage) {
           systemPrompt = systemMessage.content
