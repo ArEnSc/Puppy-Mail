@@ -73,6 +73,7 @@ export type SendEmailResult = MailActionResult<{ messageId: string }>
 export type ScheduleEmailResult = MailActionResult<{ scheduledId: string }>
 export type LabelOperationResult = MailActionResult<void>
 export type ListenInboxResult = MailActionResult<{ listenerId: string }>
+export type AnalysisResult = MailActionResult<string | string[]>
 
 export interface MailActionService {
   // Send operations
@@ -89,4 +90,10 @@ export interface MailActionService {
     labels?: string[]
     callback?: (email: EmailMessage) => void
   }): Promise<ListenInboxResult>
+
+  // Analysis operations
+  analysis(prompt: string, context?: {
+    emails?: EmailMessage[]
+    data?: Record<string, unknown>
+  }): Promise<AnalysisResult>
 }

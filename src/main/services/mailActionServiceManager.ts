@@ -3,7 +3,8 @@ import {
   SendEmailResult,
   ScheduleEmailResult,
   LabelOperationResult,
-  ListenInboxResult
+  ListenInboxResult,
+  AnalysisResult
 } from '../../types/mailActions'
 import { MockMailActionService } from './mockMailActionService'
 
@@ -65,6 +66,12 @@ export class MailActionServiceManager {
     ...args: Parameters<MailActionService['listenForEmails']>
   ): Promise<ListenInboxResult> {
     return this.service.listenForEmails(...args)
+  }
+
+  public async analysis(
+    ...args: Parameters<MailActionService['analysis']>
+  ): Promise<AnalysisResult> {
+    return this.service.analysis(...args)
   }
 
 }

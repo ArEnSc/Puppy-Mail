@@ -10,7 +10,8 @@ import {
   SendEmailResult,
   ScheduleEmailResult,
   LabelOperationResult,
-  ListenInboxResult
+  ListenInboxResult,
+  AnalysisResult
 } from '../../types/mailActions'
 
 export class MockMailActionService implements MailActionService {
@@ -247,6 +248,58 @@ export class MockMailActionService implements MailActionService {
     return this.createSuccess({ listenerId })
   }
 
+
+  async analysis(prompt: string, context?: {
+    emails?: EmailMessage[]
+    data?: Record<string, unknown>
+  }): Promise<AnalysisResult> {
+    console.log('[MockMailActionService] analysis called with prompt:', prompt)
+    
+    // Simulate analysis results based on the prompt
+    const promptLower = prompt.toLowerCase()
+    
+    // If emails are provided in context, analyze them
+    if (context?.emails && context.emails.length > 0) {
+      if (promptLower.includes('summary') || promptLower.includes('summarize')) {
+        const summary = `Summary of ${context.emails.length} emails:\n` +
+          context.emails.map(email => 
+            `- From ${email.from.email}: ${email.subject}`
+          ).join('\n')
+        
+        return this.createSuccess(summary)
+      }
+      
+      if (promptLower.includes('count') || promptLower.includes('how many')) {
+        const results = [
+          `Total emails: ${context.emails.length}`,
+          `Unread emails: ${context.emails.filter(e => !e.isRead).length}`,
+          `Emails with attachments: ${context.emails.filter(e => e.hasAttachment).length}`
+        ]
+        return this.createSuccess(results)
+      }
+      
+      if (promptLower.includes('sender') || promptLower.includes('from')) {
+        const senders = [...new Set(context.emails.map(e => e.from.email))]
+        return this.createSuccess(senders)
+      }
+    }
+    
+    // Default mock analysis
+    const mockResults = [
+      'Analysis result 1: Data processed successfully',
+      'Analysis result 2: Patterns identified',
+      'Analysis result 3: Recommendations generated'
+    ]
+    
+    console.log(`[MockMailActionService] Analysis completed with ${mockResults.length} results`)
+    
+    // Return either a single string or array based on prompt
+    if (promptLower.includes('list') || promptLower.includes('multiple')) {
+      return this.createSuccess(mockResults)
+    }
+    
+    return this.createSuccess(mockResults.join('\n'))
+  }
 
   private emailMatchesFilter(email: EmailMessage, filter?: InboxListener['filter']): boolean {
     if (!filter) return true

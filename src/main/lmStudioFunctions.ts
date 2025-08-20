@@ -1,5 +1,5 @@
 // Function definitions for LM Studio function calling
-import type { EmailComposition, LabelOperation } from '../types/mailActions'
+import type { EmailComposition, LabelOperation, EmailMessage } from '../types/mailActions'
 import { EmailService } from './db/emailService'
 import { getMailActionService } from './services/mailActionServiceManager'
 
@@ -177,6 +177,32 @@ export const availableFunctions: FunctionDefinition[] = [
       },
       required: ['from']
     }
+  },
+  {
+    name: 'analysis',
+    description: 'Run analysis on data using an LLM prompt',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'The analysis prompt/question to run'
+        },
+        includeRecentEmails: {
+          type: 'boolean',
+          description: 'Whether to include recent emails in the analysis context'
+        },
+        emailCount: {
+          type: 'number',
+          description: 'Number of recent emails to include (if includeRecentEmails is true)'
+        },
+        customData: {
+          type: 'object',
+          description: 'Additional custom data to include in the analysis'
+        }
+      },
+      required: ['prompt']
+    }
   }
 ]
 
@@ -269,6 +295,41 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       }
     }
     return result
+  },
+  analysis: async (args: unknown) => {
+    const params = args as {
+      prompt: string
+      includeRecentEmails?: boolean
+      emailCount?: number
+      customData?: Record<string, unknown>
+    }
+    console.log('[Function Call] analysis:', params)
+
+    // Build context for analysis
+    const context: { emails?: EmailMessage[]; data?: Record<string, unknown> } = {}
+    
+    if (params.includeRecentEmails) {
+      // Get recent emails from the database
+      const emails = await EmailService.getEmails(params.emailCount || 10, 0)
+      context.emails = emails
+    }
+    
+    if (params.customData) {
+      context.data = params.customData
+    }
+
+    const result = await mailActionService.analysis(params.prompt, context)
+    
+    if (result.success) {
+      return {
+        success: true,
+        result: result.data,
+        message: typeof result.data === 'string' 
+          ? 'Analysis completed' 
+          : `Analysis completed with ${result.data.length} results`
+      }
+    }
+    return result
   }
 }
 
@@ -343,7 +404,7 @@ To use a function, you can either:
 Examples:
 - To send an email: <|channel|>commentary to=functions.sendEmail <|message|>{"to": ["user@example.com"], "subject": "Hello", "body": "Hi there!"}
 - To add labels: <|channel|>commentary to=functions.addLabels <|message|>{"emailId": "email-123", "labelIds": ["label-1", "label-2"]}
-- To listen for emails: <|channel|>commentary to=functions.listenForEmails <|message|>{"from": ["boss@company.com", "client@example.com"], "notificationMessage": "Important email received!"}
+- To analyze data: <|channel|>commentary to=functions.analysis <|message|>{"prompt": "Summarize my recent emails", "includeRecentEmails": true, "emailCount": 5}
 
 Remember: Always ask for missing information before executing functions!`
 
