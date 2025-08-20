@@ -19,6 +19,7 @@ const customIpcRenderer = {
       'settings:set',
       'lmstudio:validate',
       'lmstudio:chat',
+      'lmstudio:getAvailableFunctions',
       // Mail action channels
       'mailAction:sendEmail',
       'mailAction:scheduleEmail',
@@ -64,6 +65,7 @@ const customIpcRenderer = {
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
       'lmstudio:stream:complete',
+      'lmstudio:stream:functionCall',
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
@@ -85,6 +87,7 @@ const customIpcRenderer = {
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
       'lmstudio:stream:complete',
+      'lmstudio:stream:functionCall',
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
@@ -106,6 +109,7 @@ const customIpcRenderer = {
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
       'lmstudio:stream:complete',
+      'lmstudio:stream:functionCall',
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
@@ -127,6 +131,7 @@ const customIpcRenderer = {
       'lmstudio:stream:chunk',
       'lmstudio:stream:error',
       'lmstudio:stream:complete',
+      'lmstudio:stream:functionCall',
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {

@@ -480,6 +480,13 @@ export function setupLMStudioHandlers(lmStudioService: LMStudioService): void {
     return lmStudioService.validateConnection(url)
   })
 
+  ipcMain.handle('lmstudio:getAvailableFunctions', async () => {
+    return {
+      functions: availableFunctions,
+      formattedPrompt: formatFunctionsForPrompt(availableFunctions)
+    }
+  })
+
   ipcMain.handle(
     'lmstudio:chat',
     async (
