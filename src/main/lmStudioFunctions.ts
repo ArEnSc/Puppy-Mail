@@ -147,15 +147,6 @@ export const availableFunctions: FunctionDefinition[] = [
     }
   },
   {
-    name: 'getLabels',
-    description: 'Get all available email labels',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: []
-    }
-  },
-  {
     name: 'listenForEmails',
     description: 'Start listening for new emails from specific senders',
     parameters: {
@@ -231,80 +222,6 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
 
     return await mailActionService.scheduleEmail(scheduledEmail)
   },
-  // Email draft operations
-  createDraft: async (args: unknown) => {
-    const params = args as { to: string[]; subject: string; body: string }
-    console.log('[Function Call] createDraft:', params)
-
-    const composition: EmailComposition = {
-      to: params.to.map((email) => ({ email })),
-      subject: params.subject,
-      body: params.body
-    }
-
-    return await mailActionService.createDraft(composition)
-  },
-  // Email read operations
-  searchEmails: async (args: unknown) => {
-    const params = args as { query: string; limit?: number }
-    console.log('[Function Call] searchEmails:', params)
-    return await mailActionService.searchEmails(params.query, params.limit)
-  },
-  readEmail: async (args: unknown) => {
-    const params = args as { emailId: string }
-    console.log('[Function Call] readEmail:', params)
-    return await mailActionService.readEmail(params.emailId)
-  },
-  getLatestEmails: async (args: unknown) => {
-    const params = args as { limit?: number; isRead?: boolean; isStarred?: boolean; label?: string }
-    console.log('[Function Call] getLatestEmails:', params)
-
-    // Use checkInbox with filters for now
-    const filter = {
-      labels: params.label ? [params.label] : undefined
-    }
-
-    const result = await mailActionService.checkInbox(filter)
-    if (result.success && result.data) {
-      // Filter by read/starred status if specified
-      let emails = result.data
-      if (params.isRead !== undefined) {
-        emails = emails.filter((e) => e.isRead === params.isRead)
-      }
-      if (params.isStarred !== undefined) {
-        emails = emails.filter((e) => e.isStarred === params.isStarred)
-      }
-      // Limit results
-      emails = emails.slice(0, params.limit || 10)
-      return { ...result, data: emails }
-    }
-    return result
-  },
-  // Email management operations
-  markAsRead: async (args: unknown) => {
-    const params = args as { emailId: string }
-    console.log('[Function Call] markAsRead:', params)
-    return await mailActionService.markAsRead(params.emailId)
-  },
-  markAsUnread: async (args: unknown) => {
-    const params = args as { emailId: string }
-    console.log('[Function Call] markAsUnread:', params)
-    return await mailActionService.markAsUnread(params.emailId)
-  },
-  toggleStar: async (args: unknown) => {
-    const params = args as { emailId: string }
-    console.log('[Function Call] toggleStar:', params)
-    // For now, just toggle using database service
-    await EmailService.toggleStar(params.emailId)
-    return { success: true }
-  },
-  deleteEmail: async (args: unknown) => {
-    const params = args as { emailId: string }
-    console.log('[Function Call] deleteEmail:', params)
-    // For now, use database service
-    await EmailService.deleteEmail(params.emailId)
-    return { success: true }
-  },
   // Label operations
   addLabels: async (args: unknown) => {
     const params = args as { emailId: string; labelIds: string[] }
@@ -326,10 +243,6 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
     }
     return await mailActionService.removeLabels(operation)
   },
-  getLabels: async () => {
-    console.log('[Function Call] getLabels')
-    return await mailActionService.getLabels()
-  },
   listenForEmails: async (args: unknown) => {
     const params = args as {
       from: string[]
@@ -339,23 +252,12 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
     }
     console.log('[Function Call] listenForEmails:', params)
 
-    // Since the filter expects a single 'from' string, we'll need to handle multiple addresses
-    // For now, we'll listen to the first address and note this limitation
-    const filter: InboxListener['filter'] = {
-      from: params.from[0], // TODO: Handle multiple senders
+    const result = await mailActionService.listenForEmails(params.from, {
       subject: params.subject,
-      labels: params.labels
-    }
-
-    const result = await mailActionService.listenToInbox({
-      filter,
+      labels: params.labels,
       callback: (email) => {
         console.log('[Email Received] From:', email.from, 'Subject:', email.subject)
-        // Check if the email is from any of the specified addresses
-        const senderEmail = typeof email.from === 'string' ? email.from : email.from.email
-        if (params.from.some(addr => senderEmail.toLowerCase().includes(addr.toLowerCase()))) {
-          console.log('[Matched Email] Notification:', params.notificationMessage || 'New email received')
-        }
+        console.log('[Notification]', params.notificationMessage || 'New email received from monitored sender')
       }
     })
 
@@ -363,8 +265,7 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       return {
         success: true,
         message: `Now monitoring emails from: ${params.from.join(', ')}`,
-        listenerId: result.data,
-        note: 'Currently monitoring the first email address only due to API limitations'
+        listenerId: result.data
       }
     }
     return result

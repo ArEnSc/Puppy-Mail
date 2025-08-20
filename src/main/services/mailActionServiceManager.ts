@@ -2,24 +2,8 @@ import {
   MailActionService,
   SendEmailResult,
   ScheduleEmailResult,
-  CancelScheduledResult,
-  GetScheduledEmailsResult,
-  CreateDraftResult,
-  UpdateDraftResult,
-  DeleteDraftResult,
-  GetDraftsResult,
   LabelOperationResult,
-  GetLabelsResult,
-  CreateLabelResult,
-  ReadEmailResult,
-  ReadEmailsResult,
-  MarkReadResult,
-  SearchEmailsResult,
-  CheckInboxResult,
-  ListenInboxResult,
-  StopListeningResult,
-  GetThreadResult,
-  CheckResponseResult
+  ListenInboxResult
 } from '../../types/mailActions'
 import { MockMailActionService } from './mockMailActionService'
 
@@ -64,42 +48,6 @@ export class MailActionServiceManager {
     return this.service.scheduleEmail(...args)
   }
 
-  public async cancelScheduledEmail(
-    ...args: Parameters<MailActionService['cancelScheduledEmail']>
-  ): Promise<CancelScheduledResult> {
-    return this.service.cancelScheduledEmail(...args)
-  }
-
-  public async getScheduledEmails(
-    ...args: Parameters<MailActionService['getScheduledEmails']>
-  ): Promise<GetScheduledEmailsResult> {
-    return this.service.getScheduledEmails(...args)
-  }
-
-  public async createDraft(
-    ...args: Parameters<MailActionService['createDraft']>
-  ): Promise<CreateDraftResult> {
-    return this.service.createDraft(...args)
-  }
-
-  public async updateDraft(
-    ...args: Parameters<MailActionService['updateDraft']>
-  ): Promise<UpdateDraftResult> {
-    return this.service.updateDraft(...args)
-  }
-
-  public async deleteDraft(
-    ...args: Parameters<MailActionService['deleteDraft']>
-  ): Promise<DeleteDraftResult> {
-    return this.service.deleteDraft(...args)
-  }
-
-  public async getDrafts(
-    ...args: Parameters<MailActionService['getDrafts']>
-  ): Promise<GetDraftsResult> {
-    return this.service.getDrafts(...args)
-  }
-
   public async addLabels(
     ...args: Parameters<MailActionService['addLabels']>
   ): Promise<LabelOperationResult> {
@@ -112,83 +60,13 @@ export class MailActionServiceManager {
     return this.service.removeLabels(...args)
   }
 
-  public async setLabels(
-    ...args: Parameters<MailActionService['setLabels']>
-  ): Promise<LabelOperationResult> {
-    return this.service.setLabels(...args)
-  }
 
-  public async getLabels(
-    ...args: Parameters<MailActionService['getLabels']>
-  ): Promise<GetLabelsResult> {
-    return this.service.getLabels(...args)
-  }
-
-  public async createLabel(
-    ...args: Parameters<MailActionService['createLabel']>
-  ): Promise<CreateLabelResult> {
-    return this.service.createLabel(...args)
-  }
-
-  public async readEmail(
-    ...args: Parameters<MailActionService['readEmail']>
-  ): Promise<ReadEmailResult> {
-    return this.service.readEmail(...args)
-  }
-
-  public async readEmails(
-    ...args: Parameters<MailActionService['readEmails']>
-  ): Promise<ReadEmailsResult> {
-    return this.service.readEmails(...args)
-  }
-
-  public async markAsRead(
-    ...args: Parameters<MailActionService['markAsRead']>
-  ): Promise<MarkReadResult> {
-    return this.service.markAsRead(...args)
-  }
-
-  public async markAsUnread(
-    ...args: Parameters<MailActionService['markAsUnread']>
-  ): Promise<MarkReadResult> {
-    return this.service.markAsUnread(...args)
-  }
-
-  public async searchEmails(
-    ...args: Parameters<MailActionService['searchEmails']>
-  ): Promise<SearchEmailsResult> {
-    return this.service.searchEmails(...args)
-  }
-
-  public async checkInbox(
-    ...args: Parameters<MailActionService['checkInbox']>
-  ): Promise<CheckInboxResult> {
-    return this.service.checkInbox(...args)
-  }
-
-  public async listenToInbox(
-    ...args: Parameters<MailActionService['listenToInbox']>
+  public async listenForEmails(
+    ...args: Parameters<MailActionService['listenForEmails']>
   ): Promise<ListenInboxResult> {
-    return this.service.listenToInbox(...args)
+    return this.service.listenForEmails(...args)
   }
 
-  public async stopListening(
-    ...args: Parameters<MailActionService['stopListening']>
-  ): Promise<StopListeningResult> {
-    return this.service.stopListening(...args)
-  }
-
-  public async getThread(
-    ...args: Parameters<MailActionService['getThread']>
-  ): Promise<GetThreadResult> {
-    return this.service.getThread(...args)
-  }
-
-  public async checkForResponse(
-    ...args: Parameters<MailActionService['checkForResponse']>
-  ): Promise<CheckResponseResult> {
-    return this.service.checkForResponse(...args)
-  }
 }
 
 // Export singleton instance getter for convenience
