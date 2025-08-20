@@ -149,7 +149,6 @@ export class MockMailActionService implements MailActionService {
     return this.createSuccess({ scheduledId })
   }
 
-
   // Label operations
   async addLabels(operation: LabelOperation): Promise<LabelOperationResult> {
     console.log('[MockMailActionService] addLabels called:', operation)
@@ -189,17 +188,24 @@ export class MockMailActionService implements MailActionService {
     return this.createSuccess()
   }
 
-
   // Email monitoring operations
-  async listenForEmails(senders: string[], options?: {
-    subject?: string
-    labels?: string[]
-    callback?: (email: EmailMessage) => void
-  }): Promise<ListenInboxResult> {
-    console.log('[MockMailActionService] listenForEmails called for senders:', senders, 'options:', options)
+  async listenForEmails(
+    senders: string[],
+    options?: {
+      subject?: string
+      labels?: string[]
+      callback?: (email: EmailMessage) => void
+    }
+  ): Promise<ListenInboxResult> {
+    console.log(
+      '[MockMailActionService] listenForEmails called for senders:',
+      senders,
+      'options:',
+      options
+    )
 
     const listenerId = this.generateId('listener')
-    
+
     // Create a listener that checks for emails from any of the specified senders
     const listener: InboxListener = {
       id: listenerId,
@@ -211,7 +217,7 @@ export class MockMailActionService implements MailActionService {
       callback: (email) => {
         // Check if email is from any of the specified senders
         const senderEmail = typeof email.from === 'string' ? email.from : email.from.email
-        if (senders.some(sender => senderEmail.toLowerCase().includes(sender.toLowerCase()))) {
+        if (senders.some((sender) => senderEmail.toLowerCase().includes(sender.toLowerCase()))) {
           console.log(`[MockMailActionService] Email from monitored sender: ${senderEmail}`)
           if (options?.callback) {
             options.callback(email)
@@ -222,7 +228,9 @@ export class MockMailActionService implements MailActionService {
 
     this.inboxListeners.set(listenerId, listener)
 
-    console.log(`[MockMailActionService] Started listening for emails from ${senders.join(', ')} with ID: ${listenerId}`)
+    console.log(
+      `[MockMailActionService] Started listening for emails from ${senders.join(', ')} with ID: ${listenerId}`
+    )
 
     // Simulate incoming email from one of the senders after 5 seconds
     setTimeout(() => {
@@ -248,56 +256,57 @@ export class MockMailActionService implements MailActionService {
     return this.createSuccess({ listenerId })
   }
 
-
-  async analysis(prompt: string, context?: {
-    emails?: EmailMessage[]
-    data?: Record<string, unknown>
-  }): Promise<AnalysisResult> {
+  async analysis(
+    prompt: string,
+    context?: {
+      emails?: EmailMessage[]
+      data?: Record<string, unknown>
+    }
+  ): Promise<AnalysisResult> {
     console.log('[MockMailActionService] analysis called with prompt:', prompt)
-    
+
     // Simulate analysis results based on the prompt
     const promptLower = prompt.toLowerCase()
-    
+
     // If emails are provided in context, analyze them
     if (context?.emails && context.emails.length > 0) {
       if (promptLower.includes('summary') || promptLower.includes('summarize')) {
-        const summary = `Summary of ${context.emails.length} emails:\n` +
-          context.emails.map(email => 
-            `- From ${email.from.email}: ${email.subject}`
-          ).join('\n')
-        
+        const summary =
+          `Summary of ${context.emails.length} emails:\n` +
+          context.emails.map((email) => `- From ${email.from.email}: ${email.subject}`).join('\n')
+
         return this.createSuccess(summary)
       }
-      
+
       if (promptLower.includes('count') || promptLower.includes('how many')) {
         const results = [
           `Total emails: ${context.emails.length}`,
-          `Unread emails: ${context.emails.filter(e => !e.isRead).length}`,
-          `Emails with attachments: ${context.emails.filter(e => e.hasAttachment).length}`
+          `Unread emails: ${context.emails.filter((e) => !e.isRead).length}`,
+          `Emails with attachments: ${context.emails.filter((e) => e.hasAttachment).length}`
         ]
         return this.createSuccess(results)
       }
-      
+
       if (promptLower.includes('sender') || promptLower.includes('from')) {
-        const senders = [...new Set(context.emails.map(e => e.from.email))]
+        const senders = [...new Set(context.emails.map((e) => e.from.email))]
         return this.createSuccess(senders)
       }
     }
-    
+
     // Default mock analysis
     const mockResults = [
       'Analysis result 1: Data processed successfully',
       'Analysis result 2: Patterns identified',
       'Analysis result 3: Recommendations generated'
     ]
-    
+
     console.log(`[MockMailActionService] Analysis completed with ${mockResults.length} results`)
-    
+
     // Return either a single string or array based on prompt
     if (promptLower.includes('list') || promptLower.includes('multiple')) {
       return this.createSuccess(mockResults)
     }
-    
+
     return this.createSuccess(mockResults.join('\n'))
   }
 

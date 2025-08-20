@@ -1,0 +1,62 @@
+{
+  "id": "workflow-001",
+  "name": "Email Analysis and Response Workflow",
+  "description": "Analyzes incoming emails with 'analysis' in subject and sends a response",
+  "trigger": {
+    "id": "trigger-001",
+    "type": "email_subject",
+    "config": {
+      "subject": "analysis",
+      "matchType": "contains"
+    }
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "functionName": "analysis",
+      "inputs": {
+        "prompt": "Summarize the key points from this email and identify any action items",
+        "useTriggeredEmail": true
+      },
+      "onError": {
+        "action": "retry",
+        "retryCount": 2,
+        "retryDelay": 5000
+      }
+    },
+    {
+      "id": "step-2",
+      "functionName": "sendEmail",
+      "inputs": {
+        "composition": {
+          "fromPreviousStep": "step-1.output"
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "success",
+        "operator": "equals",
+        "value": true
+      },
+      "onError": {
+        "action": "stop",
+        "notifyEmail": "admin@example.com"
+      }
+    },
+    {
+      "id": "step-3",
+      "functionName": "addLabels",
+      "inputs": {
+        "emailIdFromPreviousStep": "trigger.emailId",
+        "labelIds": ["processed", "analyzed"],
+        "operation": "add"
+      },
+      "onError": {
+        "action": "continue"
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}

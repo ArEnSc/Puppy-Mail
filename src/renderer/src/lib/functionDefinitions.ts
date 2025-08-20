@@ -27,7 +27,9 @@ let cachedFormattedPrompt: string | null = null
 
 export async function getAvailableFunctions(): Promise<FunctionDefinition[]> {
   if (!cachedFunctions) {
-    const result = await ipc.invoke<{ functions: FunctionDefinition[]; formattedPrompt: string }>('lmstudio:getAvailableFunctions')
+    const result = await ipc.invoke<{ functions: FunctionDefinition[]; formattedPrompt: string }>(
+      'lmstudio:getAvailableFunctions'
+    )
     cachedFunctions = result.functions
     cachedFormattedPrompt = result.formattedPrompt
   }
@@ -36,7 +38,9 @@ export async function getAvailableFunctions(): Promise<FunctionDefinition[]> {
 
 export async function getFormattedFunctionsPrompt(): Promise<string> {
   if (!cachedFormattedPrompt) {
-    const result = await ipc.invoke<{ functions: FunctionDefinition[]; formattedPrompt: string }>('lmstudio:getAvailableFunctions')
+    const result = await ipc.invoke<{ functions: FunctionDefinition[]; formattedPrompt: string }>(
+      'lmstudio:getAvailableFunctions'
+    )
     cachedFunctions = result.functions
     cachedFormattedPrompt = result.formattedPrompt
   }

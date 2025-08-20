@@ -1,0 +1,60 @@
+{
+  "id": "correct-workflow-001",
+  "name": "Correctly Configured Workflow",
+  "description": "A workflow with proper condition checking",
+  "trigger": {
+    "id": "trigger-001",
+    "type": "email_from",
+    "config": {
+      "fromAddress": "important@example.com"
+    }
+  },
+  "steps": [
+    {
+      "id": "analyze",
+      "functionName": "analysis",
+      "inputs": {
+        "prompt": "Extract action items from this email",
+        "useTriggeredEmail": true
+      }
+    },
+    {
+      "id": "add-labels",
+      "functionName": "addLabels",
+      "inputs": {
+        "operation": {
+          "emailIdFromPreviousStep": true,
+          "labelIds": ["action-required", "analyzed"],
+          "operation": "add"
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "analyze.success",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "send-notification",
+      "functionName": "sendEmail",
+      "inputs": {
+        "composition": {
+          "to": [{ "email": "manager@example.com" }],
+          "subject": "Action Required - Email Analysis",
+          "body": "An important email has been analyzed and requires action.",
+          "isHtml": false
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "add-labels.success",
+        "operator": "equals",
+        "value": true
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}

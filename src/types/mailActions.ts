@@ -85,15 +85,21 @@ export interface MailActionService {
   removeLabels(operation: LabelOperation): Promise<LabelOperationResult>
 
   // Email monitoring operations
-  listenForEmails(senders: string[], options?: {
-    subject?: string
-    labels?: string[]
-    callback?: (email: EmailMessage) => void
-  }): Promise<ListenInboxResult>
+  listenForEmails(
+    senders: string[],
+    options?: {
+      subject?: string
+      labels?: string[]
+      callback?: (email: EmailMessage) => void
+    }
+  ): Promise<ListenInboxResult>
 
   // Analysis operations
-  analysis(prompt: string, context?: {
-    emails?: EmailMessage[]
-    data?: Record<string, unknown>
-  }): Promise<AnalysisResult>
+  analysis(
+    prompt: string,
+    context?: {
+      emails?: EmailMessage[]
+      data?: Record<string, unknown>
+    }
+  ): Promise<AnalysisResult>
 }

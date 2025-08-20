@@ -1,0 +1,43 @@
+{
+  "id": "working-workflow-001",
+  "name": "Working Two-Step Workflow",
+  "description": "A workflow where both steps execute",
+  "trigger": {
+    "id": "trigger-001",
+    "type": "email_subject",
+    "config": {
+      "subject": "process",
+      "matchType": "contains"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1-analyze",
+      "functionName": "analysis",
+      "inputs": {
+        "prompt": "Analyze this email for important information",
+        "useTriggeredEmail": true
+      }
+    },
+    {
+      "id": "step2-label",
+      "functionName": "addLabels",
+      "inputs": {
+        "operation": {
+          "emailIdFromPreviousStep": true,
+          "labelIds": ["processed", "analyzed"],
+          "operation": "add"
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "step1-analyze.success",
+        "operator": "equals",
+        "value": true
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}

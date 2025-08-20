@@ -405,7 +405,9 @@ export class LMStudioService {
       }
     } catch (error) {
       console.error('Error handling function call:', error)
-      onError(`Failed to process function call: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      onError(
+        `Failed to process function call: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 

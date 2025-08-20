@@ -24,7 +24,12 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
     "auth:gmail": "tsx src/scripts/getRefreshToken.ts",
-    "test:email": "tsx src/scripts/testEmailFetch.ts"
+    "test:email": "tsx src/scripts/testEmailFetch.ts",
+    "test:workflow": "tsx src/workflow/standalone/run-workflow.ts",
+    "test:workflow:json": "tsx src/workflow/standalone/run-workflow.ts src/workflow/examples/simple-test.json",
+    "workflow:cli": "tsx src/workflow/standalone/workflow-cli.ts",
+    "workflow:debug": "tsx src/workflow/debug/debug-runner.ts",
+    "workflow:logs": "tsx src/workflow/test/test-with-all-logs.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

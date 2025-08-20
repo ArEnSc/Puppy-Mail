@@ -283,7 +283,10 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       labels: params.labels,
       callback: (email) => {
         console.log('[Email Received] From:', email.from, 'Subject:', email.subject)
-        console.log('[Notification]', params.notificationMessage || 'New email received from monitored sender')
+        console.log(
+          '[Notification]',
+          params.notificationMessage || 'New email received from monitored sender'
+        )
       }
     })
 
@@ -307,26 +310,27 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
 
     // Build context for analysis
     const context: { emails?: EmailMessage[]; data?: Record<string, unknown> } = {}
-    
+
     if (params.includeRecentEmails) {
       // Get recent emails from the database
       const emails = await EmailService.getEmails(params.emailCount || 10, 0)
       context.emails = emails
     }
-    
+
     if (params.customData) {
       context.data = params.customData
     }
 
     const result = await mailActionService.analysis(params.prompt, context)
-    
+
     if (result.success) {
       return {
         success: true,
         result: result.data,
-        message: typeof result.data === 'string' 
-          ? 'Analysis completed' 
-          : `Analysis completed with ${result.data.length} results`
+        message:
+          typeof result.data === 'string'
+            ? 'Analysis completed'
+            : `Analysis completed with ${result.data.length} results`
       }
     }
     return result

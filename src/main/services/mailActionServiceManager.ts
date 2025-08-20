@@ -61,7 +61,6 @@ export class MailActionServiceManager {
     return this.service.removeLabels(...args)
   }
 
-
   public async listenForEmails(
     ...args: Parameters<MailActionService['listenForEmails']>
   ): Promise<ListenInboxResult> {
@@ -73,7 +72,6 @@ export class MailActionServiceManager {
   ): Promise<AnalysisResult> {
     return this.service.analysis(...args)
   }
-
 }
 
 // Export singleton instance getter for convenience
