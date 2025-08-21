@@ -30,7 +30,8 @@
     "workflow:cli": "tsx src/workflow/standalone/workflow-cli.ts",
     "workflow:debug": "tsx src/workflow/debug/debug-runner.ts",
     "workflow:logs": "tsx src/workflow/test/test-with-all-logs.ts",
-    "workflow:test": "tsx src/workflow/test/test-workflow-integration.ts"
+    "workflow:test": "tsx src/workflow/test/test-workflow-integration.ts",
+    "workflow:prompt": "tsx src/workflow/test/test-llm-workflow-prompt.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

@@ -23,11 +23,7 @@ export interface TimerTrigger {
 }
 
 // Available functions from MailActionService
-export type WorkflowFunction =
-  | 'sendEmail'
-  | 'scheduleEmail'
-  | 'listenForEmails'
-  | 'analysis'
+export type WorkflowFunction = 'sendEmail' | 'scheduleEmail' | 'listenForEmails' | 'analysis'
 
 export interface WorkflowStep {
   id: string

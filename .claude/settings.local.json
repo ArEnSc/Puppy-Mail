@@ -5,7 +5,8 @@
       "Bash(mv:*)",
       "Bash(npm run lint)",
       "Bash(npm run workflow:logs:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
