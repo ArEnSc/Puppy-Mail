@@ -81,7 +81,7 @@
       "runtimeArgs": ["ts-node"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
-    },
+    }
   ],
   "compounds": [
     {

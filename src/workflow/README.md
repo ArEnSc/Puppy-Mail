@@ -78,6 +78,7 @@ npm run test:workflow:json
 ```
 
 Or with a custom workflow:
+
 ```bash
 npm run test:workflow -- path/to/your/workflow.json
 ```
@@ -89,6 +90,7 @@ npm run workflow:cli
 ```
 
 Interactive menu for:
+
 - Loading workflows from files
 - Creating simple workflows
 - Viewing workflow structure
@@ -229,6 +231,7 @@ Configure how steps handle errors:
 ```
 
 Actions:
+
 - `stop`: Stop workflow execution
 - `continue`: Continue to next step
 - `retry`: Retry the step
@@ -309,8 +312,12 @@ await workflowService.initialize()
 // Create workflow
 const workflow = await workflowService.createWorkflow({
   name: 'My Workflow',
-  trigger: { /* ... */ },
-  steps: [ /* ... */ ]
+  trigger: {
+    /* ... */
+  },
+  steps: [
+    /* ... */
+  ]
 })
 
 // Handle incoming emails

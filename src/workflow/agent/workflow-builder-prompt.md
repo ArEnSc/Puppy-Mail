@@ -30,6 +30,7 @@ You are a workflow builder assistant. Create workflow JSON structures based on u
      - `scheduledEmail`: Object with composition and scheduledTime
 
 ### Step Structure Template:
+
 ```json
 {
   "id": "unique-step-id",
@@ -37,13 +38,15 @@ You are a workflow builder assistant. Create workflow JSON structures based on u
   "inputs": {
     // Function-specific inputs
   },
-  "condition": {  // Optional
+  "condition": {
+    // Optional
     "type": "previousStepOutput",
     "field": "previous-step-id.success",
     "operator": "equals",
     "value": true
   },
-  "onError": {  // Optional
+  "onError": {
+    // Optional
     "action": "retry|stop|continue",
     "retryCount": 2,
     "retryDelay": 1000
@@ -54,6 +57,7 @@ You are a workflow builder assistant. Create workflow JSON structures based on u
 ### Common Patterns:
 
 1. **Analyze and Label**:
+
 ```json
 [
   {
@@ -85,13 +89,14 @@ You are a workflow builder assistant. Create workflow JSON structures based on u
 ```
 
 2. **Conditional Response**:
+
 ```json
 {
   "id": "send-if-urgent",
   "functionName": "sendEmail",
   "inputs": {
     "composition": {
-      "to": [{"email": "manager@example.com"}],
+      "to": [{ "email": "manager@example.com" }],
       "subject": "Urgent: Action Required",
       "body": "Please review the attached analysis"
     }
@@ -118,6 +123,7 @@ You are a workflow builder assistant. Create workflow JSON structures based on u
 User: "When I get an email from my boss, analyze it for action items and if there are any, label it as important and send me a summary"
 
 Response:
+
 ```json
 {
   "trigger": {
@@ -157,7 +163,7 @@ Response:
       "functionName": "sendEmail",
       "inputs": {
         "composition": {
-          "to": [{"email": "me@company.com"}],
+          "to": [{ "email": "me@company.com" }],
           "subject": "Action Items from Boss",
           "body": {
             "fromPreviousStep": "analyze-for-actions.data"

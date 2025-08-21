@@ -16,6 +16,7 @@ import {
   MailActionResult
 } from '../../types/mailActions'
 import { WorkflowLogger } from './WorkflowLogger'
+import { toolRegistry } from '../tools/ToolRegistry'
 
 export interface TriggerData {
   emailId?: string
@@ -287,30 +288,30 @@ export class WorkflowEngine {
       // Replace all {{ref}} patterns in the string
       return value.replace(/\{\{([^}]+)\}\}/g, (match, ref) => {
         ref = ref.trim()
-        
+
         // Handle trigger references
         if (ref.startsWith('trigger.')) {
           const path = ref.slice(8) // Remove "trigger."
           const resolved = this.getFieldValue(context.trigger, path)
           return resolved != null ? String(resolved) : match
         }
-        
+
         // Handle step output references
         const parts = ref.split('.')
         const stepId = parts[0]
         const stepOutput = context.stepOutputs.get(stepId)
-        
+
         if (!stepOutput) {
           this.logger.warn(`Step output not found for reference: {{${ref}}}`, {}, {})
           return match // Keep original if not found
         }
-        
+
         // Navigate nested path
         const resolved = this.getFieldValue(stepOutput, parts.slice(1).join('.'))
         return resolved != null ? String(resolved) : match
       })
     }
-    
+
     // Handle objects recursively
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       this.logger.debug('Resolving object:', { value }, {})
@@ -321,12 +322,12 @@ export class WorkflowEngine {
       this.logger.debug('Resolved object to:', { resolved }, {})
       return resolved
     }
-    
+
     // Handle arrays recursively
     if (Array.isArray(value)) {
-      return value.map(item => this.resolveValue(item, context))
+      return value.map((item) => this.resolveValue(item, context))
     }
-    
+
     // Return primitive values as-is
     return value
   }
@@ -336,10 +337,10 @@ export class WorkflowEngine {
     context: WorkflowContext
   ): ProcessedInputs {
     if (!inputs) return {}
-    
+
     // Use the new resolver to handle all references
     const resolvedInputs = this.resolveValue(inputs, context)
-    
+
     // Build processed inputs based on what was resolved
     const processed: ProcessedInputs = {}
 

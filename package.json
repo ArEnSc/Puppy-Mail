@@ -12,6 +12,7 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
+    "fix:line-endings": "node scripts/fix-line-endings.js",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
@@ -54,6 +55,7 @@
     "react-intersection-observer": "^9.16.0",
     "realm": "^20.2.0",
     "rxjs": "^7.8.2",
+    "zod": "^4.0.17",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
