@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv'
 import * as path from 'path'
-import { pollEmails, formatEmail, type EmailConfig } from '../main/emailManager'
+import { pollEmails, formatEmail, type EmailConfig } from '../main/services/email/emailManager'
 
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 

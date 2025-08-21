@@ -1,10 +1,10 @@
 import * as cron from 'node-cron'
 import { ipcMain, BrowserWindow } from 'electron'
-import { getEmailConfig, getPollInterval } from './config'
+import { getEmailConfig, getPollInterval } from '../../config'
 import { formatEmail, FormattedEmail, Email, pollEmailsWithClient } from './emailManager'
-import { getCleanEmail } from './utils/emailSanitizer'
-import { EmailService as DBEmailService } from './db/emailService'
-import { GmailAuthService } from './auth/authService'
+import { getCleanEmail } from '../../utils/emailSanitizer'
+import { EmailService as DBEmailService } from '../../db/emailService'
+import { GmailAuthService } from '../../auth/authService'
 
 export class EmailService {
   private cronJob: cron.ScheduledTask | null = null

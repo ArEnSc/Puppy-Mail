@@ -42,33 +42,35 @@ interface StepOutput {
  */
 export class WorkflowValidator {
   // Define what each function outputs
-  private static readonly FUNCTION_OUTPUTS: Record<WorkflowFunction, (inputs: unknown) => StepOutput> =
-    {
-      analysis: () => ({
-        success: true,
-        data: 'string or string[]' // Analysis results
-      }),
-      sendEmail: () => ({
-        success: true,
-        data: { messageId: 'string' }
-      }),
-      scheduleEmail: () => ({
-        success: true,
-        data: { scheduledId: 'string' }
-      }),
-      addLabels: () => ({
-        success: true
-        // No data field
-      }),
-      removeLabels: () => ({
-        success: true
-        // No data field
-      }),
-      listenForEmails: () => ({
-        success: true,
-        data: { listenerId: 'string' }
-      })
-    }
+  private static readonly FUNCTION_OUTPUTS: Record<
+    WorkflowFunction,
+    (inputs: unknown) => StepOutput
+  > = {
+    analysis: () => ({
+      success: true,
+      data: 'string or string[]' // Analysis results
+    }),
+    sendEmail: () => ({
+      success: true,
+      data: { messageId: 'string' }
+    }),
+    scheduleEmail: () => ({
+      success: true,
+      data: { scheduledId: 'string' }
+    }),
+    addLabels: () => ({
+      success: true
+      // No data field
+    }),
+    removeLabels: () => ({
+      success: true
+      // No data field
+    }),
+    listenForEmails: () => ({
+      success: true,
+      data: { listenerId: 'string' }
+    })
+  }
 
   /**
    * Validate entire workflow

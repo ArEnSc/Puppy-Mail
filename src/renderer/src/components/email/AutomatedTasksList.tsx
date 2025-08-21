@@ -105,7 +105,7 @@ export function AutomatedTasksList(): JSX.Element {
   ])
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 
-  const handleStart = () => {
+  const handleStart = (): void => {
     if (selectedAutomatedTask) {
       const taskName = selectedAutomatedTask === 'daily-summary' ? 'Daily Summary' : 'Email Cleanup'
       const newRun: TaskRun = {
@@ -119,7 +119,7 @@ export function AutomatedTasksList(): JSX.Element {
     }
   }
 
-  const handleCancel = (runId: string) => {
+  const handleCancel = (runId: string): void => {
     setTaskRuns(
       taskRuns.map((run) =>
         run.id === runId ? { ...run, status: 'cancelled', endTime: new Date() } : run
@@ -127,12 +127,12 @@ export function AutomatedTasksList(): JSX.Element {
     )
   }
 
-  const handleDelete = (runId: string) => {
+  const handleDelete = (runId: string): void => {
     setTaskRuns(taskRuns.filter((run) => run.id !== runId))
     setDeleteTaskId(null)
   }
 
-  const formatDuration = (start: Date, end?: Date) => {
+  const formatDuration = (start: Date, end?: Date): string => {
     const endTime = end || new Date()
     const duration = endTime.getTime() - start.getTime()
     const minutes = Math.floor(duration / 60000)

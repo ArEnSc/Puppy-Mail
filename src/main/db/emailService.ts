@@ -1,5 +1,5 @@
 import { getDatabase, EmailDocument, AccountDocument } from './database'
-import { Email } from '../emailManager'
+import { Email } from '../services/email/emailManager'
 
 export class EmailService {
   static async syncEmails(accountId: string, emails: Email[]): Promise<void> {

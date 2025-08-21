@@ -32,7 +32,7 @@ export const FUNCTION_IO_MAP = {
     },
     example: {
       success: true,
-      data: "Analysis: This email contains 3 action items:\n1. Review proposal\n2. Schedule meeting\n3. Send feedback"
+      data: 'Analysis: This email contains 3 action items:\n1. Review proposal\n2. Schedule meeting\n3. Send feedback'
     }
   },
 

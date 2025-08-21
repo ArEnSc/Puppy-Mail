@@ -9,7 +9,21 @@ import {
   InboxListener
 } from '../../../types/mailActions'
 
-export function useMailActions() {
+interface UseMailActionsReturn {
+  isLoading: boolean
+  error: string | null
+  sendEmail: (composition: EmailComposition) => Promise<{ messageId: string } | null>
+  scheduleEmail: (scheduledEmail: ScheduledEmail) => Promise<{ scheduledId: string } | null>
+  addLabels: (operation: LabelOperation) => Promise<void | null>
+  removeLabels: (operation: LabelOperation) => Promise<void | null>
+  getLabels: () => Promise<EmailLabel[] | null>
+  getEmails: (labelId?: string) => Promise<EmailMessage[] | null>
+  listenToInbox: (filter?: InboxListener['filter'], callback?: (email: EmailMessage) => void) => Promise<{ listenerId: string } | null>
+  stopListening: (listenerId: string) => Promise<void | null>
+  analyzeEmail: (emailId: string, prompt: string) => Promise<string | string[] | null>
+}
+
+export function useMailActions(): UseMailActionsReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -233,7 +247,7 @@ export function useMailActions() {
     async (filter?: InboxListener['filter'], callback?: (email: EmailMessage) => void) => {
       // Set up listener for inbox updates
       if (callback) {
-        const handler = (_event: any, email: EmailMessage) => callback(email)
+        const handler = (_event: unknown, email: EmailMessage): void => callback(email)
         window.electron.ipcRenderer.on('mailAction:inboxUpdate', handler)
       }
 

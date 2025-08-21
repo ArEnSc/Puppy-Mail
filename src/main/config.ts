@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv'
-import { EmailConfig } from './emailManager'
+import { EmailConfig } from './services/email/emailManager'
 
 dotenv.config()
 

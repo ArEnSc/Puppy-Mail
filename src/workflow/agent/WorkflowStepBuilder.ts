@@ -33,14 +33,15 @@ export class WorkflowStepBuilder {
       id: `send-${++this.stepCounter}`,
       functionName: 'sendEmail',
       inputs: {
-        composition: typeof body === 'string' 
-          ? {
-              to: to.map((email) => ({ email })),
-              subject,
-              body,
-              isHtml: false
-            }
-          : body
+        composition:
+          typeof body === 'string'
+            ? {
+                to: to.map((email) => ({ email })),
+                subject,
+                body,
+                isHtml: false
+              }
+            : body
       }
     }
 

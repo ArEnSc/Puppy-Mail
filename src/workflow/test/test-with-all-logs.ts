@@ -2,7 +2,7 @@
 
 /**
  * Test workflow with verbose logging enabled
- * 
+ *
  * DEBUGGING:
  * 1. Set breakpoint on line 49 (engine.executeWorkflow)
  * 2. Set breakpoints in WorkflowEngine.ts:
