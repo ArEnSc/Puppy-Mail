@@ -167,8 +167,7 @@ async function runDebugWorkflow(): Promise<void> {
     console.log('✅ EXECUTION COMPLETE')
     console.log('='.repeat(60))
 
-    // 9. Get all logs
-    const allLogs = logger.getAllLogs()
+    // 9. Get execution logs
     const executionLogs = logger.getLogsForExecution(execution.id)
 
     // 10. Show execution visualization with logs

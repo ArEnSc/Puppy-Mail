@@ -1,5 +1,5 @@
 // Workflow engine types
-import { EmailComposition, ScheduledEmail, LabelOperation } from '../../types/mailActions'
+import { EmailComposition, ScheduledEmail } from '../../types/mailActions'
 
 export interface WorkflowTrigger {
   id: string
@@ -26,15 +26,13 @@ export interface TimerTrigger {
 export type WorkflowFunction =
   | 'sendEmail'
   | 'scheduleEmail'
-  | 'addLabels'
-  | 'removeLabels'
   | 'listenForEmails'
   | 'analysis'
 
 export interface WorkflowStep {
   id: string
   functionName: WorkflowFunction
-  inputs: SendEmailInputs | ScheduleEmailInputs | LabelInputs | ListenInputs | AnalysisInputs
+  inputs: SendEmailInputs | ScheduleEmailInputs | ListenInputs | AnalysisInputs
   condition?: StepCondition
   onError?: ErrorHandling
 }
@@ -70,17 +68,6 @@ export interface ScheduleEmailInputs {
     | ScheduledEmail
     | {
         fromPreviousStep?: string
-      }
-}
-
-export interface LabelInputs {
-  operation:
-    | LabelOperation
-    | {
-        emailId?: string
-        emailIdFromPreviousStep?: string
-        labelIds: string[]
-        operation: 'add' | 'remove' | 'set'
       }
 }
 

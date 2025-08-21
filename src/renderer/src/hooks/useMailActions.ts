@@ -18,7 +18,10 @@ interface UseMailActionsReturn {
   removeLabels: (operation: LabelOperation) => Promise<void | null>
   getLabels: () => Promise<EmailLabel[] | null>
   getEmails: (labelId?: string) => Promise<EmailMessage[] | null>
-  listenToInbox: (filter?: InboxListener['filter'], callback?: (email: EmailMessage) => void) => Promise<{ listenerId: string } | null>
+  listenToInbox: (
+    filter?: InboxListener['filter'],
+    callback?: (email: EmailMessage) => void
+  ) => Promise<{ listenerId: string } | null>
   stopListening: (listenerId: string) => Promise<void | null>
   analyzeEmail: (emailId: string, prompt: string) => Promise<string | string[] | null>
 }

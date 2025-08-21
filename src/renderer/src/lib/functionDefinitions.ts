@@ -49,7 +49,7 @@ export async function getFormattedFunctionsPrompt(): Promise<string> {
 
 // For backwards compatibility - these will be populated on first use
 export let availableFunctions: FunctionDefinition[] = []
-export let formatFunctionsForPrompt = (functions: FunctionDefinition[]): string => {
+export let formatFunctionsForPrompt = (): string => {
   console.warn('formatFunctionsForPrompt called before initialization')
   return ''
 }

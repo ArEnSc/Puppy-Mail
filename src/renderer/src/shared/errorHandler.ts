@@ -13,7 +13,7 @@ export interface AppError {
   code: string
   message: string
   severity: ErrorSeverity
-  details?: any
+  details?: unknown
   timestamp: Date
 }
 
@@ -112,19 +112,19 @@ export class ErrorHandler {
 }
 
 // Export convenience functions
-export const logInfo = (message: string, details?: any) =>
+export const logInfo = (message: string, details?: unknown): void =>
   ErrorHandler.log(
     { code: 'INFO', message, details, severity: ErrorSeverity.INFO, timestamp: new Date() },
     ErrorSeverity.INFO
   )
 
-export const logWarning = (message: string, details?: any) =>
+export const logWarning = (message: string, details?: unknown): void =>
   ErrorHandler.log(
     { code: 'WARNING', message, details, severity: ErrorSeverity.WARNING, timestamp: new Date() },
     ErrorSeverity.WARNING
   )
 
-export const logError = (error: Error | string, code?: string) =>
+export const logError = (error: Error | string): void =>
   ErrorHandler.log(error, ErrorSeverity.ERROR)
 
 export const handleAsync = ErrorHandler.handleAsync.bind(ErrorHandler)

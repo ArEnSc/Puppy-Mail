@@ -14,5 +14,6 @@ export function useLMStudioAutoConnect(): void {
         logError(error, 'LMSTUDIO_AUTO_CONNECT_ERROR')
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
 }

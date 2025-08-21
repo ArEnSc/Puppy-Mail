@@ -5,7 +5,6 @@ import {
   WorkflowStep,
   SendEmailInputs,
   ScheduleEmailInputs,
-  LabelInputs,
   ListenInputs,
   AnalysisInputs
 } from '../types/workflow'
@@ -14,7 +13,6 @@ import {
   EmailMessage,
   EmailComposition,
   ScheduledEmail,
-  LabelOperation,
   MailActionResult
 } from '../../types/mailActions'
 import { WorkflowLogger } from './WorkflowLogger'
@@ -43,8 +41,6 @@ interface ProcessedInputs {
   emails?: EmailMessage[]
   data?: Record<string, unknown>
   emailId?: string
-  labelIds?: string[]
-  operation?: 'add' | 'remove' | 'set'
   subject?: string
   labels?: string[]
   callback?: (email: EmailMessage) => void
@@ -53,14 +49,6 @@ interface ProcessedInputs {
 // Type guards
 function hasFromPreviousStep(obj: unknown): obj is { fromPreviousStep: string } {
   return typeof obj === 'object' && obj !== null && 'fromPreviousStep' in obj
-}
-
-function isLabelOperationWithRef(obj: unknown): obj is {
-  emailIdFromPreviousStep?: string
-  labelIds: string[]
-  operation: 'add' | 'remove' | 'set'
-} {
-  return typeof obj === 'object' && obj !== null && 'operation' in obj && 'labelIds' in obj
 }
 
 export class WorkflowEngine {
@@ -294,7 +282,7 @@ export class WorkflowEngine {
   }
 
   private processInputs(
-    inputs: SendEmailInputs | ScheduleEmailInputs | LabelInputs | ListenInputs | AnalysisInputs,
+    inputs: SendEmailInputs | ScheduleEmailInputs | ListenInputs | AnalysisInputs,
     context: WorkflowContext
   ): ProcessedInputs {
     if (!inputs) return {}
@@ -330,19 +318,6 @@ export class WorkflowEngine {
       }
     }
 
-    if ('operation' in inputs) {
-      const labelInputs = inputs as LabelInputs
-      if (isLabelOperationWithRef(labelInputs.operation)) {
-        processed.emailId = context.trigger?.emailId
-        processed.labelIds = labelInputs.operation.labelIds
-        processed.operation = labelInputs.operation.operation
-      } else {
-        const op = labelInputs.operation as LabelOperation
-        processed.emailId = op.emailId
-        processed.labelIds = op.labelIds
-        processed.operation = op.operation
-      }
-    }
 
     if ('senders' in inputs) {
       const listenInputs = inputs as ListenInputs
@@ -378,24 +353,6 @@ export class WorkflowEngine {
       case 'scheduleEmail':
         if (!inputs.scheduledEmail) throw new Error('Missing scheduledEmail for scheduleEmail')
         return await this.mailActions.scheduleEmail(inputs.scheduledEmail)
-      case 'addLabels':
-        if (!inputs.emailId || !inputs.labelIds || !inputs.operation) {
-          throw new Error('Missing required fields for addLabels')
-        }
-        return await this.mailActions.addLabels({
-          emailId: inputs.emailId,
-          labelIds: inputs.labelIds,
-          operation: inputs.operation
-        })
-      case 'removeLabels':
-        if (!inputs.emailId || !inputs.labelIds || !inputs.operation) {
-          throw new Error('Missing required fields for removeLabels')
-        }
-        return await this.mailActions.removeLabels({
-          emailId: inputs.emailId,
-          labelIds: inputs.labelIds,
-          operation: inputs.operation
-        })
       case 'listenForEmails':
         if (!inputs.senders) throw new Error('Missing senders for listenForEmails')
         return await this.mailActions.listenForEmails(inputs.senders, {

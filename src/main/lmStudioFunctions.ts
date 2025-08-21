@@ -1,5 +1,5 @@
 // Function definitions for LM Studio function calling
-import type { EmailComposition, LabelOperation, EmailMessage } from '../types/mailActions'
+import type { EmailComposition, EmailMessage } from '../types/mailActions'
 import { EmailService } from './db/emailService'
 import { getMailActionService } from './services/mailActionServiceManager'
 
@@ -103,49 +103,6 @@ export const availableFunctions: FunctionDefinition[] = [
       required: ['to', 'subject', 'body', 'scheduledTime']
     }
   },
-  // Label operations
-  {
-    name: 'addLabels',
-    description: 'Add labels to an email',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email'
-        },
-        labelIds: {
-          type: 'array',
-          description: 'Array of label IDs to add',
-          items: {
-            type: 'string'
-          }
-        }
-      },
-      required: ['emailId', 'labelIds']
-    }
-  },
-  {
-    name: 'removeLabels',
-    description: 'Remove labels from an email',
-    parameters: {
-      type: 'object',
-      properties: {
-        emailId: {
-          type: 'string',
-          description: 'ID of the email'
-        },
-        labelIds: {
-          type: 'array',
-          description: 'Array of label IDs to remove',
-          items: {
-            type: 'string'
-          }
-        }
-      },
-      required: ['emailId', 'labelIds']
-    }
-  },
   {
     name: 'listenForEmails',
     description: 'Start listening for new emails from specific senders',
@@ -247,27 +204,6 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
     }
 
     return await mailActionService.scheduleEmail(scheduledEmail)
-  },
-  // Label operations
-  addLabels: async (args: unknown) => {
-    const params = args as { emailId: string; labelIds: string[] }
-    console.log('[Function Call] addLabels:', params)
-    const operation: LabelOperation = {
-      emailId: params.emailId,
-      labelIds: params.labelIds,
-      operation: 'add'
-    }
-    return await mailActionService.addLabels(operation)
-  },
-  removeLabels: async (args: unknown) => {
-    const params = args as { emailId: string; labelIds: string[] }
-    console.log('[Function Call] removeLabels:', params)
-    const operation: LabelOperation = {
-      emailId: params.emailId,
-      labelIds: params.labelIds,
-      operation: 'remove'
-    }
-    return await mailActionService.removeLabels(operation)
   },
   listenForEmails: async (args: unknown) => {
     const params = args as {
@@ -407,7 +343,7 @@ To use a function, you can either:
 
 Examples:
 - To send an email: <|channel|>commentary to=functions.sendEmail <|message|>{"to": ["user@example.com"], "subject": "Hello", "body": "Hi there!"}
-- To add labels: <|channel|>commentary to=functions.addLabels <|message|>{"emailId": "email-123", "labelIds": ["label-1", "label-2"]}
+- To schedule an email: <|channel|>commentary to=functions.scheduleEmail <|message|>{"to": ["user@example.com"], "subject": "Meeting", "body": "Let's meet tomorrow", "scheduledTime": "2024-01-20T10:00:00Z"}
 - To analyze data: <|channel|>commentary to=functions.analysis <|message|>{"prompt": "Summarize my recent emails", "includeRecentEmails": true, "emailCount": 5}
 
 Remember: Always ask for missing information before executing functions!`

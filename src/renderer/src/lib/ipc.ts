@@ -19,7 +19,7 @@ class IPCClient {
   /**
    * Invoke an IPC method with error handling
    */
-  async invoke<T>(channel: string, ...args: any[]): Promise<T> {
+  async invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
     if (!this.available) {
       throw new Error('IPC not available - running outside Electron')
     }
@@ -35,7 +35,7 @@ class IPCClient {
   /**
    * Send a one-way IPC message
    */
-  send(channel: string, ...args: any[]): void {
+  send(channel: string, ...args: unknown[]): void {
     if (!this.available) {
       console.warn('IPC not available - running outside Electron')
       return
@@ -47,7 +47,7 @@ class IPCClient {
   /**
    * Listen to IPC events
    */
-  on(channel: string, callback: (...args: any[]) => void): () => void {
+  on(channel: string, callback: (...args: unknown[]) => void): () => void {
     if (!this.available) {
       console.warn('IPC not available - running outside Electron')
       return () => {} // Return noop unsubscribe
@@ -64,7 +64,7 @@ class IPCClient {
   /**
    * Listen to IPC events once
    */
-  once(channel: string, callback: (...args: any[]) => void): void {
+  once(channel: string, callback: (...args: unknown[]) => void): void {
     if (!this.available) {
       console.warn('IPC not available - running outside Electron')
       return
@@ -76,7 +76,7 @@ class IPCClient {
   /**
    * Remove IPC event listener
    */
-  off(channel: string, callback: (...args: any[]) => void): void {
+  off(channel: string, callback: (...args: unknown[]) => void): void {
     if (!this.available) {
       return
     }

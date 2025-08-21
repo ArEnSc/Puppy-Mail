@@ -128,7 +128,7 @@ export class WorkflowStepBuilder {
     }
 
     if (description.includes('send') || description.includes('notify')) {
-      const emailDetails = this.extractEmailDetails(description)
+      const emailDetails = this.extractEmailDetails()
       const previousStep = steps.length > 0 ? steps[steps.length - 1].id : undefined
       steps.push(
         this.createSendEmailStep(
@@ -166,7 +166,7 @@ export class WorkflowStepBuilder {
     return labels.length > 0 ? labels : ['processed']
   }
 
-  private extractEmailDetails(description: string): {
+  private extractEmailDetails(): {
     to: string[]
     subject: string
     body: string | { fromPreviousStep: string }

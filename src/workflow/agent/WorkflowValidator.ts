@@ -94,7 +94,7 @@ export class WorkflowValidator {
     // Validate each step
     for (let i = 0; i < plan.steps.length; i++) {
       const step = plan.steps[i]
-      const stepErrors = this.validateStep(step, availableOutputs, plan)
+      const stepErrors = this.validateStep(step, availableOutputs)
       errors.push(...stepErrors)
 
       // Add this step's output to available outputs
@@ -136,8 +136,7 @@ export class WorkflowValidator {
    */
   private static validateStep(
     step: WorkflowStep,
-    availableOutputs: Map<string, StepOutput>,
-    _plan: WorkflowPlan
+    availableOutputs: Map<string, StepOutput>
   ): ValidationError[] {
     const errors: ValidationError[] = []
 
@@ -163,7 +162,7 @@ export class WorkflowValidator {
         errors.push(...this.validateScheduleEmailInputs(step, availableOutputs))
         break
       case 'listenForEmails':
-        errors.push(...this.validateListenInputs(step, availableOutputs))
+        errors.push(...this.validateListenInputs(step))
         break
     }
 
@@ -275,7 +274,8 @@ export class WorkflowValidator {
         })
       } else {
         // Check if the referenced step produces compatible data
-        const output = availableOutputs.get(stepId)!
+        // Validate that output exists (for type checking)
+        availableOutputs.get(stepId)!
         if (stepId !== 'analysis' && !path.includes('data')) {
           errors.push({
             stepId: step.id,
@@ -432,10 +432,7 @@ export class WorkflowValidator {
   /**
    * Validate listenForEmails inputs
    */
-  private static validateListenInputs(
-    step: WorkflowStep,
-    _availableOutputs: Map<string, StepOutput>
-  ): ValidationError[] {
+  private static validateListenInputs(step: WorkflowStep): ValidationError[] {
     const errors: ValidationError[] = []
     const inputs = step.inputs as ListenInputs
 
