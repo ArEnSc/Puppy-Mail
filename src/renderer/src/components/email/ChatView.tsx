@@ -27,10 +27,10 @@ interface FunctionCall {
 }
 
 interface Message {
-  prompt: string
-  contextMessages: [object]
+  prompt?: string
+  contextMessages?: Array<{ role: string; content: string }>
   id: string
-  role: 'assistant' | 'user' | 'error'
+  role: 'system' | 'assistant' | 'user' | 'error'
   content: string
   reasoning?: string
   functionCalls?: FunctionCall[]
@@ -136,7 +136,7 @@ export function ChatView(): JSX.Element {
         role: 'error',
         content: error,
         timestamp: new Date(),
-        prompt: false,
+        prompt: undefined,
         contextMessages: undefined
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -228,7 +228,7 @@ export function ChatView(): JSX.Element {
 
         // Add function definitions if enabled
         if (enableFunctions) {
-          const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
+          const functionsPrompt = formatFunctionsForPrompt()
           systemPrompt += '\n\n' + functionsPrompt
         }
 
