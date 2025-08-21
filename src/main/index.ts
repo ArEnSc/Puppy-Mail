@@ -8,9 +8,25 @@ import { createEmailService } from './services/email/emailService'
 import { createDatabase, closeDatabase } from './db/database'
 import { LMStudioService, setupLMStudioHandlers } from './lmStudioService'
 import { setupMailActionHandlers } from './ipc/mailActionHandlers'
+import { WorkflowService } from '../workflow/WorkflowService'
+import { getMailActionService } from './services/mailActionServiceManager'
+import { sanitizeEmailBody } from './utils/emailSanitizer'
 
 // Load environment variables
 dotenv.config()
+
+// Helper functions for email parsing
+function extractEmailAddress(emailString: string): string {
+  // Extract email from strings like "John Doe <john@example.com>"
+  const match = emailString.match(/<(.+)>/)
+  return match ? match[1] : emailString
+}
+
+function extractName(emailString: string): string | undefined {
+  // Extract name from strings like "John Doe <john@example.com>"
+  const match = emailString.match(/^([^<]+)\s*</)
+  return match ? match[1].trim() : undefined
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -90,8 +106,57 @@ app.whenReady().then(async () => {
   const gmailAuthService = new GmailAuthService()
   setupAuthHandlers(gmailAuthService)
 
+  // Initialize workflow service
+  const workflowStorageDir = join(app.getPath('userData'), 'workflows')
+  const mailActionService = getMailActionService()
+  const workflowService = new WorkflowService(mailActionService, workflowStorageDir)
+
+  // Initialize workflow service
+  await workflowService.initialize()
+  console.log('WorkflowService initialized')
+
   // Initialize email service
-  createEmailService(gmailAuthService)
+  const emailService = createEmailService(gmailAuthService)
+
+  // Connect email service to workflow triggers
+  emailService.onRawEmails(async (emails) => {
+    console.log(`Processing ${emails.length} emails for workflow triggers`)
+
+    for (const email of emails) {
+      // Convert Email to EmailMessage format for workflows
+      // Gmail provides "Name <email@example.com>" format, we need to parse it
+      const emailMessage = {
+        id: email.id,
+        from: {
+          email: extractEmailAddress(email.from),
+          name: extractName(email.from)
+        },
+        to: [
+          {
+            email: extractEmailAddress(email.to),
+            name: extractName(email.to)
+          }
+        ],
+        subject: email.subject,
+        body: sanitizeEmailBody(email.body), // Clean up HTML and formatting
+        date: email.date,
+        labels: email.labels,
+        isRead: email.isRead,
+        hasAttachment: email.attachments.length > 0,
+        threadId: email.threadId
+      }
+
+      console.log(
+        `Checking workflow triggers for email: ${email.subject} from ${emailMessage.from.email}`
+      )
+
+      try {
+        await workflowService.handleIncomingEmail(emailMessage)
+      } catch (error) {
+        console.error('Error handling workflow trigger:', error)
+      }
+    }
+  })
 
   // Initialize LM Studio service
   const lmStudioService = new LMStudioService()

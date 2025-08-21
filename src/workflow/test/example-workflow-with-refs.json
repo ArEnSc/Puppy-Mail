@@ -1,0 +1,43 @@
+{
+  "id": "email-analyzer-workflow",
+  "name": "Email Analysis and Response Workflow",
+  "description": "Analyzes incoming emails and sends summaries",
+  "trigger": {
+    "id": "trigger-001",
+    "type": "email_from",
+    "config": {
+      "fromAddress": "client@example.com"
+    }
+  },
+  "steps": [
+    {
+      "id": "analyze",
+      "functionName": "analysis",
+      "inputs": {
+        "prompt": "Analyze this email: {{trigger.email.body}}. Extract key points and suggest a response.",
+        "useTriggeredEmail": true
+      }
+    },
+    {
+      "id": "send-summary",
+      "functionName": "sendEmail",
+      "inputs": {
+        "composition": {
+          "to": ["manager@company.com"],
+          "subject": "Analysis of: {{trigger.email.subject}}",
+          "body": "From: {{trigger.email.from.email}}\n\nAnalysis Result:\n{{analyze.data}}",
+          "isHtml": false
+        }
+      },
+      "condition": {
+        "type": "previousStepOutput",
+        "field": "analyze.success",
+        "operator": "equals",
+        "value": true
+      }
+    }
+  ],
+  "enabled": true,
+  "createdAt": "2024-01-20T10:00:00Z",
+  "updatedAt": "2024-01-20T10:00:00Z"
+}

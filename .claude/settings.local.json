@@ -3,7 +3,9 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npm run workflow:logs:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

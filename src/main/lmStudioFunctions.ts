@@ -21,6 +21,19 @@ export interface FunctionDefinition {
     >
     required?: string[]
   }
+  outputs?: {
+    type: 'object'
+    properties: Record<
+      string,
+      {
+        type: string
+        description: string
+        items?: {
+          type: string
+        }
+      }
+    >
+  }
 }
 
 export interface FunctionCall {
@@ -72,6 +85,19 @@ export const availableFunctions: FunctionDefinition[] = [
         }
       },
       required: ['to', 'subject', 'body']
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the email was sent successfully'
+        },
+        messageId: {
+          type: 'string',
+          description: 'The ID of the sent message'
+        }
+      }
     }
   },
   {
@@ -101,6 +127,19 @@ export const availableFunctions: FunctionDefinition[] = [
         }
       },
       required: ['to', 'subject', 'body', 'scheduledTime']
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the email was scheduled successfully'
+        },
+        scheduledId: {
+          type: 'string',
+          description: 'The ID of the scheduled email'
+        }
+      }
     }
   },
   {
@@ -133,6 +172,23 @@ export const availableFunctions: FunctionDefinition[] = [
         }
       },
       required: ['from']
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the listener was set up successfully'
+        },
+        listenerId: {
+          type: 'string',
+          description: 'The ID of the email listener'
+        },
+        message: {
+          type: 'string',
+          description: 'Status message about the listener'
+        }
+      }
     }
   },
   {
@@ -159,6 +215,23 @@ export const availableFunctions: FunctionDefinition[] = [
         }
       },
       required: ['prompt']
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the analysis completed successfully'
+        },
+        result: {
+          type: 'string',
+          description: 'The analysis result text'
+        },
+        message: {
+          type: 'string',
+          description: 'Status message about the analysis'
+        }
+      }
     }
   }
 ]

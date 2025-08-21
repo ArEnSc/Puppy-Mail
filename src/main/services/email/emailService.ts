@@ -9,6 +9,7 @@ import { GmailAuthService } from '../../auth/authService'
 export class EmailService {
   private cronJob: cron.ScheduledTask | null = null
   private emailHandler: ((emails: FormattedEmail[]) => void) | null = null
+  private rawEmailHandler: ((emails: Email[]) => void) | null = null
   private gmailAuthService: GmailAuthService
   lastSyncTime: Date | null = null
 
@@ -18,6 +19,10 @@ export class EmailService {
 
   onNewEmails(handler: (emails: FormattedEmail[]) => void): void {
     this.emailHandler = handler
+  }
+
+  onRawEmails(handler: (emails: Email[]) => void): void {
+    this.rawEmailHandler = handler
   }
 
   async fetchLatestEmails(maxResults: number = 10): Promise<FormattedEmail[]> {
@@ -61,6 +66,12 @@ export class EmailService {
         }
         this.lastSyncTime = new Date()
 
+        // Call raw email handler if set (for workflows)
+        if (this.rawEmailHandler) {
+          console.log('Calling raw email handler for workflows...')
+          this.rawEmailHandler(emails)
+        }
+
         // Notify renderer about sync completion
         BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('email:syncComplete', {
@@ -97,6 +108,7 @@ export class EmailService {
         if (this.emailHandler && emails.length > 0) {
           this.emailHandler(emails)
         }
+        // Raw handler is called inside fetchLatestEmails
       } catch (error) {
         console.error('Error during scheduled email poll:', error)
       }

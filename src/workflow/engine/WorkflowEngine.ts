@@ -281,59 +281,88 @@ export class WorkflowEngine {
     }
   }
 
+  private resolveValue(value: any, context: WorkflowContext): any {
+    // Handle strings that may contain references like "{{stepId.field}}"
+    if (typeof value === 'string' && value.includes('{{') && value.includes('}}')) {
+      // Replace all {{ref}} patterns in the string
+      return value.replace(/\{\{([^}]+)\}\}/g, (match, ref) => {
+        ref = ref.trim()
+        
+        // Handle trigger references
+        if (ref.startsWith('trigger.')) {
+          const path = ref.slice(8) // Remove "trigger."
+          const resolved = this.getFieldValue(context.trigger, path)
+          return resolved != null ? String(resolved) : match
+        }
+        
+        // Handle step output references
+        const parts = ref.split('.')
+        const stepId = parts[0]
+        const stepOutput = context.stepOutputs.get(stepId)
+        
+        if (!stepOutput) {
+          this.logger.warn(`Step output not found for reference: {{${ref}}}`, {}, {})
+          return match // Keep original if not found
+        }
+        
+        // Navigate nested path
+        const resolved = this.getFieldValue(stepOutput, parts.slice(1).join('.'))
+        return resolved != null ? String(resolved) : match
+      })
+    }
+    
+    // Handle objects recursively
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      this.logger.debug('Resolving object:', { value }, {})
+      const resolved: any = {}
+      for (const [key, val] of Object.entries(value)) {
+        resolved[key] = this.resolveValue(val, context)
+      }
+      this.logger.debug('Resolved object to:', { resolved }, {})
+      return resolved
+    }
+    
+    // Handle arrays recursively
+    if (Array.isArray(value)) {
+      return value.map(item => this.resolveValue(item, context))
+    }
+    
+    // Return primitive values as-is
+    return value
+  }
+
   private processInputs(
     inputs: SendEmailInputs | ScheduleEmailInputs | ListenInputs | AnalysisInputs,
     context: WorkflowContext
   ): ProcessedInputs {
     if (!inputs) return {}
-
+    
+    // Use the new resolver to handle all references
+    const resolvedInputs = this.resolveValue(inputs, context)
+    
+    // Build processed inputs based on what was resolved
     const processed: ProcessedInputs = {}
 
-    // Type-safe input processing based on input type
-    if ('composition' in inputs && inputs.composition) {
-      if (hasFromPreviousStep(inputs.composition)) {
-        const stepRef = inputs.composition.fromPreviousStep
-        const [stepId, ...path] = stepRef.split('.')
-        const stepOutput = context.stepOutputs.get(stepId)
-        processed.composition = this.getFieldValue(
-          { [stepId]: stepOutput },
-          path.join('.')
-        ) as EmailComposition
-      } else {
-        processed.composition = inputs.composition as EmailComposition
-      }
+    // Extract the relevant fields from resolved inputs
+    if ('composition' in resolvedInputs) {
+      processed.composition = resolvedInputs.composition
     }
-
-    if ('scheduledEmail' in inputs && inputs.scheduledEmail) {
-      if (hasFromPreviousStep(inputs.scheduledEmail)) {
-        const stepRef = inputs.scheduledEmail.fromPreviousStep
-        const [stepId, ...path] = stepRef.split('.')
-        const stepOutput = context.stepOutputs.get(stepId)
-        processed.scheduledEmail = this.getFieldValue(
-          { [stepId]: stepOutput },
-          path.join('.')
-        ) as ScheduledEmail
-      } else {
-        processed.scheduledEmail = inputs.scheduledEmail as ScheduledEmail
-      }
+    if ('scheduledEmail' in resolvedInputs) {
+      processed.scheduledEmail = resolvedInputs.scheduledEmail
     }
-
-
-    if ('senders' in inputs) {
-      const listenInputs = inputs as ListenInputs
-      processed.senders = listenInputs.senders
-      processed.subject = listenInputs.subject
-      processed.labels = listenInputs.labels
+    if ('senders' in resolvedInputs) {
+      processed.senders = resolvedInputs.senders
+      processed.subject = resolvedInputs.subject
+      processed.labels = resolvedInputs.labels
     }
-
-    if ('prompt' in inputs) {
-      const analysisInputs = inputs as AnalysisInputs
-      processed.prompt = analysisInputs.prompt
-      if (analysisInputs.useTriggeredEmail && context.trigger?.email) {
+    if ('prompt' in resolvedInputs) {
+      processed.prompt = resolvedInputs.prompt
+      // Handle special case for triggered email
+      if (resolvedInputs.useTriggeredEmail && context.trigger?.email) {
         processed.emails = [context.trigger.email]
       }
-      if (analysisInputs.emailsFromPreviousStep) {
-        const [stepId] = analysisInputs.emailsFromPreviousStep.split('.')
+      if (resolvedInputs.emailsFromPreviousStep) {
+        const [stepId] = resolvedInputs.emailsFromPreviousStep.split('.')
         const stepOutput = context.stepOutputs.get(stepId)
         processed.emails = stepOutput as EmailMessage[]
       }
