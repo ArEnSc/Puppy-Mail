@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/shared/constants'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+import { ipc } from '@/lib/ipc'
+import { LMSTUDIO_IPC_CHANNELS } from '../../../shared/types/lmStudio'
 
 interface ApiKeyConfig {
   key: string
@@ -114,16 +115,17 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
 const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
   try {
     // Use the new SDK connection method
-    const result = await ipc.invoke<{ success: boolean; models?: string[]; error?: string }>(
-      IPC_CHANNELS.LMSTUDIO_CONNECT,
-      url
-    )
+    const result = await ipc.invoke<{
+      success: boolean
+      data?: { models: string[] }
+      error?: string
+    }>(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CONNECT, url)
 
     if (!result.success) {
       throw new Error(result.error || ERROR_MESSAGES.LMSTUDIO_CONNECTION_FAILED)
     }
 
-    return { models: result.models || [] }
+    return { models: result.data?.models || [] }
   } catch (error) {
     if (error instanceof Error) {
       throw error

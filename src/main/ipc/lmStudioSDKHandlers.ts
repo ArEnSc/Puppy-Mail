@@ -36,7 +36,16 @@ export function setupLMStudioSDKHandlers(): void {
       url: string = 'ws://localhost:1234'
     ): Promise<LMStudioResponse<LMStudioConnectResponse>> => {
       try {
-        client = new LMStudioClient({ baseUrl: url })
+        // Convert http:// to ws:// and https:// to wss://
+        let wsUrl = url
+        if (url.startsWith('http://')) {
+          wsUrl = url.replace('http://', 'ws://')
+        } else if (url.startsWith('https://')) {
+          wsUrl = url.replace('https://', 'wss://')
+        }
+        
+        console.log('[LMStudio SDK] Connecting to:', wsUrl)
+        client = new LMStudioClient({ baseUrl: wsUrl })
 
         // Test connection by listing models
         const models = await client.llm.listLoaded()

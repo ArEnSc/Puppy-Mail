@@ -6,8 +6,16 @@ export function useLMStudioAutoConnect(): void {
   const { lmStudio, validateLMStudio } = useSettingsStore()
 
   useEffect(() => {
-    // Auto-connect if we have a URL and model saved but not connected
-    if (lmStudio.url && lmStudio.model && !lmStudio.isConnected && !lmStudio.isValidating) {
+    // Log current state for debugging
+    logInfo('LM Studio auto-connect check', {
+      url: lmStudio.url,
+      model: lmStudio.model,
+      isConnected: lmStudio.isConnected,
+      isValidating: lmStudio.isValidating
+    })
+
+    // Auto-connect if we have a URL saved but not connected
+    if (lmStudio.url && !lmStudio.isConnected && !lmStudio.isValidating) {
       logInfo('Auto-connecting to LM Studio', { url: lmStudio.url, model: lmStudio.model })
 
       validateLMStudio().catch((error) => {
