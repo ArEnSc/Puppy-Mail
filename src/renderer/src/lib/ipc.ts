@@ -117,5 +117,25 @@ export const IPC_CHANNELS = {
   LMSTUDIO_STREAM_CHUNK: 'lmstudio:stream:chunk',
   LMSTUDIO_STREAM_ERROR: 'lmstudio:stream:error',
   LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete',
-  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall'
+  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall',
+
+  // LM Studio SDK operations (new)
+  LMSTUDIO_CONNECT: 'lmstudio:connect',
+  LMSTUDIO_GET_MODELS: 'lmstudio:getModels',
+  LMSTUDIO_GET_OR_CREATE_CHAT: 'lmstudio:getOrCreateChat',
+  LMSTUDIO_GET_CHAT_HISTORY: 'lmstudio:getChatHistory',
+  LMSTUDIO_CLEAR_CHAT: 'lmstudio:clearChat',
+  LMSTUDIO_DISCONNECT: 'lmstudio:disconnect',
+
+  // LM Studio SDK events (new)
+  LMSTUDIO_ROUND_START: 'lmstudio:roundStart',
+  LMSTUDIO_ROUND_END: 'lmstudio:roundEnd',
+  LMSTUDIO_MESSAGE: 'lmstudio:message',
+  LMSTUDIO_FRAGMENT: 'lmstudio:fragment',
+  LMSTUDIO_TOOL_CALL_START: 'lmstudio:toolCallStart',
+  LMSTUDIO_TOOL_CALL_NAME: 'lmstudio:toolCallName',
+  LMSTUDIO_TOOL_CALL_END: 'lmstudio:toolCallEnd',
+  LMSTUDIO_TOOL_CALL_FINALIZED: 'lmstudio:toolCallFinalized',
+  LMSTUDIO_COMPLETE: 'lmstudio:complete',
+  LMSTUDIO_ERROR: 'lmstudio:error'
 } as const

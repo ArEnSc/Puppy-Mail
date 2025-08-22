@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useLMStudio } from '@/hooks/useLMStudio'
 import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -43,6 +44,9 @@ export function ChatView(): JSX.Element {
   const { lmStudio } = useSettingsStore()
   const prompt =
     'You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise.'
+
+  // Use SDK for sending messages
+  const { sendMessage: sendSDKMessage } = useLMStudio(prompt)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -66,6 +70,8 @@ export function ChatView(): JSX.Element {
   const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
   const [enableFunctions, setEnableFunctions] = useState(true)
+  const [sessionId] = useState(() => `chat-${Date.now()}`)
+  const [chatInitialized, setChatInitialized] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(false)
@@ -96,6 +102,22 @@ export function ChatView(): JSX.Element {
   useEffect(() => {
     streamingMessageIdRef.current = streamingMessageId
   }, [streamingMessageId])
+
+  // Initialize chat session when component mounts
+  useEffect(() => {
+    const initializeChat = async (): Promise<void> => {
+      if (lmStudio.isConnected && !chatInitialized) {
+        try {
+          await ipc.invoke(IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT, sessionId, prompt)
+          setChatInitialized(true)
+        } catch (error) {
+          console.error('Failed to initialize chat:', error)
+        }
+      }
+    }
+
+    initializeChat()
+  }, [lmStudio.isConnected, sessionId, prompt, chatInitialized])
 
   useEffect(() => {
     // Track mounting
@@ -252,13 +274,8 @@ export function ChatView(): JSX.Element {
         streamingMessageIdRef.current = assistantMessageId
         setIsStreaming(true)
 
-        ipc.send(
-          IPC_CHANNELS.LMSTUDIO_STREAM,
-          lmStudio.url,
-          lmStudio.model,
-          conversationMessages,
-          enableFunctions
-        )
+        // Use SDK to send message
+        await sendSDKMessage(userMessage.content, enableFunctions)
       }
     }
   }
