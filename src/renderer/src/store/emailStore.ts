@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-
+import { ipc, IPC_CHANNELS } from '@renderer/lib/ipc'
 export interface Email {
   id: string
   threadId: string
@@ -207,8 +207,8 @@ export const useEmailStore = create<EmailState>()(
             )
           }))
           // Sync to database
-          if (window.electron?.ipcRenderer) {
-            window.electron.ipcRenderer.invoke('email:markAsRead', id).catch(console.error)
+          if (ipc.isAvailable()) {
+            ipc.invoke(IPC_CHANNELS.EMAIL_MARK_AS_READ, id).catch(console.error)
           }
         },
 
@@ -226,8 +226,8 @@ export const useEmailStore = create<EmailState>()(
             )
           }))
           // Sync to database
-          if (window.electron?.ipcRenderer) {
-            window.electron.ipcRenderer.invoke('email:toggleStar', id).catch(console.error)
+          if (ipc.isAvailable()) {
+            ipc.invoke(IPC_CHANNELS.EMAIL_TOGGLE_STAR, id).catch(console.error)
           }
         },
 

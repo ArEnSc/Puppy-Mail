@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useEmailStore } from '@/store/emailStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
+import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 import {
   Dialog,
   DialogContent,
@@ -140,10 +141,10 @@ export function Settings(): JSX.Element {
 
   // Check auth status when dialog opens
   useEffect(() => {
-    if (isSettingsOpen && window.electron?.ipcRenderer) {
+    if (isSettingsOpen && ipc.isAvailable()) {
       console.log('Checking auth status...')
-      window.electron.ipcRenderer
-        .invoke('auth:check')
+      ipc
+        .invoke(IPC_CHANNELS.AUTH_CHECK)
         .then((isAuthenticated) => {
           console.log('Auth check result:', isAuthenticated)
           if (isAuthenticated) {
@@ -175,7 +176,7 @@ export function Settings(): JSX.Element {
   const handleGoogleAuth = async (): Promise<void> => {
     console.log('handleGoogleAuth called')
     try {
-      if (window.electron?.ipcRenderer) {
+      if (ipc.isAvailable()) {
         console.log('Electron IPC available, starting OAuth')
         // Clear any previous errors
         setGoogleAuth((prev) => ({ ...prev, error: null }))
@@ -222,11 +223,11 @@ export function Settings(): JSX.Element {
         }
 
         // Set up the listener first
-        window.electron.ipcRenderer.once('google-oauth-complete', handleOAuthComplete)
+        ipc.once(IPC_CHANNELS.AUTH_GOOGLE_COMPLETE, handleOAuthComplete)
 
         // Then send the start event
         console.log('Sending google-oauth-start')
-        window.electron.ipcRenderer.send('google-oauth-start')
+        ipc.send(IPC_CHANNELS.AUTH_GOOGLE_START)
       } else {
         // Fallback for development/testing
         console.log('No Electron IPC available')
@@ -247,8 +248,8 @@ export function Settings(): JSX.Element {
     setIsClearing(true)
     try {
       // Clear from database
-      if (window.electron?.ipcRenderer) {
-        await window.electron.ipcRenderer.invoke('email:clearAll')
+      if (ipc.isAvailable()) {
+        await ipc.invoke(IPC_CHANNELS.EMAIL_CLEAR_ALL)
       }
       // Clear from store
       clearAllEmails()

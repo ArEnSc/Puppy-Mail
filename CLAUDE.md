@@ -40,6 +40,7 @@ D:\Chloe\
 ## Technology Stack
 
 ### Core Dependencies
+
 - **Electron** (v37.2.3) - Desktop application framework
 - **React** (v19.1.0) - UI framework
 - **TypeScript** (v5.8.3) - Type safety
@@ -47,6 +48,7 @@ D:\Chloe\
 - **Electron Vite** (v4.0.0) - Electron-specific Vite configuration
 
 ### Frontend
+
 - **Zustand** (v5.0.7) - State management
 - **Tailwind CSS** (v3.4.17) - Styling
 - **Shadcn/ui** - Component library (Radix UI based)
@@ -55,12 +57,14 @@ D:\Chloe\
 - **date-fns** (v4.1.0) - Date utilities
 
 ### Backend
+
 - **Realm** (v20.2.0) - Local database
 - **Google APIs** (v156.0.0) - Gmail integration
 - **Node-cron** (v4.2.1) - Scheduled tasks
 - **RxJS** (v7.8.2) - Reactive programming
 
 ### Development Tools
+
 - **ESLint** (v9.31.0) - Linting
 - **Prettier** (v3.6.2) - Code formatting
 - **TSX** (v4.20.4) - TypeScript execution
@@ -94,17 +98,20 @@ D:\Chloe\
 ## Available Scripts
 
 ### Development
+
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Run built application
 
 ### Code Quality
+
 - `npm run lint` - Run ESLint
 - `npm run lint -- --fix` - Auto-fix linting issues
 - `npm run typecheck` - Check TypeScript types
 - `npm run format` - Format with Prettier
 
 ### Testing & Debugging
+
 - `npm run auth:gmail` - Setup Gmail authentication
 - `npm run test:email` - Test email fetching
 - `npm run test:workflow` - Run workflow tests
@@ -112,6 +119,7 @@ D:\Chloe\
 - `npm run workflow:debug` - Debug workflow execution
 
 ### Build & Deploy
+
 - `npm run build:win` - Build for Windows
 - `npm run build:mac` - Build for macOS
 - `npm run build:linux` - Build for Linux
@@ -174,6 +182,7 @@ D:\Chloe\
 ### File Organization
 
 #### Main Process Files
+
 - `src/main/index.ts` - Entry point, window management
 - `src/main/googleAuth.ts` - Gmail OAuth implementation
 - `src/main/emailManager.ts` - Email operations coordinator
@@ -181,6 +190,7 @@ D:\Chloe\
 - `src/main/lmStudioService.ts` - AI integration
 
 #### Renderer Process Files
+
 - `src/renderer/src/App.tsx` - Root component
 - `src/renderer/src/components/email/EmailLayout.tsx` - Main email UI
 - `src/renderer/src/store/emailStore.ts` - Email state management
@@ -188,6 +198,7 @@ D:\Chloe\
 - `src/renderer/src/lib/ipc.ts` - IPC communication wrapper
 
 #### Workflow Engine Files
+
 - `src/workflow/WorkflowService.ts` - Main workflow API
 - `src/workflow/engine/WorkflowEngine.ts` - Execution engine
 - `src/workflow/agent/WorkflowStepBuilder.ts` - AI workflow builder
@@ -242,6 +253,7 @@ D:\Chloe\
 ### Workflow Automation
 
 The workflow engine supports:
+
 - **Email triggers** - React to incoming emails
 - **Timer triggers** - Scheduled workflows
 - **Mail actions** - Send, label, analyze emails
@@ -271,7 +283,7 @@ The workflow engine supports:
 - Do what has been asked; nothing more, nothing less
 - NEVER create files unless absolutely necessary
 - ALWAYS prefer editing existing files over creating new ones
-- NEVER proactively create documentation files (*.md) unless explicitly requested
+- NEVER proactively create documentation files (\*.md) unless explicitly requested
 - Follow existing code patterns and conventions
 - Maintain type safety throughout the codebase
 - Test thoroughly before suggesting commits

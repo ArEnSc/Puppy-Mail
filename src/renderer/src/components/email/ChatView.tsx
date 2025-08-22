@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
-import { availableFunctions, formatFunctionsForPrompt } from '@/lib/functionDefinitions'
+import { formatFunctionsForPrompt } from '@/lib/functionDefinitions'
 
 interface FunctionCall {
   name: string
@@ -27,10 +28,10 @@ interface FunctionCall {
 }
 
 interface Message {
-  prompt: string
-  contextMessages: [object]
+  prompt?: string
+  contextMessages?: Array<{ role: string; content: string }>
   id: string
-  role: 'assistant' | 'user' | 'error'
+  role: 'system' | 'assistant' | 'user' | 'error'
   content: string
   reasoning?: string
   functionCalls?: FunctionCall[]
@@ -100,7 +101,7 @@ export function ChatView(): JSX.Element {
     // Track mounting
     isMountedRef.current = true
 
-    if (!window.electron?.ipcRenderer) return
+    if (!ipc.isAvailable()) return
 
     const handleStreamChunk = (
       ...[, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
@@ -136,7 +137,7 @@ export function ChatView(): JSX.Element {
         role: 'error',
         content: error,
         timestamp: new Date(),
-        prompt: false,
+        prompt: undefined,
         contextMessages: undefined
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -170,17 +171,20 @@ export function ChatView(): JSX.Element {
     }
 
     // Add listeners
-    window.electron.ipcRenderer.on('lmstudio:stream:chunk', handleStreamChunk)
-    window.electron.ipcRenderer.on('lmstudio:stream:error', handleStreamError)
-    window.electron.ipcRenderer.on('lmstudio:stream:complete', handleStreamComplete)
-    window.electron.ipcRenderer.on('lmstudio:stream:functionCall', handleFunctionCall)
+    const unsubscribeChunk = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_CHUNK, handleStreamChunk)
+    const unsubscribeError = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_ERROR, handleStreamError)
+    const unsubscribeComplete = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_COMPLETE, handleStreamComplete)
+    const unsubscribeFunctionCall = ipc.on(
+      IPC_CHANNELS.LMSTUDIO_STREAM_FUNCTION_CALL,
+      handleFunctionCall
+    )
 
     // Cleanup
     return () => {
-      window.electron.ipcRenderer.off('lmstudio:stream:chunk', handleStreamChunk)
-      window.electron.ipcRenderer.off('lmstudio:stream:error', handleStreamError)
-      window.electron.ipcRenderer.off('lmstudio:stream:complete', handleStreamComplete)
-      window.electron.ipcRenderer.off('lmstudio:stream:functionCall', handleFunctionCall)
+      unsubscribeChunk()
+      unsubscribeError()
+      unsubscribeComplete()
+      unsubscribeFunctionCall()
       isMountedRef.current = false
     }
   }, []) // Empty dependency array - set up listeners only once
@@ -213,7 +217,7 @@ export function ChatView(): JSX.Element {
       }
 
       // Start streaming
-      if (window.electron?.ipcRenderer) {
+      if (ipc.isAvailable()) {
         const conversationMessages = messages.concat(userMessage).map((msg) => ({
           role: msg.role,
           content: msg.content
@@ -228,7 +232,7 @@ export function ChatView(): JSX.Element {
 
         // Add function definitions if enabled
         if (enableFunctions) {
-          const functionsPrompt = formatFunctionsForPrompt(availableFunctions)
+          const functionsPrompt = formatFunctionsForPrompt()
           systemPrompt += '\n\n' + functionsPrompt
         }
 
@@ -248,8 +252,8 @@ export function ChatView(): JSX.Element {
         streamingMessageIdRef.current = assistantMessageId
         setIsStreaming(true)
 
-        window.electron.ipcRenderer.send(
-          'lmstudio:stream',
+        ipc.send(
+          IPC_CHANNELS.LMSTUDIO_STREAM,
           lmStudio.url,
           lmStudio.model,
           conversationMessages,
