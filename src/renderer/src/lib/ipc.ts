@@ -116,5 +116,6 @@ export const IPC_CHANNELS = {
   // LM Studio events
   LMSTUDIO_STREAM_CHUNK: 'lmstudio:stream:chunk',
   LMSTUDIO_STREAM_ERROR: 'lmstudio:stream:error',
-  LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete'
+  LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete',
+  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall'
 } as const

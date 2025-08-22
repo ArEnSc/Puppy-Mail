@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { ipc } from '@/lib/ipc'
 
 interface EmailWebviewProps {
   htmlContent: string
@@ -110,8 +111,8 @@ export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps)
             const href = target.getAttribute('href')
             if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
               // Use Electron's IPC to open external links
-              if (window.electron && window.electron.ipcRenderer) {
-                window.electron.ipcRenderer.send('open-external', href)
+              if (ipc.isAvailable()) {
+                ipc.send('open-external', href)
               }
             }
           }

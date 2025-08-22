@@ -16,7 +16,8 @@
       "Bash(npx tsx:*)",
       "Bash(node:*)",
       "Bash(npm run lint:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(od:*)"
     ],
     "deny": [],
     "ask": []

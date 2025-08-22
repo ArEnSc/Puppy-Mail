@@ -33,7 +33,9 @@ export const sendEmailTool = tool({
     return {
       success: result.success,
       messageId: result.data?.messageId,
-      message: result.success ? 'Email sent successfully' : result.error?.message || 'Failed to send email'
+      message: result.success
+        ? 'Email sent successfully'
+        : result.error?.message || 'Failed to send email'
     }
   }
 })
@@ -61,7 +63,9 @@ export const scheduleEmailTool = tool({
     return {
       success: result.success,
       scheduledId: result.data?.scheduledId,
-      message: result.success ? 'Email scheduled successfully' : result.error?.message || 'Failed to schedule email'
+      message: result.success
+        ? 'Email scheduled successfully'
+        : result.error?.message || 'Failed to schedule email'
     }
   }
 })
@@ -153,10 +157,10 @@ export const analysisTool = tool({
     if (includeRecentEmails) {
       const emailDocs = await EmailService.getEmails(emailCount || 10, 0)
       // Convert EmailDocument[] to EmailMessage[]
-      const emails: EmailMessage[] = emailDocs.map(doc => ({
+      const emails: EmailMessage[] = emailDocs.map((doc) => ({
         id: doc.id,
         from: { email: doc.from, name: '' },
-        to: doc.to.map(email => ({ email, name: '' })),
+        to: doc.to.map((email) => ({ email, name: '' })),
         cc: [],
         subject: doc.subject,
         body: doc.body,
