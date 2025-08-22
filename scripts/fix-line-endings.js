@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { execSync } = require('child_process')
 
 // Directories to process
@@ -10,6 +13,7 @@ const dirsToProcess = ['src', 'scripts']
 // File extensions to process
 const extensions = ['.js', '.jsx', '.ts', '.tsx', '.json', '.md', '.yml', '.yaml', '.css', '.html']
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function fixLineEndings(filePath) {
   const content = fs.readFileSync(filePath, 'utf8')
   const fixedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -22,6 +26,7 @@ function fixLineEndings(filePath) {
   return false
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function processDirectory(dir) {
   let fixedCount = 0
 
@@ -61,7 +66,7 @@ if (totalFixed > 0) {
 
   try {
     execSync('npm run format', { stdio: 'inherit' })
-  } catch (error) {
+  } catch {
     console.log('Note: Run "npm run format" manually if needed')
   }
 } else {
