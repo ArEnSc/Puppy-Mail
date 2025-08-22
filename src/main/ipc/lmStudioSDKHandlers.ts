@@ -2,27 +2,24 @@ import { ipcMain, IpcMainEvent } from 'electron'
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
 import { lmStudioAgentTools } from '../lmStudioAgentTools'
 import type { ChatMessage } from '@lmstudio/sdk'
-
-// Import IPC channels from the shared constants
-const IPC_CHANNELS = {
-  LMSTUDIO_CONNECT: 'lmstudio:connect',
-  LMSTUDIO_GET_MODELS: 'lmstudio:getModels',
-  LMSTUDIO_GET_OR_CREATE_CHAT: 'lmstudio:getOrCreateChat',
-  LMSTUDIO_CHAT: 'lmstudio:chat',
-  LMSTUDIO_GET_CHAT_HISTORY: 'lmstudio:getChatHistory',
-  LMSTUDIO_CLEAR_CHAT: 'lmstudio:clearChat',
-  LMSTUDIO_DISCONNECT: 'lmstudio:disconnect',
-  LMSTUDIO_ROUND_START: 'lmstudio:roundStart',
-  LMSTUDIO_ROUND_END: 'lmstudio:roundEnd',
-  LMSTUDIO_MESSAGE: 'lmstudio:message',
-  LMSTUDIO_FRAGMENT: 'lmstudio:fragment',
-  LMSTUDIO_TOOL_CALL_START: 'lmstudio:toolCallStart',
-  LMSTUDIO_TOOL_CALL_NAME: 'lmstudio:toolCallName',
-  LMSTUDIO_TOOL_CALL_END: 'lmstudio:toolCallEnd',
-  LMSTUDIO_TOOL_CALL_FINALIZED: 'lmstudio:toolCallFinalized',
-  LMSTUDIO_COMPLETE: 'lmstudio:complete',
-  LMSTUDIO_ERROR: 'lmstudio:error'
-} as const
+import {
+  LMSTUDIO_IPC_CHANNELS,
+  LMStudioResponse,
+  LMStudioConnectResponse,
+  LMStudioModelsResponse,
+  LMStudioChatSessionResponse,
+  LMStudioChatHistoryResponse,
+  LMStudioRoundStartPayload,
+  LMStudioRoundEndPayload,
+  LMStudioMessagePayload,
+  LMStudioFragmentPayload,
+  LMStudioErrorPayload,
+  LMStudioCompletePayload,
+  LMStudioToolCallStartPayload,
+  LMStudioToolCallNamePayload,
+  LMStudioToolCallEndPayload,
+  LMStudioToolCallFinalizedPayload
+} from '../../shared/types/lmStudio'
 
 // Single client instance - SDK manages connection internally
 let client: LMStudioClient | null = null
@@ -32,49 +29,66 @@ const chatSessions = new Map<string, Chat>()
 
 export function setupLMStudioSDKHandlers(): void {
   // Connect to LM Studio
-  ipcMain.handle(IPC_CHANNELS.LMSTUDIO_CONNECT, async (_event, url: string = 'ws://localhost:1234') => {
-    try {
-      client = new LMStudioClient({ baseUrl: url })
+  ipcMain.handle(
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CONNECT,
+    async (
+      _event,
+      url: string = 'ws://localhost:1234'
+    ): Promise<LMStudioResponse<LMStudioConnectResponse>> => {
+      try {
+        client = new LMStudioClient({ baseUrl: url })
 
-      // Test connection by listing models
-      const models = await client.llm.listLoaded()
-      return {
-        success: true,
-        models: models.map((m) => m.identifier)
-      }
-    } catch (error) {
-      client = null
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection failed'
+        // Test connection by listing models
+        const models = await client.llm.listLoaded()
+        return {
+          success: true,
+          data: {
+            models: models.map((m) => m.identifier)
+          }
+        }
+      } catch (error) {
+        client = null
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Connection failed'
+        }
       }
     }
-  })
+  )
 
   // Get loaded models
-  ipcMain.handle(IPC_CHANNELS.LMSTUDIO_GET_MODELS, async () => {
-    if (!client) {
-      return { success: false, error: 'Not connected to LM Studio' }
-    }
+  ipcMain.handle(
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_GET_MODELS,
+    async (): Promise<LMStudioResponse<LMStudioModelsResponse>> => {
+      if (!client) {
+        return { success: false, error: 'Not connected to LM Studio' }
+      }
 
-    try {
-      const models = await client.llm.listLoaded()
-      return {
-        success: true,
-        models: models.map((m) => m.identifier)
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get models'
+      try {
+        const models = await client.llm.listLoaded()
+        return {
+          success: true,
+          data: {
+            models: models.map((m) => m.identifier)
+          }
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get models'
+        }
       }
     }
-  })
+  )
 
   // Create or get chat session
   ipcMain.handle(
-    IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT,
-    async (_event, sessionId: string, systemPrompt?: string) => {
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT,
+    async (
+      _event,
+      sessionId: string,
+      systemPrompt?: string
+    ): Promise<LMStudioResponse<LMStudioChatSessionResponse>> => {
       let chat = chatSessions.get(sessionId)
 
       if (!chat) {
@@ -85,13 +99,13 @@ export function setupLMStudioSDKHandlers(): void {
         chatSessions.set(sessionId, chat)
       }
 
-      return { success: true, sessionId }
+      return { success: true, data: { sessionId } }
     }
   )
 
   // Main chat handler using SDK's act() method
   ipcMain.on(
-    IPC_CHANNELS.LMSTUDIO_CHAT,
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CHAT,
     async (
       event: IpcMainEvent,
       sessionId: string,
@@ -100,13 +114,17 @@ export function setupLMStudioSDKHandlers(): void {
       enableTools: boolean = true
     ) => {
       if (!client) {
-        event.reply(IPC_CHANNELS.LMSTUDIO_ERROR, { error: 'Not connected to LM Studio' })
+        event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR, {
+          error: 'Not connected to LM Studio'
+        } as LMStudioErrorPayload)
         return
       }
 
       const chat = chatSessions.get(sessionId)
       if (!chat) {
-        event.reply(IPC_CHANNELS.LMSTUDIO_ERROR, { error: 'Chat session not found' })
+        event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR, {
+          error: 'Chat session not found'
+        } as LMStudioErrorPayload)
         return
       }
 
@@ -119,7 +137,9 @@ export function setupLMStudioSDKHandlers(): void {
         const model = models.find((m) => m.identifier === modelIdentifier)
 
         if (!model) {
-          event.reply(IPC_CHANNELS.LMSTUDIO_ERROR, { error: `Model ${modelIdentifier} not found` })
+          event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR, {
+            error: `Model ${modelIdentifier} not found`
+          } as LMStudioErrorPayload)
           return
         }
 
@@ -128,93 +148,105 @@ export function setupLMStudioSDKHandlers(): void {
 
         await model.act(chat, tools, {
           onRoundStart: (roundIndex) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_ROUND_START, { roundIndex })
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ROUND_START, {
+              roundIndex
+            } as LMStudioRoundStartPayload)
           },
           onRoundEnd: (roundIndex) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_ROUND_END, { roundIndex })
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ROUND_END, {
+              roundIndex
+            } as LMStudioRoundEndPayload)
           },
           onMessage: (message: ChatMessage) => {
             // Send the message content to frontend
-            event.reply(IPC_CHANNELS.LMSTUDIO_MESSAGE, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_MESSAGE, {
               role: message.getRole(),
               content: message.getText(),
               toolCallRequests: message.getToolCallRequests(),
               toolCallResults: message.getToolCallResults()
-            })
+            } as LMStudioMessagePayload)
           },
           onPredictionFragment: (fragment) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_FRAGMENT, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_FRAGMENT, {
               content: fragment.content,
               tokenCount: fragment.tokensCount
-            })
+            } as LMStudioFragmentPayload)
           },
           onToolCallRequestStart: (roundIndex, callId, info) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_TOOL_CALL_START, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_START, {
               roundIndex,
               callId,
               toolCallId: info.toolCallId
-            })
+            } as LMStudioToolCallStartPayload)
           },
           onToolCallRequestNameReceived: (roundIndex, callId, name) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_TOOL_CALL_NAME, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_NAME, {
               roundIndex,
               callId,
               name
-            })
+            } as LMStudioToolCallNamePayload)
           },
           onToolCallRequestEnd: (roundIndex, callId, info) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_TOOL_CALL_END, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_END, {
               roundIndex,
               callId,
               toolCall: info.toolCallRequest,
               rawContent: info.rawContent
-            })
+            } as LMStudioToolCallEndPayload)
           },
           onToolCallRequestFinalized: (roundIndex, callId, info) => {
-            event.reply(IPC_CHANNELS.LMSTUDIO_TOOL_CALL_FINALIZED, {
+            event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_FINALIZED, {
               roundIndex,
               callId,
               toolCall: info.toolCallRequest,
               rawContent: info.rawContent
-            })
+            } as LMStudioToolCallFinalizedPayload)
           }
         })
 
-        event.reply(IPC_CHANNELS.LMSTUDIO_COMPLETE, { sessionId })
+        event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_COMPLETE, {
+          sessionId
+        } as LMStudioCompletePayload)
       } catch (error) {
         console.error('[LMStudio] Chat error:', error)
-        event.reply(IPC_CHANNELS.LMSTUDIO_ERROR, {
+        event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR, {
           error: error instanceof Error ? error.message : 'Chat failed'
-        })
+        } as LMStudioErrorPayload)
       }
     }
   )
 
   // Get chat history
-  ipcMain.handle(IPC_CHANNELS.LMSTUDIO_GET_CHAT_HISTORY, async (_event, sessionId: string) => {
-    const chat = chatSessions.get(sessionId)
-    if (!chat) {
-      return { success: false, error: 'Chat session not found' }
+  ipcMain.handle(
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_GET_CHAT_HISTORY,
+    async (_event, sessionId: string): Promise<LMStudioResponse<LMStudioChatHistoryResponse>> => {
+      const chat = chatSessions.get(sessionId)
+      if (!chat) {
+        return { success: false, error: 'Chat session not found' }
+      }
+
+      const messages = chat.getMessagesArray().map((msg) => ({
+        role: msg.getRole(),
+        content: msg.getText(),
+        toolCallRequests: msg.getToolCallRequests(),
+        toolCallResults: msg.getToolCallResults()
+      }))
+
+      return { success: true, data: { messages } }
     }
-
-    const messages = chat.getMessagesArray().map((msg) => ({
-      role: msg.getRole(),
-      content: msg.getText(),
-      toolCallRequests: msg.getToolCallRequests(),
-      toolCallResults: msg.getToolCallResults()
-    }))
-
-    return { success: true, messages }
-  })
+  )
 
   // Clear chat session
-  ipcMain.handle(IPC_CHANNELS.LMSTUDIO_CLEAR_CHAT, async (_event, sessionId: string) => {
-    chatSessions.delete(sessionId)
-    return { success: true }
-  })
+  ipcMain.handle(
+    LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CLEAR_CHAT,
+    async (_event, sessionId: string): Promise<LMStudioResponse> => {
+      chatSessions.delete(sessionId)
+      return { success: true }
+    }
+  )
 
   // Disconnect
-  ipcMain.handle(IPC_CHANNELS.LMSTUDIO_DISCONNECT, async () => {
+  ipcMain.handle(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_DISCONNECT, async (): Promise<LMStudioResponse> => {
     client = null
     chatSessions.clear()
     return { success: true }

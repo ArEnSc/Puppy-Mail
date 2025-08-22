@@ -7,6 +7,7 @@ import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { createEmailService } from './services/email/emailService'
 import { createDatabase, closeDatabase } from './db/database'
 import { LMStudioService, setupLMStudioHandlers } from './lmStudioService'
+import { setupLMStudioSDKHandlers } from './ipc/lmStudioSDKHandlers'
 import { setupMailActionHandlers } from './ipc/mailActionHandlers'
 import { WorkflowService } from '../workflow/WorkflowService'
 import { getMailActionService } from './services/mailActionServiceManager'
@@ -158,7 +159,10 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Initialize LM Studio service
+  // Initialize LM Studio SDK handlers
+  setupLMStudioSDKHandlers()
+
+  // Initialize LM Studio service (keeping for backward compatibility)
   const lmStudioService = new LMStudioService()
   setupLMStudioHandlers(lmStudioService)
 

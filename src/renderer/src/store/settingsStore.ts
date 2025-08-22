@@ -113,8 +113,9 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
 
 const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
   try {
+    // Use the new SDK connection method
     const result = await ipc.invoke<{ success: boolean; models?: string[]; error?: string }>(
-      IPC_CHANNELS.LMSTUDIO_VALIDATE,
+      IPC_CHANNELS.LMSTUDIO_CONNECT,
       url
     )
 
