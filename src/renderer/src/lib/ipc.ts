@@ -1,7 +1,6 @@
 /**
  * IPC wrapper utility for consistent Electron IPC communication
  */
-import { LMSTUDIO_IPC_CHANNELS } from '../../../shared/types/lmStudio'
 
 class IPCClient {
   private available: boolean
@@ -109,17 +108,13 @@ export const IPC_CHANNELS = {
   AUTH_GOOGLE_START: 'google-oauth-start',
   AUTH_GOOGLE_COMPLETE: 'google-oauth-complete',
 
-  // LM Studio operations
+  // LM Studio operations (legacy - still used by ChatView)
   LMSTUDIO_VALIDATE: 'lmstudio:validate',
-  LMSTUDIO_CHAT: 'lmstudio:chat',
   LMSTUDIO_STREAM: 'lmstudio:stream',
 
-  // LM Studio events
+  // LM Studio events (legacy - still used by ChatView)
   LMSTUDIO_STREAM_CHUNK: 'lmstudio:stream:chunk',
   LMSTUDIO_STREAM_ERROR: 'lmstudio:stream:error',
   LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete',
-  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall',
-
-  // Include all LM Studio SDK channels from shared types
-  ...LMSTUDIO_IPC_CHANNELS
+  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall'
 } as const

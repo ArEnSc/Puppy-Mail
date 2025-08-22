@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+
+import { ipc } from '@/lib/ipc'
+import { LMSTUDIO_IPC_CHANNELS } from '../../../shared/types/lmStudio'
 import type {
   LMStudioResponse,
   LMStudioChatSessionResponse,
@@ -8,11 +10,25 @@ import type {
   LMStudioErrorPayload
 } from '../../../shared/types/lmStudio'
 
-export function useLMStudio(systemPrompt?: string): {
+interface ToolCall {
+  name: string
+  arguments?: Record<string, unknown>
+}
+
+interface UseLMStudioCallbacks {
+  onFragment?: (content: string) => void
+  onError?: (error: string) => void
+  onComplete?: () => void
+  onToolCall?: (toolCall: ToolCall) => void
+}
+
+export function useLMStudio(
+  systemPrompt?: string,
+  callbacks?: UseLMStudioCallbacks
+): {
   isConnected: boolean
   isStreaming: boolean
   sessionId: string
-  streamingContent: string
   initializeChat: (
     customSystemPrompt?: string
   ) => Promise<LMStudioResponse<LMStudioChatSessionResponse> | undefined>
@@ -21,7 +37,6 @@ export function useLMStudio(systemPrompt?: string): {
   const { lmStudio } = useSettingsStore()
   const [sessionId] = useState(() => `chat-${Date.now()}`)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [streamingContent, setStreamingContent] = useState('')
 
   // Initialize chat session
   const initializeChat = useCallback(
@@ -36,7 +51,7 @@ export function useLMStudio(systemPrompt?: string): {
       try {
         const prompt = customSystemPrompt || systemPrompt
         const result = await ipc.invoke<LMStudioResponse<LMStudioChatSessionResponse>>(
-          IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT,
+          LMSTUDIO_IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT,
           sessionId,
           prompt
         )
@@ -64,10 +79,9 @@ export function useLMStudio(systemPrompt?: string): {
       }
 
       setIsStreaming(true)
-      setStreamingContent('')
 
       // Send via IPC
-      ipc.send(IPC_CHANNELS.LMSTUDIO_CHAT, sessionId, lmStudio.model, message, enableTools)
+      ipc.send(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CHAT, sessionId, lmStudio.model, message, enableTools)
     },
     [lmStudio.isConnected, lmStudio.model, isStreaming, sessionId]
   )
@@ -76,39 +90,53 @@ export function useLMStudio(systemPrompt?: string): {
   useEffect(() => {
     if (!ipc.isAvailable()) return
 
-    // Simple fragment handler for now
+    // Fragment handler - stream to callback
     const handleFragment = (_event: unknown, data: LMStudioFragmentPayload): void => {
-      setStreamingContent((prev) => prev + data.content)
+      callbacks?.onFragment?.(data.content)
     }
 
     const handleComplete = (): void => {
       setIsStreaming(false)
+      callbacks?.onComplete?.()
     }
 
     const handleError = (_event: unknown, data: LMStudioErrorPayload): void => {
       console.error('LM Studio error:', data.error)
       setIsStreaming(false)
+      callbacks?.onError?.(data.error)
+    }
+
+    // Tool call handler
+    const handleToolCallEnd = (_event: unknown, data: { toolCall?: ToolCall }): void => {
+      if (data.toolCall) {
+        callbacks?.onToolCall?.(data.toolCall)
+      }
     }
 
     const unsubscribeFragment = ipc.on(
-      IPC_CHANNELS.LMSTUDIO_FRAGMENT,
+      LMSTUDIO_IPC_CHANNELS.LMSTUDIO_FRAGMENT,
       handleFragment as (...args: unknown[]) => void
     )
     const unsubscribeComplete = ipc.on(
-      IPC_CHANNELS.LMSTUDIO_COMPLETE,
+      LMSTUDIO_IPC_CHANNELS.LMSTUDIO_COMPLETE,
       handleComplete as (...args: unknown[]) => void
     )
     const unsubscribeError = ipc.on(
-      IPC_CHANNELS.LMSTUDIO_ERROR,
+      LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR,
       handleError as (...args: unknown[]) => void
+    )
+    const unsubscribeToolCall = ipc.on(
+      LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_END,
+      handleToolCallEnd as (...args: unknown[]) => void
     )
 
     return () => {
       unsubscribeFragment()
       unsubscribeComplete()
       unsubscribeError()
+      unsubscribeToolCall()
     }
-  }, [])
+  }, [callbacks])
 
   // Auto-initialize on mount if connected
   useEffect(() => {
@@ -121,7 +149,6 @@ export function useLMStudio(systemPrompt?: string): {
     isConnected: lmStudio.isConnected,
     isStreaming,
     sessionId,
-    streamingContent,
     initializeChat,
     sendMessage
   }

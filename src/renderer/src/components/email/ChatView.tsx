@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useLMStudio } from '@/hooks/useLMStudio'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
-import { formatFunctionsForPrompt } from '@/lib/functionDefinitions'
 
 interface FunctionCall {
   name: string
@@ -45,8 +43,66 @@ export function ChatView(): JSX.Element {
   const prompt =
     'You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise.'
 
-  // Use SDK for sending messages
-  const { sendMessage: sendSDKMessage } = useLMStudio(prompt)
+  // Track the current streaming message ID
+  const streamingMessageIdRef = useRef<string | null>(null)
+
+  // Use SDK for sending messages with callbacks
+  const { sendMessage: sendSDKMessage, isStreaming } = useLMStudio(prompt, {
+    onFragment: (content: string) => {
+      if (streamingMessageIdRef.current) {
+        const currentId = streamingMessageIdRef.current
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === currentId) {
+              return { ...msg, content: msg.content + content }
+            }
+            return msg
+          })
+        )
+      }
+    },
+    onError: (error: string) => {
+      console.error('LM Studio error:', error)
+      setStreamingMessageId(null)
+      streamingMessageIdRef.current = null
+
+      // Add error as a message in the chat
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'error',
+        content: error,
+        timestamp: new Date()
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    },
+    onComplete: () => {
+      setStreamingMessageId(null)
+      streamingMessageIdRef.current = null
+    },
+    onToolCall: (toolCall: { name: string; arguments?: Record<string, unknown> }) => {
+      if (streamingMessageIdRef.current && toolCall?.name) {
+        const currentId = streamingMessageIdRef.current
+        const functionCall: FunctionCall = {
+          name: toolCall.name,
+          arguments: toolCall.arguments || {},
+          result: undefined
+        }
+
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === currentId) {
+              const existingCalls = msg.functionCalls || []
+              return {
+                ...msg,
+                functionCalls: [...existingCalls, functionCall]
+              }
+            }
+            return msg
+          })
+        )
+      }
+    }
+  })
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -64,17 +120,13 @@ export function ChatView(): JSX.Element {
     }
   ])
   const [inputValue, setInputValue] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
   const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
   const [enableFunctions, setEnableFunctions] = useState(true)
-  const [sessionId] = useState(() => `chat-${Date.now()}`)
-  const [chatInitialized, setChatInitialized] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const isMountedRef = useRef(false)
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -96,120 +148,10 @@ export function ChatView(): JSX.Element {
     }
   }, [inputValue])
 
-  // Use a ref to store the current streaming message ID to avoid closure issues
-  const streamingMessageIdRef = useRef<string | null>(null)
-
+  // Update ref when streamingMessageId changes
   useEffect(() => {
     streamingMessageIdRef.current = streamingMessageId
   }, [streamingMessageId])
-
-  // Initialize chat session when component mounts
-  useEffect(() => {
-    const initializeChat = async (): Promise<void> => {
-      if (lmStudio.isConnected && !chatInitialized) {
-        try {
-          await ipc.invoke(IPC_CHANNELS.LMSTUDIO_GET_OR_CREATE_CHAT, sessionId, prompt)
-          setChatInitialized(true)
-        } catch (error) {
-          console.error('Failed to initialize chat:', error)
-        }
-      }
-    }
-
-    initializeChat()
-  }, [lmStudio.isConnected, sessionId, prompt, chatInitialized])
-
-  useEffect(() => {
-    // Track mounting
-    isMountedRef.current = true
-
-    if (!ipc.isAvailable()) return
-
-    const handleStreamChunk = (
-      ...[, data]: [unknown, { chunk: string; type: 'content' | 'reasoning' }]
-    ): void => {
-      if (streamingMessageIdRef.current && isMountedRef.current) {
-        const currentId = streamingMessageIdRef.current
-        const { chunk, type } = data
-
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === currentId) {
-              if (type === 'reasoning') {
-                return { ...msg, reasoning: (msg.reasoning || '') + chunk }
-              } else {
-                return { ...msg, content: msg.content + chunk }
-              }
-            }
-            return msg
-          })
-        )
-      }
-    }
-
-    const handleStreamError = (...[, error]: [unknown, string]): void => {
-      console.error('Stream error:', error)
-      setIsStreaming(false)
-      setStreamingMessageId(null)
-      streamingMessageIdRef.current = null
-
-      // Add error as a message in the chat
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'error',
-        content: error,
-        timestamp: new Date(),
-        prompt: undefined,
-        contextMessages: undefined
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    }
-
-    const handleStreamComplete = (): void => {
-      setIsStreaming(false)
-      setStreamingMessageId(null)
-      streamingMessageIdRef.current = null
-    }
-
-    const handleFunctionCall = (
-      ...[, functionCall]: [unknown, FunctionCall & { result?: unknown }]
-    ): void => {
-      if (streamingMessageIdRef.current && isMountedRef.current) {
-        const currentId = streamingMessageIdRef.current
-
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === currentId) {
-              const existingCalls = msg.functionCalls || []
-              return {
-                ...msg,
-                functionCalls: [...existingCalls, functionCall]
-              }
-            }
-            return msg
-          })
-        )
-      }
-    }
-
-    // Add listeners
-    const unsubscribeChunk = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_CHUNK, handleStreamChunk)
-    const unsubscribeError = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_ERROR, handleStreamError)
-    const unsubscribeComplete = ipc.on(IPC_CHANNELS.LMSTUDIO_STREAM_COMPLETE, handleStreamComplete)
-    const unsubscribeFunctionCall = ipc.on(
-      IPC_CHANNELS.LMSTUDIO_STREAM_FUNCTION_CALL,
-      handleFunctionCall
-    )
-
-    // Cleanup
-    return () => {
-      unsubscribeChunk()
-      unsubscribeError()
-      unsubscribeComplete()
-      unsubscribeFunctionCall()
-      isMountedRef.current = false
-    }
-  }, []) // Empty dependency array - set up listeners only once
 
   const handleSend = async (): Promise<void> => {
     if (inputValue.trim() && !isStreaming) {
@@ -230,7 +172,7 @@ export function ChatView(): JSX.Element {
       if (!lmStudio.isConnected || !lmStudio.model) {
         const errorMessage: Message = {
           id: crypto.randomUUID(),
-          role: 'assistant',
+          role: 'error',
           content: 'Please connect to LM Studio in the settings first.',
           timestamp: new Date()
         }
@@ -238,45 +180,20 @@ export function ChatView(): JSX.Element {
         return
       }
 
-      // Start streaming
-      if (ipc.isAvailable()) {
-        const conversationMessages = messages.concat(userMessage).map((msg) => ({
-          role: msg.role,
-          content: msg.content
-        }))
-
-        // Build the system prompt that will be sent
-        let systemPrompt = prompt
-        const systemMessage = conversationMessages.find((msg) => msg.role === 'system')
-        if (systemMessage) {
-          systemPrompt = systemMessage.content
-        }
-
-        // Add function definitions if enabled
-        if (enableFunctions) {
-          const functionsPrompt = formatFunctionsForPrompt()
-          systemPrompt += '\n\n' + functionsPrompt
-        }
-
-        // Create assistant message placeholder with prompt info
-        const assistantMessageId = crypto.randomUUID()
-        const assistantMessage: Message = {
-          id: assistantMessageId,
-          role: 'assistant',
-          content: '',
-          reasoning: '',
-          timestamp: new Date(),
-          prompt: systemPrompt,
-          contextMessages: conversationMessages
-        }
-        setMessages((prev) => [...prev, assistantMessage])
-        setStreamingMessageId(assistantMessageId)
-        streamingMessageIdRef.current = assistantMessageId
-        setIsStreaming(true)
-
-        // Use SDK to send message
-        await sendSDKMessage(userMessage.content, enableFunctions)
+      // Create assistant message placeholder
+      const assistantMessageId = crypto.randomUUID()
+      const assistantMessage: Message = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date()
       }
+      setMessages((prev) => [...prev, assistantMessage])
+      setStreamingMessageId(assistantMessageId)
+      streamingMessageIdRef.current = assistantMessageId
+
+      // Use SDK to send message
+      await sendSDKMessage(userMessage.content, enableFunctions)
     }
   }
 
