@@ -83,7 +83,8 @@ async function main(): Promise<void> {
           console.log(chalk.green('🤖 Final Response: ') + chalk.white(message.getText()))
         }
       },
-      onPredictionCompleted: (prediction_result) => {
+
+      onPredictionCompleted: () => {
         console.log(chalk.blue(`\n📝 Prediction completed`))
       },
       onPredictionFragment: ({ content }) => {
