@@ -15,7 +15,8 @@
       "@renderer/*": [
         "src/renderer/src/*"
       ],
-      "@/*": ["./src/renderer/src/*"]
+      "@/*": ["./src/renderer/src/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   }
 }

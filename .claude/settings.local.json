@@ -17,7 +17,9 @@
       "Bash(node:*)",
       "Bash(npm run lint:*)",
       "Bash(grep:*)",
-      "Bash(od:*)"
+      "Bash(od:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { logInfo, logError } from '@shared/logger'
 
 import { ipc } from '@/lib/ipc'
 import { LMSTUDIO_IPC_CHANNELS } from '../../../shared/types/lmStudio'
@@ -44,7 +45,7 @@ export function useLMStudio(
       customSystemPrompt?: string
     ): Promise<LMStudioResponse<LMStudioChatSessionResponse> | undefined> => {
       if (!lmStudio.isConnected) {
-        console.log('Not connected to LM Studio')
+        logInfo('Not connected to LM Studio')
         return
       }
 
@@ -56,10 +57,10 @@ export function useLMStudio(
           prompt
         )
 
-        console.log('Chat initialized:', result)
+        logInfo('Chat initialized:', result)
         return result
       } catch (error) {
-        console.error('Error initializing chat:', error)
+        logError('Error initializing chat:', error)
         return undefined
       }
     },
@@ -70,7 +71,7 @@ export function useLMStudio(
   const sendMessage = useCallback(
     async (message: string, enableTools = true): Promise<void> => {
       if (!lmStudio.isConnected || !lmStudio.model || isStreaming) {
-        console.log('Cannot send message:', {
+        logInfo('Cannot send message:', {
           connected: lmStudio.isConnected,
           model: lmStudio.model,
           streaming: isStreaming
@@ -101,7 +102,7 @@ export function useLMStudio(
     }
 
     const handleError = (_event: unknown, data: LMStudioErrorPayload): void => {
-      console.error('LM Studio error:', data.error)
+      logError('LM Studio error:', data.error)
       setIsStreaming(false)
       callbacks?.onError?.(data.error)
     }

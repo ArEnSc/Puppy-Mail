@@ -131,7 +131,7 @@ D:\Chloe\
 1. **Always test before committing** - The app should run without errors
 2. **Use the IPC wrapper** (`src/renderer/src/lib/ipc.ts`) instead of direct `window.electron?.ipcRenderer` calls
 3. **Use constants** from `src/renderer/src/shared/constants.ts` instead of hardcoding values
-4. **Use error handler** from `src/renderer/src/shared/errorHandler.ts` for consistent error handling
+4. **Use error handler** from `src/renderer/src/shared/appLogger.ts` for consistent error handling
 5. **Follow existing patterns** - Check neighboring files for conventions
 
 ### Code Quality Standards

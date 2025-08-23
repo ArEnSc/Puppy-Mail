@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { getMailActionService } from '../services/mailActionServiceManager'
+import { logInfo } from '../../shared/logger'
 import {
   EmailComposition,
   ScheduledEmail,
@@ -132,5 +133,5 @@ export function setupMailActionHandlers(): void {
     return mailService.checkForResponse(originalMessageId)
   })
 
-  console.log('[MailActionHandlers] IPC handlers registered')
+  logInfo('[MailActionHandlers] IPC handlers registered')
 }

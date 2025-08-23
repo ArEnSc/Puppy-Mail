@@ -4,6 +4,7 @@ import { OAuth2Client } from 'google-auth-library'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { app } from 'electron'
+import { logInfo, logError } from '../../shared/logger'
 
 interface AuthTokens {
   access_token?: string | null
@@ -45,7 +46,7 @@ export class GmailAuthService {
       const encrypted = safeStorage.encryptString(JSON.stringify(tokens))
       await fs.writeFile(this.tokenPath, encrypted)
     } catch (error) {
-      console.error('Failed to save tokens:', error)
+      logError('Failed to save tokens:', error)
       throw new Error('Failed to save authentication tokens')
     }
   }
@@ -62,7 +63,7 @@ export class GmailAuthService {
 
   async isAuthenticated(): Promise<boolean> {
     const tokens = await this.loadTokens()
-    console.log(
+    logInfo(
       'Checking authentication, tokens exist:',
       !!tokens,
       'has refresh token:',
@@ -76,10 +77,10 @@ export class GmailAuthService {
 
     try {
       await this.oauth2Client.getAccessToken()
-      console.log('Successfully verified access token')
+      logInfo('Successfully verified access token')
       return true
     } catch (error) {
-      console.error('Failed to get access token:', error)
+      logError('Failed to get access token:', error)
       return false
     }
   }
@@ -111,18 +112,18 @@ export class GmailAuthService {
 
   async handleAuthCallback(code: string): Promise<void> {
     try {
-      console.log('Exchanging auth code for tokens...')
+      logInfo('Exchanging auth code for tokens...')
       const { tokens } = await this.oauth2Client.getToken(code)
-      console.log('Received tokens:', {
+      logInfo('Received tokens:', {
         hasAccessToken: !!tokens.access_token,
         hasRefreshToken: !!tokens.refresh_token,
         expiryDate: tokens.expiry_date
       })
       await this.saveTokens(tokens)
       this.oauth2Client.setCredentials(tokens)
-      console.log('Tokens saved and credentials set')
+      logInfo('Tokens saved and credentials set')
     } catch (error) {
-      console.error('Auth callback error:', error)
+      logError('Auth callback error:', error)
       throw new Error('Failed to exchange authorization code')
     }
   }
@@ -149,7 +150,7 @@ export class GmailAuthService {
       const { credentials } = await this.oauth2Client.refreshAccessToken()
       await this.saveTokens(credentials)
     } catch (error) {
-      console.error('Failed to refresh token:', error)
+      logError('Failed to refresh token:', error)
       throw new Error('Failed to refresh access token')
     }
   }
@@ -159,7 +160,7 @@ export class GmailAuthService {
       await fs.unlink(this.tokenPath)
       this.oauth2Client.setCredentials({})
     } catch (error) {
-      console.error('Logout error:', error)
+      logError('Logout error:', error)
     }
   }
 }

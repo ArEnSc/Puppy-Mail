@@ -5,6 +5,7 @@ import { useLMStudio } from '@/hooks/useLMStudio'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { logError } from '@shared/logger'
 
 import {
   Send,
@@ -62,7 +63,7 @@ export function ChatView(): JSX.Element {
       }
     },
     onError: (error: string) => {
-      console.error('LM Studio error:', error)
+      logError('LM Studio error:', error)
       setStreamingMessageId(null)
       streamingMessageIdRef.current = null
 

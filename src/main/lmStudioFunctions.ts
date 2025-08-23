@@ -2,6 +2,7 @@
 import type { EmailComposition, EmailMessage } from '../types/mailActions'
 import { EmailService } from './db/emailService'
 import { getMailActionService } from './services/mailActionServiceManager'
+import { logInfo, logError, logDebug } from '../shared/logger'
 
 export interface FunctionDefinition {
   name: string
@@ -251,7 +252,7 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       bcc?: string[]
       isHtml?: boolean
     }
-    console.log('[Function Call] sendEmail:', params)
+    logInfo('[Function Call] sendEmail:', params)
 
     // Convert string arrays to EmailAddress arrays
     const composition: EmailComposition = {
@@ -267,7 +268,7 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
   },
   scheduleEmail: async (args: unknown) => {
     const params = args as { to: string[]; subject: string; body: string; scheduledTime: string }
-    console.log('[Function Call] scheduleEmail:', params)
+    logInfo('[Function Call] scheduleEmail:', params)
 
     const scheduledEmail = {
       to: params.to.map((email) => ({ email })),
@@ -285,14 +286,14 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       labels?: string[]
       notificationMessage?: string
     }
-    console.log('[Function Call] listenForEmails:', params)
+    logInfo('[Function Call] listenForEmails:', params)
 
     const result = await mailActionService.listenForEmails(params.from, {
       subject: params.subject,
       labels: params.labels,
       callback: (email) => {
-        console.log('[Email Received] From:', email.from, 'Subject:', email.subject)
-        console.log(
+        logInfo('[Email Received] From:', email.from, 'Subject:', email.subject)
+        logInfo(
           '[Notification]',
           params.notificationMessage || 'New email received from monitored sender'
         )
@@ -315,7 +316,7 @@ export const functionImplementations: Record<string, (args: unknown) => unknown>
       emailCount?: number
       customData?: Record<string, unknown>
     }
-    console.log('[Function Call] analysis:', params)
+    logInfo('[Function Call] analysis:', params)
 
     // Build context for analysis
     const context: { emails?: EmailMessage[]; data?: Record<string, unknown> } = {}
@@ -369,7 +370,7 @@ export async function executeFunction(functionCall: FunctionCall): Promise<{
       result
     }
   } catch (error) {
-    console.error(`[Function Execution Error] ${functionCall.name}:`, error)
+    logError(`[Function Execution Error] ${functionCall.name}:`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Function execution failed'
@@ -379,7 +380,7 @@ export async function executeFunction(functionCall: FunctionCall): Promise<{
 
 // Format functions for the LM Studio prompt
 export function formatFunctionsForPrompt(functions: FunctionDefinition[]): string {
-  console.log('[formatFunctionsForPrompt] Called with', functions.length, 'functions')
+  logDebug('[formatFunctionsForPrompt] Called with', functions.length, 'functions')
 
   const prompt = `You have access to the following functions:
 
@@ -421,7 +422,7 @@ Examples:
 
 Remember: Always ask for missing information before executing functions!`
 
-  console.log('[formatFunctionsForPrompt] Generated prompt of length:', prompt.length)
-  console.log('[formatFunctionsForPrompt] Full prompt:\n', prompt)
+  logDebug('[formatFunctionsForPrompt] Generated prompt of length:', prompt.length)
+  logDebug('[formatFunctionsForPrompt] Full prompt:\n', prompt)
   return prompt
 }

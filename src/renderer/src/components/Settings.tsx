@@ -3,6 +3,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useEmailStore } from '@/store/emailStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
 import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+import { logInfo, logError } from '@shared/logger'
 import {
   Dialog,
   DialogContent,
@@ -142,11 +143,11 @@ export function Settings(): JSX.Element {
   // Check auth status when dialog opens
   useEffect(() => {
     if (isSettingsOpen && ipc.isAvailable()) {
-      console.log('Checking auth status...')
+      logInfo('Checking auth status...')
       ipc
         .invoke(IPC_CHANNELS.AUTH_CHECK)
         .then((isAuthenticated) => {
-          console.log('Auth check result:', isAuthenticated)
+          logInfo('Auth check result:', isAuthenticated)
           if (isAuthenticated) {
             // Get stored user info if available
             const storedAuth = localStorage.getItem('googleAuth')
@@ -168,16 +169,16 @@ export function Settings(): JSX.Element {
           }
         })
         .catch((error) => {
-          console.error('Error checking auth:', error)
+          logError('Error checking auth:', error)
         })
     }
   }, [isSettingsOpen, setGoogleAuth])
 
   const handleGoogleAuth = async (): Promise<void> => {
-    console.log('handleGoogleAuth called')
+    logInfo('handleGoogleAuth called')
     try {
       if (ipc.isAvailable()) {
-        console.log('Electron IPC available, starting OAuth')
+        logInfo('Electron IPC available, starting OAuth')
         // Clear any previous errors
         setGoogleAuth((prev) => ({ ...prev, error: null }))
 
@@ -193,12 +194,12 @@ export function Settings(): JSX.Element {
             isAuthenticated?: boolean
           }
         ): void => {
-          console.log('OAuth complete event received:', data)
+          logInfo('OAuth complete event received:', data)
           if (data.error) {
-            console.error('OAuth error received:', data.error)
+            logError('OAuth error received:', data.error)
             setGoogleAuth({ error: data.error })
           } else {
-            console.log('OAuth success, updating state')
+            logInfo('OAuth success, updating state')
             setGoogleAuth({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
@@ -218,7 +219,7 @@ export function Settings(): JSX.Element {
             )
 
             // Show success notification (you could use a toast here)
-            console.log('Successfully connected to Gmail!')
+            logInfo('Successfully connected to Gmail!')
           }
         }
 
@@ -226,18 +227,18 @@ export function Settings(): JSX.Element {
         ipc.once(IPC_CHANNELS.AUTH_GOOGLE_COMPLETE, handleOAuthComplete)
 
         // Then send the start event
-        console.log('Sending google-oauth-start')
+        logInfo('Sending google-oauth-start')
         ipc.send(IPC_CHANNELS.AUTH_GOOGLE_START)
       } else {
         // Fallback for development/testing
-        console.log('No Electron IPC available')
+        logInfo('No Electron IPC available')
         setGoogleAuth({
           error:
             'Google OAuth requires Electron environment. In production, this would open Google sign-in.'
         })
       }
     } catch (error) {
-      console.error('Google auth error in Settings (catch block):', error)
+      logError('Google auth error in Settings (catch block):', error)
       setGoogleAuth({
         error: error instanceof Error ? error.message : 'Failed to initiate Google authentication'
       })
@@ -258,7 +259,7 @@ export function Settings(): JSX.Element {
       // Sync new emails
       await syncEmails()
     } catch (error) {
-      console.error('Failed to clear emails:', error)
+      logError('Failed to clear emails:', error)
     } finally {
       setIsClearing(false)
     }

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { ipc, IPC_CHANNELS } from '@renderer/lib/ipc'
+import { logInfo, logError } from '@shared/logger'
 export interface Email {
   id: string
   threadId: string
@@ -139,7 +140,7 @@ export const useEmailStore = create<EmailState>()(
         setEmails: (emails) => {
           const pageSize = get().pageSize
           const totalPages = Math.ceil(emails.length / pageSize)
-          console.log(
+          logInfo(
             `setEmails: Received ${emails.length} emails, pageSize: ${pageSize}, totalPages: ${totalPages}`
           )
           set({ emails, totalPages, currentPage: 1 })
@@ -208,7 +209,7 @@ export const useEmailStore = create<EmailState>()(
           }))
           // Sync to database
           if (ipc.isAvailable()) {
-            ipc.invoke(IPC_CHANNELS.EMAIL_MARK_AS_READ, id).catch(console.error)
+            ipc.invoke(IPC_CHANNELS.EMAIL_MARK_AS_READ, id).catch(logError)
           }
         },
 
@@ -227,7 +228,7 @@ export const useEmailStore = create<EmailState>()(
           }))
           // Sync to database
           if (ipc.isAvailable()) {
-            ipc.invoke(IPC_CHANNELS.EMAIL_TOGGLE_STAR, id).catch(console.error)
+            ipc.invoke(IPC_CHANNELS.EMAIL_TOGGLE_STAR, id).catch(logError)
           }
         },
 

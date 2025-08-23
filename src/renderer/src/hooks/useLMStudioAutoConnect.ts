@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
-import { logInfo, logError } from '@/shared/errorHandler'
+import { logInfo, logError } from '@shared/logger'
 
 export function useLMStudioAutoConnect(): void {
   const { lmStudio, validateLMStudio } = useSettingsStore()

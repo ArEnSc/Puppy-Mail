@@ -2,6 +2,7 @@ import { ipcMain, IpcMainEvent } from 'electron'
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
 import { lmStudioAgentTools } from '../lmStudioAgentTools'
 import type { ChatMessage } from '@lmstudio/sdk'
+import { logInfo, logError } from '../../shared/logger'
 import {
   LMSTUDIO_IPC_CHANNELS,
   LMStudioResponse,
@@ -43,10 +44,9 @@ export function setupLMStudioSDKHandlers(): void {
         } else if (url.startsWith('https://')) {
           wsUrl = url.replace('https://', 'wss://')
         }
-        
-        console.log('[LMStudio SDK] Connecting to:', wsUrl)
-        client = new LMStudioClient({ baseUrl: wsUrl })
 
+        logInfo('[LMStudio SDK] Connecting to:', wsUrl)
+        client = new LMStudioClient({ baseUrl: wsUrl })
         // Test connection by listing models
         const models = await client.llm.listLoaded()
         return {
@@ -56,6 +56,7 @@ export function setupLMStudioSDKHandlers(): void {
           }
         }
       } catch (error) {
+        logError(`Error: ${error}`)
         client = null
         return {
           success: false,
@@ -217,7 +218,7 @@ export function setupLMStudioSDKHandlers(): void {
           sessionId
         } as LMStudioCompletePayload)
       } catch (error) {
-        console.error('[LMStudio] Chat error:', error)
+        logError('[LMStudio] Chat error:', error)
         event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR, {
           error: error instanceof Error ? error.message : 'Chat failed'
         } as LMStudioErrorPayload)
@@ -261,5 +262,5 @@ export function setupLMStudioSDKHandlers(): void {
     return { success: true }
   })
 
-  console.log('[LMStudio SDK] IPC handlers registered')
+  logInfo('[LMStudio SDK] IPC handlers registered')
 }
