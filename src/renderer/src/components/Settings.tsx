@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type JSX } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useLMStudioStore } from '@/store/lmStudioStore'
 import { useEmailStore } from '@/store/emailStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
 import { ipc, IPC_CHANNELS } from '@/lib/ipc'
@@ -116,14 +117,21 @@ export function Settings(): JSX.Element {
     openai,
     anthropic,
     googleAuth,
-    lmStudio,
     setApiKey,
     validateApiKey,
     setGoogleAuth,
-    clearGoogleAuth,
-    setLMStudioUrl,
-    validateLMStudio
+    clearGoogleAuth
   } = useSettingsStore()
+
+  const {
+    url: lmStudioUrl,
+    model: lmStudioModel,
+    isConnected: lmStudioIsConnected,
+    isValidating: lmStudioIsValidating,
+    error: lmStudioError,
+    setUrl: setLMStudioUrl,
+    connect: validateLMStudio
+  } = useLMStudioStore()
 
   const { clearAllEmails } = useEmailStore()
   const { syncEmails } = useEmailSync()
@@ -367,24 +375,24 @@ export function Settings(): JSX.Element {
                       id="lmstudio-url"
                       type="text"
                       placeholder="http://localhost:1234/v1"
-                      value={lmStudio.url}
+                      value={lmStudioUrl}
                       onChange={(e) => setLMStudioUrl(e.target.value)}
-                      className={lmStudio.error ? 'border-destructive' : ''}
+                      className={lmStudioError ? 'border-destructive' : ''}
                     />
                     <Button
                       type="button"
-                      variant={lmStudio.isConnected ? 'outline' : 'default'}
+                      variant={lmStudioIsConnected ? 'outline' : 'default'}
                       size="default"
                       onClick={validateLMStudio}
-                      disabled={lmStudio.isValidating || !lmStudio.url}
+                      disabled={lmStudioIsValidating || !lmStudioUrl}
                       className="min-w-[100px]"
                     >
-                      {lmStudio.isValidating ? (
+                      {lmStudioIsValidating ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Testing
                         </>
-                      ) : lmStudio.isConnected ? (
+                      ) : lmStudioIsConnected ? (
                         <>
                           <Check className="mr-2 h-4 w-4" />
                           Connected
@@ -395,21 +403,21 @@ export function Settings(): JSX.Element {
                     </Button>
                   </div>
 
-                  {lmStudio.model && lmStudio.isConnected && (
+                  {lmStudioModel && lmStudioIsConnected && (
                     <div className="mt-2">
                       <Label htmlFor="lmstudio-model">Active Model</Label>
-                      <p className="text-sm text-muted-foreground">{lmStudio.model}</p>
+                      <p className="text-sm text-muted-foreground">{lmStudioModel}</p>
                     </div>
                   )}
 
-                  {lmStudio.error && (
+                  {lmStudioError && (
                     <p className="flex items-center gap-1 text-sm text-destructive">
                       <AlertCircle className="h-3 w-3" />
-                      {lmStudio.error}
+                      {lmStudioError}
                     </p>
                   )}
 
-                  {lmStudio.isConnected && !lmStudio.error && (
+                  {lmStudioIsConnected && !lmStudioError && (
                     <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
                       <Check className="h-3 w-3" />
                       Connected to LM Studio

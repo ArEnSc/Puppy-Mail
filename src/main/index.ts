@@ -31,7 +31,7 @@ function createWindow(): void {
       sandbox: false
     }
   })
-  mainWindow.webContents.openDevTools()
+  //mainWindow.webContents.openDevTools()
   mainWindow.on('ready-to-show', () => {
     logInfo('Main window ready - showing window')
     mainWindow.show()

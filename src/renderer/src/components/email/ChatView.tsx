@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
-import { useSettingsStore } from '@/store/settingsStore'
-import { useLMStudio } from '@/hooks/useLMStudio'
+import { useLMStudioStore } from '@/store/lmStudioStore'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -20,108 +19,74 @@ import {
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 
-interface FunctionCall {
-  name: string
-  arguments: Record<string, unknown>
-  result?: unknown
-  error?: string
-}
-
-interface Message {
+// Using the Message type from lmStudioStore
+type Message = {
   prompt?: string
   contextMessages?: Array<{ role: string; content: string }>
   id: string
   role: 'system' | 'assistant' | 'user' | 'error'
   content: string
   reasoning?: string
-  functionCalls?: FunctionCall[]
+  functionCalls?: Array<{
+    name: string
+    arguments: Record<string, unknown>
+    result?: unknown
+    error?: string
+  }>
   timestamp: Date
 }
 
 export function ChatView(): JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
-  const { lmStudio } = useSettingsStore()
+  const {
+    isConnected,
+    isAutoConnecting,
+    isValidating,
+    model,
+    createSession,
+    sendMessage: sendToLMStudio,
+    initializeChat,
+    registerEventHandlers,
+    sessions
+  } = useLMStudioStore()
   const prompt =
     'You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise.'
 
-  // Track the current streaming message ID
-  const streamingMessageIdRef = useRef<string | null>(null)
+  // Session management
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const session = sessionId && sessions[sessionId] ? sessions[sessionId] : null
+  const isStreaming = session?.isStreaming || false
 
-  // Use SDK for sending messages with callbacks
-  const { sendMessage: sendSDKMessage, isStreaming } = useLMStudio(prompt, {
-    onFragment: (content: string) => {
-      if (streamingMessageIdRef.current) {
-        const currentId = streamingMessageIdRef.current
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === currentId) {
-              return { ...msg, content: msg.content + content }
-            }
-            return msg
-          })
-        )
-      }
-    },
-    onError: (error: string) => {
-      logError('LM Studio error:', error)
-      setStreamingMessageId(null)
-      streamingMessageIdRef.current = null
+  // Initialize session and event handlers on mount
+  useEffect(() => {
+    const newSessionId = createSession(prompt)
+    setSessionId(newSessionId)
+    initializeChat(newSessionId, prompt)
 
-      // Add error as a message in the chat
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'error',
-        content: error,
-        timestamp: new Date()
+    // Register event handlers
+    const cleanup = registerEventHandlers(newSessionId, {
+      onFragment: () => {
+        // State is managed in the store, but we can add custom logic here if needed
+      },
+      onError: (error: string) => {
+        logError('LM Studio error:', error)
+      },
+      onComplete: () => {
+        // Completion is handled in the store
+      },
+      onToolCall: () => {
+        // Tool calls are handled in the store
       }
-      setMessages((prev) => [...prev, errorMessage])
-    },
-    onComplete: () => {
-      setStreamingMessageId(null)
-      streamingMessageIdRef.current = null
-    },
-    onToolCall: (toolCall: { name: string; arguments?: Record<string, unknown> }) => {
-      if (streamingMessageIdRef.current && toolCall?.name) {
-        const currentId = streamingMessageIdRef.current
-        const functionCall: FunctionCall = {
-          name: toolCall.name,
-          arguments: toolCall.arguments || {},
-          result: undefined
-        }
+    })
 
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === currentId) {
-              const existingCalls = msg.functionCalls || []
-              return {
-                ...msg,
-                functionCalls: [...existingCalls, functionCall]
-              }
-            }
-            return msg
-          })
-        )
-      }
-    }
-  })
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content:
-        "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
-      timestamp: new Date(),
-      prompt: prompt,
-      contextMessages: [
-        {
-          role: 'system',
-          content: prompt
-        }
-      ]
-    }
-  ])
+    return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Use messages from the session in the store
+  const messages = session?.messages || []
   const [inputValue, setInputValue] = useState('')
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  // Streaming state from store
+  const streamingMessageId = session?.streamingMessageId || null
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
   const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
@@ -149,52 +114,47 @@ export function ChatView(): JSX.Element {
     }
   }, [inputValue])
 
-  // Update ref when streamingMessageId changes
+  // Add initial message when session is created
   useEffect(() => {
-    streamingMessageIdRef.current = streamingMessageId
-  }, [streamingMessageId])
+    if (sessionId && messages.length === 0) {
+      const lmStudioStore = useLMStudioStore.getState()
+      lmStudioStore.addMessage(sessionId, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content:
+          "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
+        timestamp: new Date(),
+        prompt: prompt,
+        contextMessages: [
+          {
+            role: 'system',
+            content: prompt
+          }
+        ]
+      })
+    }
+  }, [sessionId, messages.length, prompt])
 
   const handleSend = async (): Promise<void> => {
-    if (inputValue.trim() && !isStreaming) {
-      // Clear any existing streaming state
-      setStreamingMessageId(null)
-
-      const userMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: inputValue.trim(),
-        timestamp: new Date()
-      }
-
-      setMessages((prev) => [...prev, userMessage])
+    if (inputValue.trim() && !isStreaming && sessionId) {
+      const content = inputValue.trim()
       setInputValue('')
 
       // Check if LM Studio is connected
-      if (!lmStudio.isConnected || !lmStudio.model) {
+      if (!isConnected || !model || !sessionId) {
         const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: 'error',
           content: 'Please connect to LM Studio in the settings first.',
           timestamp: new Date()
         }
-        setMessages((prev) => [...prev, errorMessage])
+        const lmStudioStore = useLMStudioStore.getState()
+        lmStudioStore.addMessage(sessionId || '', errorMessage)
         return
       }
 
-      // Create assistant message placeholder
-      const assistantMessageId = crypto.randomUUID()
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date()
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-      setStreamingMessageId(assistantMessageId)
-      streamingMessageIdRef.current = assistantMessageId
-
-      // Use SDK to send message
-      await sendSDKMessage(userMessage.content, enableFunctions)
+      // Send message through the store
+      await sendToLMStudio(sessionId, content, enableFunctions)
     }
   }
 
@@ -257,8 +217,11 @@ export function ChatView(): JSX.Element {
           {selectedAutomatedTask === 'email-cleanup' && 'Email Cleanup Configuration'}
           {!selectedAutomatedTask && 'Task Assistant'}
         </h2>
-        {lmStudio.isConnected && (
-          <p className="text-xs text-muted-foreground mt-1">Connected to {lmStudio.model}</p>
+        {(isAutoConnecting || isValidating) && (
+          <p className="text-xs text-muted-foreground mt-1">Connecting to LM Studio...</p>
+        )}
+        {isConnected && !isAutoConnecting && !isValidating && (
+          <p className="text-xs text-muted-foreground mt-1">Connected to {model}</p>
         )}
       </div>
 

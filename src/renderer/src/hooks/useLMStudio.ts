@@ -25,7 +25,8 @@ interface UseLMStudioCallbacks {
 
 export function useLMStudio(
   systemPrompt?: string,
-  callbacks?: UseLMStudioCallbacks
+  callbacks?: UseLMStudioCallbacks,
+  autoConnect = false
 ): {
   isConnected: boolean
   isStreaming: boolean
@@ -35,7 +36,7 @@ export function useLMStudio(
   ) => Promise<LMStudioResponse<LMStudioChatSessionResponse> | undefined>
   sendMessage: (message: string, enableTools?: boolean) => Promise<void>
 } {
-  const { lmStudio } = useSettingsStore()
+  const { lmStudio, validateLMStudio, setLMStudioAutoConnecting } = useSettingsStore()
   const [sessionId] = useState(() => `chat-${Date.now()}`)
   const [isStreaming, setIsStreaming] = useState(false)
 
@@ -138,6 +139,50 @@ export function useLMStudio(
       unsubscribeToolCall()
     }
   }, [callbacks])
+
+  // Auto-connect functionality
+  useEffect(() => {
+    if (!autoConnect) return
+
+    // Clear any stale auto-connecting state on mount
+    if (lmStudio.isAutoConnecting) {
+      logInfo('Clearing stale auto-connecting state')
+      setLMStudioAutoConnecting(false)
+    }
+
+    // Log current state for debugging
+    logInfo('LM Studio auto-connect check', {
+      url: lmStudio.url,
+      model: lmStudio.model,
+      isConnected: lmStudio.isConnected,
+      isValidating: lmStudio.isValidating,
+      isAutoConnecting: lmStudio.isAutoConnecting
+    })
+
+    // Auto-connect if we have a URL saved but not connected
+    if (
+      lmStudio.url &&
+      !lmStudio.isConnected &&
+      !lmStudio.isValidating &&
+      !lmStudio.isAutoConnecting
+    ) {
+      logInfo('Auto-connecting to LM Studio', { url: lmStudio.url, model: lmStudio.model })
+
+      // Set auto-connecting state
+      setLMStudioAutoConnecting(true)
+
+      validateLMStudio()
+        .then(() => {
+          logInfo('Auto-connect successful')
+          setLMStudioAutoConnecting(false)
+        })
+        .catch((error) => {
+          logError(error, 'LMSTUDIO_AUTO_CONNECT_ERROR')
+          setLMStudioAutoConnecting(false)
+        })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConnect, lmStudio.url, lmStudio.isConnected])
 
   // Auto-initialize on mount if connected
   useEffect(() => {
