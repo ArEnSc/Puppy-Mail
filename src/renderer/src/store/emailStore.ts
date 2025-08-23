@@ -103,6 +103,7 @@ interface EmailState {
   // Computed
   getFilteredEmails: () => Email[]
   getPaginatedEmails: () => Email[]
+  updateTotalPages: () => void
   getSelectedEmail: () => Email | null
 }
 
@@ -315,13 +316,16 @@ export const useEmailStore = create<EmailState>()(
           const start = (state.currentPage - 1) * state.pageSize
           const end = start + state.pageSize
 
-          // Update total pages based on filtered results
+          return filtered.slice(start, end)
+        },
+
+        updateTotalPages: () => {
+          const state = get()
+          const filtered = state.getFilteredEmails()
           const totalPages = Math.ceil(filtered.length / state.pageSize)
           if (totalPages !== state.totalPages) {
             set({ totalPages })
           }
-
-          return filtered.slice(start, end)
         },
 
         getSelectedEmail: () => {

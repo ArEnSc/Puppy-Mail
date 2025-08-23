@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'
@@ -22,6 +23,7 @@ export function EmailList(): JSX.Element {
     selectEmail,
     getPaginatedEmails,
     getFilteredEmails,
+    updateTotalPages,
     markAsRead,
     toggleStar,
     currentPage,
@@ -34,6 +36,11 @@ export function EmailList(): JSX.Element {
   const paginatedEmails = getPaginatedEmails()
   const allFilteredEmails = getFilteredEmails()
   const totalEmails = allFilteredEmails.length
+
+  // Update total pages when filtered emails change
+  useEffect(() => {
+    updateTotalPages()
+  }, [allFilteredEmails.length, pageSize, updateTotalPages])
 
   return (
     <div className="flex h-full flex-col bg-background">
