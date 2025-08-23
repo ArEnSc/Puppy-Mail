@@ -3,8 +3,6 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import * as dotenv from 'dotenv'
-// Import electron-timber early to ensure renderer logs work
-import 'electron-timber'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { createEmailService } from './services/email/emailService'
 import { createDatabase, closeDatabase } from './db/database'
@@ -33,7 +31,7 @@ function createWindow(): void {
       sandbox: false
     }
   })
-
+  mainWindow.webContents.openDevTools()
   mainWindow.on('ready-to-show', () => {
     logInfo('Main window ready - showing window')
     mainWindow.show()
@@ -147,7 +145,8 @@ app.whenReady().then(async () => {
       )
 
       try {
-        await workflowService.handleIncomingEmail(emailMessage)
+        // TODO FIX later for triggers
+        //await workflowService.handleIncomingEmail(emailMessage)
       } catch (error) {
         logError('Error handling workflow trigger:', error)
       }
@@ -155,9 +154,10 @@ app.whenReady().then(async () => {
   })
 
   // Initialize LM Studio SDK handlers
+  logInfo('Setting Up SDK Handlers LMStudio')
   setupLMStudioSDKHandlers()
-
   // Initialize Mail Action handlers
+  logInfo('Setting Up SDK Handlers GoogleMail')
   setupMailActionHandlers()
 
   // Handle the existing google-oauth-start event to bridge with new auth system
