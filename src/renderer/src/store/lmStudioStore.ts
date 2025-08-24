@@ -15,7 +15,8 @@ import type {
   LMStudioToolCallStartPayload,
   LMStudioToolCallNamePayload,
   LMStudioToolCallEndPayload,
-  LMStudioToolCallFinalizedPayload
+  LMStudioToolCallFinalizedPayload,
+  LMStudioMessagePayload
 } from '@shared/types/lmStudio'
 import { logInfo, logError } from '@shared/logger'
 import { API_ENDPOINTS } from '@/shared/constants'
@@ -559,6 +560,39 @@ export const useLMStudioStore = create<LMStudioState>()(
           })
         }
 
+        // Handle message events which include tool call results
+        const handleMessage = (_event: unknown, data: LMStudioMessagePayload): void => {
+          logInfo('Received message with potential tool results:', data)
+          
+          // Tool results come as part of messages after tool execution
+          if (data.toolCallResults && Array.isArray(data.toolCallResults) && data.toolCallResults.length > 0) {
+            const state = get()
+            const session = state.sessions[sessionId]
+            
+            if (session) {
+              set((draft) => {
+                // Find the most recent assistant message with function calls
+                const messages = draft.sessions[sessionId].messages
+                const lastAssistantMessage = [...messages].reverse().find(m => 
+                  m.role === 'assistant' && m.functionCalls && m.functionCalls.length > 0
+                )
+                
+                if (lastAssistantMessage && lastAssistantMessage.functionCalls) {
+                  // Map tool results to function calls
+                  data.toolCallResults.forEach((result: any, index: number) => {
+                    if (lastAssistantMessage.functionCalls![index]) {
+                      // Update the function call with its result
+                      if (result && typeof result === 'object') {
+                        lastAssistantMessage.functionCalls![index].result = result.content || result
+                      }
+                    }
+                  })
+                }
+              })
+            }
+          }
+        }
+
         // Register handlers
         const unsubscribeFragment = ipc.on(
           LMSTUDIO_IPC_CHANNELS.LMSTUDIO_FRAGMENT,
@@ -571,6 +605,10 @@ export const useLMStudioStore = create<LMStudioState>()(
         const unsubscribeError = ipc.on(
           LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR,
           handleError as (...args: unknown[]) => void
+        )
+        const unsubscribeMessage = ipc.on(
+          LMSTUDIO_IPC_CHANNELS.LMSTUDIO_MESSAGE,
+          handleMessage as (...args: unknown[]) => void
         )
         const unsubscribeToolCallStart = ipc.on(
           LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_START,
@@ -594,6 +632,7 @@ export const useLMStudioStore = create<LMStudioState>()(
           unsubscribeFragment()
           unsubscribeComplete()
           unsubscribeError()
+          unsubscribeMessage()
           unsubscribeToolCallStart()
           unsubscribeToolCallName()
           unsubscribeToolCallEnd()

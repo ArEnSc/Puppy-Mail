@@ -315,21 +315,25 @@ export function ChatView(): JSX.Element {
                                       )}
                                     </div>
                                     {call.result !== undefined && (
-                                      <div className="mt-1">
-                                        <span className="text-green-600 dark:text-green-400">
-                                          →{' '}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                          {JSON.stringify(call.result, null, 2)}
-                                        </span>
+                                      <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800">
+                                        <div className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">
+                                          Result:
+                                        </div>
+                                        <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
+                                          {typeof call.result === 'object' 
+                                            ? JSON.stringify(call.result, null, 2)
+                                            : String(call.result)}
+                                        </div>
                                       </div>
                                     )}
                                     {call.error && (
-                                      <div className="mt-1">
-                                        <span className="text-red-600 dark:text-red-400">✗ </span>
-                                        <span className="text-red-600 dark:text-red-400">
+                                      <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+                                        <div className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">
+                                          Error:
+                                        </div>
+                                        <div className="text-xs text-red-600 dark:text-red-400 font-mono">
                                           {call.error}
-                                        </span>
+                                        </div>
                                       </div>
                                     )}
                                   </>
