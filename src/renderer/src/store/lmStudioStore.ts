@@ -124,7 +124,7 @@ export const useLMStudioStore = create<LMStudioState>()(
       lastValidated: null,
 
       // Initial settings
-      filterSpecialTokens: true, // Default to filtering tokens
+      filterSpecialTokens: false, // Default to NOT filtering tokens
 
       // Initial chat state
       sessions: {},

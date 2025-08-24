@@ -92,7 +92,6 @@ export function ChatView(): JSX.Element {
 
   // Auto-scroll to bottom when messages change
   useAutoScroll(scrollAreaRef, [messages])
-
   // Auto-resize textarea based on content
   useAutoResizeTextarea(textareaRef, inputValue)
 
