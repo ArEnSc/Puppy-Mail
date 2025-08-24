@@ -1,6 +1,7 @@
 import Realm from 'realm'
 import { app } from 'electron'
 import { join } from 'path'
+import { logInfo, logError, logWarning } from '../../shared/logger'
 
 // Email schema
 export class EmailDocument extends Realm.Object<EmailDocument> {
@@ -78,11 +79,11 @@ export async function createDatabase(): Promise<Realm | null> {
   }
 
   try {
-    console.log('Creating new Realm database instance...')
+    logInfo('Creating new Realm database instance...')
 
     // Get app data path for database storage
     const dbPath = join(app.getPath('userData'), 'chloe.realm')
-    console.log('Database path:', dbPath)
+    logInfo('Database path:', dbPath)
 
     // Create Realm instance with persistence
     realmInstance = await Realm.open({
@@ -90,7 +91,7 @@ export async function createDatabase(): Promise<Realm | null> {
       schema: [EmailDocument, AccountDocument],
       schemaVersion: 2,
       onMigration: (oldRealm, newRealm) => {
-        console.log(
+        logInfo(
           'Database migration from version',
           oldRealm.schemaVersion,
           'to',
@@ -99,21 +100,21 @@ export async function createDatabase(): Promise<Realm | null> {
       }
     })
 
-    console.log('Database created successfully')
-    console.log('Database path:', realmInstance.path)
-    console.log('Schema version:', realmInstance.schemaVersion)
+    logInfo('Database created successfully')
+    logInfo('Database path:', realmInstance.path)
+    logInfo('Schema version:', realmInstance.schemaVersion)
 
     return realmInstance
   } catch (error) {
-    console.error('Error creating database:', error)
-    console.error('Error details:', {
+    logError('Error creating database:', error)
+    logError('Error details:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     })
 
     // Log the error but don't throw - let the app continue without database
-    console.warn('App will continue without database functionality')
+    logWarning('App will continue without database functionality')
     return null
   }
 }
@@ -122,7 +123,7 @@ export async function getDatabase(): Promise<Realm | null> {
   // Always go through createDatabase to ensure proper initialization
   const db = await createDatabase()
   if (!db) {
-    console.warn('getDatabase: Database is not available')
+    logWarning('getDatabase: Database is not available')
   }
   return db
 }
@@ -131,6 +132,6 @@ export async function closeDatabase(): Promise<void> {
   if (realmInstance && !realmInstance.isClosed) {
     realmInstance.close()
     realmInstance = null
-    console.log('Database closed successfully')
+    logInfo('Database closed successfully')
   }
 }

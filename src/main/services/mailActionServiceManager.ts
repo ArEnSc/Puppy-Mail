@@ -7,6 +7,7 @@ import {
   AnalysisResult
 } from '../../types/mailActions'
 import { MockMailActionService } from './mockMailActionService'
+import { logInfo } from '../../shared/logger'
 
 export class MailActionServiceManager {
   private static instance: MailActionServiceManager
@@ -16,7 +17,7 @@ export class MailActionServiceManager {
     // Initialize with mock service for now
     // In production, this would switch based on configuration
     this.service = new MockMailActionService()
-    console.log('[MailActionServiceManager] Initialized with MockMailActionService')
+    logInfo('[MailActionServiceManager] Initialized with MockMailActionService')
   }
 
   public static getInstance(): MailActionServiceManager {
@@ -33,7 +34,7 @@ export class MailActionServiceManager {
   // Allow switching service implementation (useful for testing)
   public setService(service: MailActionService): void {
     this.service = service
-    console.log('[MailActionServiceManager] Service implementation changed')
+    logInfo('[MailActionServiceManager] Service implementation changed')
   }
 
   // Expose service methods directly for convenience

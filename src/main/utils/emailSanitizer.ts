@@ -101,3 +101,16 @@ export function getCleanEmail(body: string, attachments: Attachment[] = []): San
     attachments: categorizeAttachments(attachments)
   }
 }
+
+// Helper functions for email parsing
+export function extractEmailAddress(emailString: string): string {
+  // Extract email from strings like "John Doe <john@example.com>"
+  const match = emailString.match(/<(.+)>/)
+  return match ? match[1] : emailString
+}
+
+export function extractName(emailString: string): string | undefined {
+  // Extract name from strings like "John Doe <john@example.com>"
+  const match = emailString.match(/^([^<]+)\s*</)
+  return match ? match[1].trim() : undefined
+}

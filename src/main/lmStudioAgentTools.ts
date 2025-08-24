@@ -1,8 +1,8 @@
 import { tool } from '@lmstudio/sdk'
 import { z } from 'zod'
 import type { EmailComposition, EmailMessage } from '../types/mailActions'
-import type { EmailDocument } from './db/database'
 import { EmailService } from './db/emailService'
+import { logInfo } from '../shared/logger'
 import { getMailActionService } from './services/mailActionServiceManager'
 const mailActionService = getMailActionService()
 
@@ -18,7 +18,7 @@ export const sendEmailTool = tool({
     isHtml: z.boolean().optional().describe('Whether the body is HTML formatted')
   },
   implementation: async ({ to, subject, body, cc, bcc, isHtml }) => {
-    console.log('[LM Studio Tool] sendEmail:', { to, subject, body, cc, bcc, isHtml })
+    logInfo('[LM Studio Tool] sendEmail:', { to, subject, body, cc, bcc, isHtml })
 
     const composition: EmailComposition = {
       to: to.map((email) => ({ email })),
@@ -50,7 +50,7 @@ export const scheduleEmailTool = tool({
     scheduledTime: z.string().describe('ISO 8601 date string for when to send')
   },
   implementation: async ({ to, subject, body, scheduledTime }) => {
-    console.log('[LM Studio Tool] scheduleEmail:', { to, subject, body, scheduledTime })
+    logInfo('[LM Studio Tool] scheduleEmail:', { to, subject, body, scheduledTime })
 
     const scheduledEmail = {
       to: to.map((email) => ({ email })),
@@ -86,17 +86,14 @@ export const listenForEmailsTool = tool({
       .describe('Message to show when a matching email arrives')
   },
   implementation: async ({ from, subject, labels, notificationMessage }) => {
-    console.log('[LM Studio Tool] listenForEmails:', { from, subject, labels, notificationMessage })
+    logInfo('[LM Studio Tool] listenForEmails:', { from, subject, labels, notificationMessage })
 
     const result = await mailActionService.listenForEmails(from, {
       subject,
       labels,
       callback: (email) => {
-        console.log('[Email Received] From:', email.from, 'Subject:', email.subject)
-        console.log(
-          '[Notification]',
-          notificationMessage || 'New email received from monitored sender'
-        )
+        logInfo('[Email Received] From:', email.from, 'Subject:', email.subject)
+        logInfo('[Notification]', notificationMessage || 'New email received from monitored sender')
       }
     })
 
@@ -134,7 +131,7 @@ export const analysisTool = tool({
       .describe('Additional custom data to include in the analysis')
   },
   implementation: async ({ prompt, emailBody, includeRecentEmails, emailCount, customData }) => {
-    console.log('[LM Studio Tool] analysis:', {
+    logInfo('[LM Studio Tool] analysis:', {
       prompt,
       emailBodyLength: emailBody?.length,
       includeRecentEmails,

@@ -5,6 +5,7 @@ import {
   formatFunctionsForPrompt,
   FunctionCall
 } from './lmStudioFunctions'
+import { logInfo, logError, logWarning, logDebug } from '../shared/logger'
 
 interface LMStudioModel {
   id: string
@@ -23,7 +24,7 @@ export class LMStudioService {
     url: string
   ): Promise<{ success: boolean; models?: string[]; error?: string }> {
     try {
-      console.log('LMStudioService: Validating connection to', url)
+      logInfo('LMStudioService: Validating connection to', url)
 
       // Remove trailing slash if present
       const cleanUrl = url.replace(/\/$/, '')
@@ -40,7 +41,7 @@ export class LMStudioService {
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('LMStudioService: Response not OK:', response.status, errorText)
+        logError('LMStudioService: Response not OK:', response.status, errorText)
         return {
           success: false,
           error: `LM Studio returned status ${response.status}`
@@ -48,7 +49,7 @@ export class LMStudioService {
       }
 
       const data = (await response.json()) as LMStudioModelsResponse
-      console.log('LMStudioService: Models response:', data)
+      logInfo('LMStudioService: Models response:', data)
 
       if (!data.data || !Array.isArray(data.data)) {
         return {
@@ -66,13 +67,13 @@ export class LMStudioService {
         }
       }
 
-      console.log('LMStudioService: Found models:', models)
+      logInfo('LMStudioService: Found models:', models)
       return {
         success: true,
         models
       }
     } catch (error) {
-      console.error('LMStudioService: Error validating connection:', error)
+      logError('LMStudioService: Error validating connection:', error)
 
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -145,7 +146,7 @@ export class LMStudioService {
         error: 'Invalid response format from LM Studio'
       }
     } catch (error) {
-      console.error('LMStudioService: Error sending message:', error)
+      logError('LMStudioService: Error sending message:', error)
 
       if (error instanceof Error) {
         return {
@@ -239,10 +240,10 @@ export class LMStudioService {
         if (done) {
           // Check if we have a buffered function call
           if (inFunctionCall && functionCallBuffer) {
-            console.log('=== PROCESSING BUFFERED FUNCTION CALL ===')
-            console.log('Buffer content:', functionCallBuffer)
-            console.log('Buffer length:', functionCallBuffer.length)
-            console.log('=========================================')
+            logDebug('=== PROCESSING BUFFERED FUNCTION CALL ===')
+            logDebug('Buffer content:', functionCallBuffer)
+            logDebug('Buffer length:', functionCallBuffer.length)
+            logDebug('=========================================')
             await this.handleFunctionCall(
               functionCallBuffer,
               url,
@@ -270,10 +271,10 @@ export class LMStudioService {
             if (data === '[DONE]') {
               // Check if we have a buffered function call
               if (inFunctionCall && functionCallBuffer) {
-                console.log('=== PROCESSING BUFFERED FUNCTION CALL AT STREAM END ===')
-                console.log('Buffer content:', functionCallBuffer)
-                console.log('Buffer length:', functionCallBuffer.length)
-                console.log('=======================================================')
+                logDebug('=== PROCESSING BUFFERED FUNCTION CALL AT STREAM END ===')
+                logDebug('Buffer content:', functionCallBuffer)
+                logDebug('Buffer length:', functionCallBuffer.length)
+                logDebug('=======================================================')
                 await this.handleFunctionCall(
                   functionCallBuffer,
                   url,
@@ -295,39 +296,39 @@ export class LMStudioService {
               const delta = parsed.choices?.[0]?.delta
 
               if (delta?.reasoning) {
-                // console.log('Sending reasoning chunk:', delta.reasoning)
+                logDebug('Sending reasoning chunk:', delta.reasoning)
                 onChunk(delta.reasoning, 'reasoning')
               }
 
               if (delta?.content) {
-                // console.log('Raw content chunk:', delta.content)
+                logDebug('Raw content chunk:', delta.content)
 
                 // Check if we're entering a function call
                 if (
                   !inFunctionCall &&
                   delta.content.includes('<|start|>assistant<|channel|>commentary to=functions.')
                 ) {
-                  console.log('Detected function call start token')
+                  logDebug('Detected function call start token')
                   inFunctionCall = true
                   functionCallBuffer = delta.content
                 } else if (inFunctionCall) {
                   // We're in a function call, buffer the content
                   functionCallBuffer += delta.content
-                  console.log('Buffering function call content:', delta.content)
+                  logDebug('Buffering function call content:', delta.content)
                 } else {
                   // Normal content, send it through
                   onChunk(delta.content, 'content')
                 }
               }
             } catch (e) {
-              console.warn('Failed to parse SSE data:', e)
+              logWarning('Failed to parse SSE data:', e)
               // Don't send parse errors to UI - they're usually just incomplete chunks
             }
           }
         }
       }
     } catch (error) {
-      console.error('LMStudioService: Error streaming message:', error)
+      logError('LMStudioService: Error streaming message:', error)
 
       if (error instanceof Error) {
         onError(error.message)
@@ -347,7 +348,7 @@ export class LMStudioService {
     onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
     try {
-      console.log('Checking for function call in content:', content)
+      logDebug('Checking for function call in content:', content)
 
       // Check for LM Studio's function calling format
       // Pattern: to=functions.functionName ... {"param": value} or {}
@@ -355,18 +356,18 @@ export class LMStudioService {
       const match = content.match(functionPattern)
 
       if (!match) {
-        console.log('No LM Studio format match found, trying JSON format...')
+        logDebug('No LM Studio format match found, trying JSON format...')
         // Also try the original JSON format
         const functionCallMatch = content.match(/\{[\s\S]*"function_call"[\s\S]*\}/m)
         if (!functionCallMatch) {
-          console.log('No function call found in content')
+          logDebug('No function call found in content')
           return
         }
 
-        console.log('Found JSON function call:', functionCallMatch[0])
+        logDebug('Found JSON function call:', functionCallMatch[0])
         const functionCallJson = JSON.parse(functionCallMatch[0])
         const functionCall: FunctionCall = functionCallJson.function_call
-        console.log('Parsed function call:', functionCall)
+        logDebug('Parsed function call:', functionCall)
         await this.executeFunctionAndContinue(
           functionCall,
           url,
@@ -379,18 +380,18 @@ export class LMStudioService {
         )
       } else {
         // Parse LM Studio format
-        console.log('Found LM Studio format match:', match[0])
+        logDebug('Found LM Studio format match:', match[0])
         const functionName = match[1]
         const argsJson = match[2]
 
-        console.log('Detected function call:', functionName, 'with args:', argsJson)
+        logDebug('Detected function call:', functionName, 'with args:', argsJson)
 
         const functionCall: FunctionCall = {
           name: functionName,
           arguments: argsJson
         }
 
-        console.log('Executing function call:', functionCall)
+        logInfo('Executing function call:', functionCall)
 
         await this.executeFunctionAndContinue(
           functionCall,
@@ -404,7 +405,7 @@ export class LMStudioService {
         )
       }
     } catch (error) {
-      console.error('Error handling function call:', error)
+      logError('Error handling function call:', error)
       onError(
         `Failed to process function call: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -421,22 +422,22 @@ export class LMStudioService {
     onError: (error: string) => void,
     onFunctionCall?: (functionCall: FunctionCall & { result?: unknown }) => void
   ): Promise<void> {
-    console.log('[executeFunctionAndContinue] Starting function execution:', functionCall.name)
+    logInfo('[executeFunctionAndContinue] Starting function execution:', functionCall.name)
 
     // Execute the function
     const result = await executeFunction(functionCall)
 
     if (!result.success) {
-      console.error('[executeFunctionAndContinue] Function failed:', result.error)
+      logError('[executeFunctionAndContinue] Function failed:', result.error)
       onError(`Function execution failed: ${result.error}`)
       return
     }
 
-    console.log('[executeFunctionAndContinue] Function execution result:', result)
+    logInfo('[executeFunctionAndContinue] Function execution result:', result)
 
     // Emit the function call with its result
     if (onFunctionCall) {
-      console.log('[executeFunctionAndContinue] Emitting function call to UI')
+      logDebug('[executeFunctionAndContinue] Emitting function call to UI')
       onFunctionCall({
         ...functionCall,
         result: result.result
@@ -456,8 +457,8 @@ export class LMStudioService {
       }
     ]
 
-    console.log('[executeFunctionAndContinue] Making recursive call to continue conversation')
-    console.log('[executeFunctionAndContinue] Updated messages count:', updatedMessages.length)
+    logDebug('[executeFunctionAndContinue] Making recursive call to continue conversation')
+    logDebug('[executeFunctionAndContinue] Updated messages count:', updatedMessages.length)
 
     // Make another call to get the final response
     await this.streamMessage(
@@ -467,13 +468,13 @@ export class LMStudioService {
       onChunk,
       onError,
       () => {
-        console.log('[executeFunctionAndContinue] Recursive stream completed')
+        logDebug('[executeFunctionAndContinue] Recursive stream completed')
       },
       true,
       onFunctionCall
     )
 
-    console.log('[executeFunctionAndContinue] Finished recursive call')
+    logDebug('[executeFunctionAndContinue] Finished recursive call')
   }
 }
 

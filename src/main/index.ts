@@ -6,29 +6,18 @@ import * as dotenv from 'dotenv'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { createEmailService } from './services/email/emailService'
 import { createDatabase, closeDatabase } from './db/database'
-import { LMStudioService, setupLMStudioHandlers } from './lmStudioService'
+import { logInfo, logError } from '../shared/logger'
+
+import { setupLMStudioSDKHandlers } from './ipc/lmStudioSDKHandlers'
 import { setupMailActionHandlers } from './ipc/mailActionHandlers'
-import { WorkflowService } from '../workflow/WorkflowService'
-import { getMailActionService } from './services/mailActionServiceManager'
-import { sanitizeEmailBody } from './utils/emailSanitizer'
+
+import { sanitizeEmailBody, extractName, extractEmailAddress } from './utils/emailSanitizer'
 
 // Load environment variables
 dotenv.config()
 
-// Helper functions for email parsing
-function extractEmailAddress(emailString: string): string {
-  // Extract email from strings like "John Doe <john@example.com>"
-  const match = emailString.match(/<(.+)>/)
-  return match ? match[1] : emailString
-}
-
-function extractName(emailString: string): string | undefined {
-  // Extract name from strings like "John Doe <john@example.com>"
-  const match = emailString.match(/^([^<]+)\s*</)
-  return match ? match[1].trim() : undefined
-}
-
 function createWindow(): void {
+  logInfo('Creating main window')
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -42,8 +31,9 @@ function createWindow(): void {
       sandbox: false
     }
   })
-
+  //mainWindow.webContents.openDevTools()
   mainWindow.on('ready-to-show', () => {
+    logInfo('Main window ready - showing window')
     mainWindow.show()
   })
 
@@ -55,8 +45,10 @@ function createWindow(): void {
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    logInfo('Loading development URL:', process.env['ELECTRON_RENDERER_URL'])
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
+    logInfo('Loading production HTML file')
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
@@ -65,6 +57,8 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  logInfo('App is ready - initializing')
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.chloe.email')
 
@@ -76,7 +70,7 @@ app.whenReady().then(async () => {
   })
 
   // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('ping', () => logInfo('pong'))
 
   // Handle opening external links
   ipcMain.on('open-external', (_, url) => {
@@ -84,17 +78,17 @@ app.whenReady().then(async () => {
   })
 
   // Initialize database
-  console.log('Initializing database...')
+  logInfo('Initializing database...')
   try {
     const db = await createDatabase()
     if (db) {
-      console.log('Database initialized successfully')
+      logInfo('Database initialized successfully')
     } else {
-      console.error('Database initialization returned null - app will continue without database')
+      logError('Database initialization returned null - app will continue without database')
     }
   } catch (error) {
-    console.error('Failed to initialize database:', error)
-    console.error('Database initialization error details:', {
+    logError('Failed to initialize database:', error)
+    logError('Database initialization error details:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
@@ -106,21 +100,21 @@ app.whenReady().then(async () => {
   const gmailAuthService = new GmailAuthService()
   setupAuthHandlers(gmailAuthService)
 
-  // Initialize workflow service
-  const workflowStorageDir = join(app.getPath('userData'), 'workflows')
-  const mailActionService = getMailActionService()
-  const workflowService = new WorkflowService(mailActionService, workflowStorageDir)
+  // // Initialize workflow service
+  // const workflowStorageDir = join(app.getPath('userData'), 'workflows')
+  // const mailActionService = getMailActionService()
+  // const workflowService = new WorkflowService(mailActionService, workflowStorageDir)
 
-  // Initialize workflow service
-  await workflowService.initialize()
-  console.log('WorkflowService initialized')
+  // // Initialize workflow service
+  // await workflowService.initialize()
+  logInfo('WorkflowService initialized')
 
   // Initialize email service
   const emailService = createEmailService(gmailAuthService)
 
   // Connect email service to workflow triggers
   emailService.onRawEmails(async (emails) => {
-    console.log(`Processing ${emails.length} emails for workflow triggers`)
+    logInfo(`Processing ${emails.length} emails for workflow triggers`)
 
     for (const email of emails) {
       // Convert Email to EmailMessage format for workflows
@@ -146,23 +140,24 @@ app.whenReady().then(async () => {
         threadId: email.threadId
       }
 
-      console.log(
+      logInfo(
         `Checking workflow triggers for email: ${email.subject} from ${emailMessage.from.email}`
       )
 
       try {
-        await workflowService.handleIncomingEmail(emailMessage)
+        // TODO FIX later for triggers
+        //await workflowService.handleIncomingEmail(emailMessage)
       } catch (error) {
-        console.error('Error handling workflow trigger:', error)
+        logError('Error handling workflow trigger:', error)
       }
     }
   })
 
-  // Initialize LM Studio service
-  const lmStudioService = new LMStudioService()
-  setupLMStudioHandlers(lmStudioService)
-
+  // Initialize LM Studio SDK handlers
+  logInfo('Setting Up SDK Handlers LMStudio')
+  setupLMStudioSDKHandlers()
   // Initialize Mail Action handlers
+  logInfo('Setting Up SDK Handlers GoogleMail')
   setupMailActionHandlers()
 
   // Handle the existing google-oauth-start event to bridge with new auth system
@@ -194,7 +189,7 @@ app.whenReady().then(async () => {
         (resolve, reject) => {
           // Handle redirects
           authWindow.webContents.on('will-redirect', async (navEvent, url) => {
-            console.log('Redirect detected:', url)
+            logInfo('Redirect detected:', url)
 
             // Check if this is our callback URL with a code parameter
             const redirectUri =
@@ -234,7 +229,7 @@ app.whenReady().then(async () => {
 
           // Also handle navigation for apps that don't trigger will-redirect
           authWindow.webContents.on('will-navigate', (navEvent, url) => {
-            console.log('Navigation detected:', url)
+            logInfo('Navigation detected:', url)
 
             // Check if this is our callback URL with a code parameter
             const redirectUri =
@@ -288,7 +283,7 @@ app.whenReady().then(async () => {
         isAuthenticated: true
       })
     } catch (error) {
-      console.error('Google OAuth error:', error)
+      logError('Google OAuth error:', error)
       event.reply('google-oauth-complete', {
         error: error instanceof Error ? error.message : 'Authentication failed'
       })
@@ -305,7 +300,10 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      logInfo('App activated - creating new window')
+      createWindow()
+    }
   })
 })
 
@@ -314,13 +312,18 @@ app.whenReady().then(async () => {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    logInfo('All windows closed - quitting app')
     app.quit()
+  } else {
+    logInfo('All windows closed - app stays active (macOS)')
   }
 })
 
 // Clean up database on app quit
 app.on('before-quit', async () => {
+  logInfo('App is quitting - cleaning up database')
   await closeDatabase()
+  logInfo('Database cleanup complete')
 })
 
 // In this file you can include the rest of your app's specific main process

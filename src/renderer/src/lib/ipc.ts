@@ -1,6 +1,7 @@
 /**
  * IPC wrapper utility for consistent Electron IPC communication
  */
+import { logError, logWarning } from '@shared/logger'
 
 class IPCClient {
   private available: boolean
@@ -27,7 +28,7 @@ class IPCClient {
     try {
       return await window.electron.ipcRenderer.invoke(channel, ...args)
     } catch (error) {
-      console.error(`IPC error on channel ${channel}:`, error)
+      logError(`IPC error on channel ${channel}:`, error)
       throw error
     }
   }
@@ -37,7 +38,7 @@ class IPCClient {
    */
   send(channel: string, ...args: unknown[]): void {
     if (!this.available) {
-      console.warn('IPC not available - running outside Electron')
+      logWarning('IPC not available - running outside Electron')
       return
     }
 
@@ -49,7 +50,7 @@ class IPCClient {
    */
   on(channel: string, callback: (...args: unknown[]) => void): () => void {
     if (!this.available) {
-      console.warn('IPC not available - running outside Electron')
+      logWarning('IPC not available - running outside Electron')
       return () => {} // Return noop unsubscribe
     }
 
@@ -66,7 +67,7 @@ class IPCClient {
    */
   once(channel: string, callback: (...args: unknown[]) => void): void {
     if (!this.available) {
-      console.warn('IPC not available - running outside Electron')
+      logWarning('IPC not available - running outside Electron')
       return
     }
 
@@ -108,12 +109,11 @@ export const IPC_CHANNELS = {
   AUTH_GOOGLE_START: 'google-oauth-start',
   AUTH_GOOGLE_COMPLETE: 'google-oauth-complete',
 
-  // LM Studio operations
+  // LM Studio operations (legacy - still used by ChatView)
   LMSTUDIO_VALIDATE: 'lmstudio:validate',
-  LMSTUDIO_CHAT: 'lmstudio:chat',
   LMSTUDIO_STREAM: 'lmstudio:stream',
 
-  // LM Studio events
+  // LM Studio events (legacy - still used by ChatView)
   LMSTUDIO_STREAM_CHUNK: 'lmstudio:stream:chunk',
   LMSTUDIO_STREAM_ERROR: 'lmstudio:stream:error',
   LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete',

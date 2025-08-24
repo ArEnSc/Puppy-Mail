@@ -1,5 +1,6 @@
 // Function definitions fetched from the main process
 import { ipc } from './ipc'
+import { logWarning } from '@shared/logger'
 
 export interface FunctionDefinition {
   name: string
@@ -50,7 +51,7 @@ export async function getFormattedFunctionsPrompt(): Promise<string> {
 // For backwards compatibility - these will be populated on first use
 export let availableFunctions: FunctionDefinition[] = []
 export let formatFunctionsForPrompt = (): string => {
-  console.warn('formatFunctionsForPrompt called before initialization')
+  logWarning('formatFunctionsForPrompt called before initialization')
   return ''
 }
 

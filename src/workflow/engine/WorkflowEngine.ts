@@ -16,7 +16,6 @@ import {
   MailActionResult
 } from '../../types/mailActions'
 import { WorkflowLogger } from './WorkflowLogger'
-import { toolRegistry } from '../tools/ToolRegistry'
 
 export interface TriggerData {
   emailId?: string

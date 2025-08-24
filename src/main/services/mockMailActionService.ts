@@ -13,6 +13,7 @@ import {
   ListenInboxResult,
   AnalysisResult
 } from '../../types/mailActions'
+import { logInfo, logError } from '../../shared/logger'
 
 export class MockMailActionService implements MailActionService {
   private scheduledEmails: Map<string, ScheduledEmail> = new Map()
@@ -21,7 +22,7 @@ export class MockMailActionService implements MailActionService {
   private mockInbox: EmailMessage[] = []
 
   constructor() {
-    console.log('[MockMailActionService] Initialized')
+    logInfo('[MockMailActionService] Initialized')
     this.initializeDefaultLabels()
     this.initializeMockInbox()
   }
@@ -56,7 +57,7 @@ export class MockMailActionService implements MailActionService {
   }
 
   private createError(code: string, message: string, details?: unknown): MailActionResult {
-    console.error(`[MockMailActionService] Error: ${code} - ${message}`, details)
+    logError(`[MockMailActionService] Error: ${code} - ${message}`, details)
     return {
       success: false,
       error: { code, message, details }
@@ -73,7 +74,7 @@ export class MockMailActionService implements MailActionService {
 
   // Send operations
   async sendEmail(composition: EmailComposition): Promise<SendEmailResult> {
-    console.log('[MockMailActionService] sendEmail called:', composition)
+    logInfo('[MockMailActionService] sendEmail called:', composition)
 
     // Validate required fields
     if (!composition.to || composition.to.length === 0) {
@@ -90,7 +91,7 @@ export class MockMailActionService implements MailActionService {
 
     const messageId = this.generateId('msg')
 
-    console.log(`[MockMailActionService] Email sent successfully:
+    logInfo(`[MockMailActionService] Email sent successfully:
       Message ID: ${messageId}
       To: ${composition.to.map((r) => r.email).join(', ')}
       Subject: ${composition.subject}
@@ -118,7 +119,7 @@ export class MockMailActionService implements MailActionService {
   }
 
   async scheduleEmail(scheduledEmail: ScheduledEmail): Promise<ScheduleEmailResult> {
-    console.log('[MockMailActionService] scheduleEmail called:', scheduledEmail)
+    logInfo('[MockMailActionService] scheduleEmail called:', scheduledEmail)
 
     // Validate scheduled time
     if (!scheduledEmail.scheduledTime || scheduledEmail.scheduledTime <= new Date()) {
@@ -130,7 +131,7 @@ export class MockMailActionService implements MailActionService {
 
     this.scheduledEmails.set(scheduledId, emailWithId)
 
-    console.log(`[MockMailActionService] Email scheduled:
+    logInfo(`[MockMailActionService] Email scheduled:
       Scheduled ID: ${scheduledId}
       Scheduled for: ${scheduledEmail.scheduledTime.toISOString()}
       Subject: ${scheduledEmail.subject}
@@ -140,7 +141,7 @@ export class MockMailActionService implements MailActionService {
     const delay = scheduledEmail.scheduledTime.getTime() - Date.now()
     setTimeout(
       () => {
-        console.log(`[MockMailActionService] Scheduled email ${scheduledId} would be sent now`)
+        logInfo(`[MockMailActionService] Scheduled email ${scheduledId} would be sent now`)
         this.scheduledEmails.delete(scheduledId)
       },
       Math.min(delay, 60000)
@@ -151,7 +152,7 @@ export class MockMailActionService implements MailActionService {
 
   // Label operations
   async addLabels(operation: LabelOperation): Promise<LabelOperationResult> {
-    console.log('[MockMailActionService] addLabels called:', operation)
+    logInfo('[MockMailActionService] addLabels called:', operation)
 
     // Find email in mock inbox
     const email = this.mockInbox.find((e) => e.id === operation.emailId)
@@ -166,14 +167,14 @@ export class MockMailActionService implements MailActionService {
       }
     })
 
-    console.log(
+    logInfo(
       `[MockMailActionService] Added labels ${operation.labelIds.join(', ')} to email ${operation.emailId}`
     )
     return this.createSuccess()
   }
 
   async removeLabels(operation: LabelOperation): Promise<LabelOperationResult> {
-    console.log('[MockMailActionService] removeLabels called:', operation)
+    logInfo('[MockMailActionService] removeLabels called:', operation)
 
     const email = this.mockInbox.find((e) => e.id === operation.emailId)
     if (!email) {
@@ -182,7 +183,7 @@ export class MockMailActionService implements MailActionService {
 
     email.labels = email.labels.filter((label) => !operation.labelIds.includes(label))
 
-    console.log(
+    logInfo(
       `[MockMailActionService] Removed labels ${operation.labelIds.join(', ')} from email ${operation.emailId}`
     )
     return this.createSuccess()
@@ -197,7 +198,7 @@ export class MockMailActionService implements MailActionService {
       callback?: (email: EmailMessage) => void
     }
   ): Promise<ListenInboxResult> {
-    console.log(
+    logInfo(
       '[MockMailActionService] listenForEmails called for senders:',
       senders,
       'options:',
@@ -218,7 +219,7 @@ export class MockMailActionService implements MailActionService {
         // Check if email is from any of the specified senders
         const senderEmail = typeof email.from === 'string' ? email.from : email.from.email
         if (senders.some((sender) => senderEmail.toLowerCase().includes(sender.toLowerCase()))) {
-          console.log(`[MockMailActionService] Email from monitored sender: ${senderEmail}`)
+          logInfo(`[MockMailActionService] Email from monitored sender: ${senderEmail}`)
           if (options?.callback) {
             options.callback(email)
           }
@@ -228,7 +229,7 @@ export class MockMailActionService implements MailActionService {
 
     this.inboxListeners.set(listenerId, listener)
 
-    console.log(
+    logInfo(
       `[MockMailActionService] Started listening for emails from ${senders.join(', ')} with ID: ${listenerId}`
     )
 
@@ -263,7 +264,7 @@ export class MockMailActionService implements MailActionService {
       data?: Record<string, unknown>
     }
   ): Promise<AnalysisResult> {
-    console.log('[MockMailActionService] analysis called with prompt:', prompt)
+    logInfo('[MockMailActionService] analysis called with prompt:', prompt)
 
     // Simulate analysis results based on the prompt
     const promptLower = prompt.toLowerCase()
@@ -300,7 +301,7 @@ export class MockMailActionService implements MailActionService {
       'Analysis result 3: Recommendations generated'
     ]
 
-    console.log(`[MockMailActionService] Analysis completed with ${mockResults.length} results`)
+    logInfo(`[MockMailActionService] Analysis completed with ${mockResults.length} results`)
 
     // Return either a single string or array based on prompt
     if (promptLower.includes('list') || promptLower.includes('multiple')) {

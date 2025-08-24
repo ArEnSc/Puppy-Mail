@@ -1,13 +1,14 @@
 import { getDatabase, EmailDocument, AccountDocument } from './database'
 import { Email } from '../services/email/emailManager'
+import { logInfo, logError, logWarning } from '../../shared/logger'
 
 export class EmailService {
   static async syncEmails(accountId: string, emails: Email[]): Promise<void> {
     try {
-      console.log(`syncEmails: Starting sync for account ${accountId} with ${emails.length} emails`)
+      logInfo(`syncEmails: Starting sync for account ${accountId} with ${emails.length} emails`)
       const db = await getDatabase()
       if (!db) {
-        console.error('syncEmails: Database not available, cannot sync emails')
+        logError('syncEmails: Database not available, cannot sync emails')
         return
       }
 
@@ -53,10 +54,10 @@ export class EmailService {
         })
       })
 
-      console.log(`syncEmails: Successfully synced ${emails.length} emails, preserving local state`)
+      logInfo(`syncEmails: Successfully synced ${emails.length} emails, preserving local state`)
     } catch (error) {
-      console.error('syncEmails: Error syncing emails to database:', error)
-      console.error('syncEmails: Error details:', {
+      logError('syncEmails: Error syncing emails to database:', error)
+      logError('syncEmails: Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -76,10 +77,10 @@ export class EmailService {
     }
   ): Promise<EmailDocument[]> {
     try {
-      console.log(`getEmails: Fetching emails with limit=${limit}, offset=${offset}`)
+      logInfo(`getEmails: Fetching emails with limit=${limit}, offset=${offset}`)
       const db = await getDatabase()
       if (!db) {
-        console.error('getEmails: Database not available, returning empty array')
+        logError('getEmails: Database not available, returning empty array')
         return []
       }
 
@@ -105,11 +106,11 @@ export class EmailService {
       // Apply pagination
       const results = Array.from(query.slice(offset, offset + limit))
 
-      console.log(`getEmails: Found ${results.length} emails`)
+      logInfo(`getEmails: Found ${results.length} emails`)
       return results
     } catch (error) {
-      console.error('getEmails: Error getting emails from database:', error)
-      console.error('getEmails: Error details:', {
+      logError('getEmails: Error getting emails from database:', error)
+      logError('getEmails: Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -120,10 +121,10 @@ export class EmailService {
 
   static async markAsRead(emailId: string): Promise<void> {
     try {
-      console.log(`markAsRead: Marking email ${emailId} as read`)
+      logInfo(`markAsRead: Marking email ${emailId} as read`)
       const db = await getDatabase()
       if (!db) {
-        console.error('markAsRead: Database not available')
+        logError('markAsRead: Database not available')
         return
       }
 
@@ -131,14 +132,14 @@ export class EmailService {
         const email = db.objectForPrimaryKey<EmailDocument>('Email', emailId)
         if (email) {
           email.isRead = true
-          console.log(`markAsRead: Successfully marked email ${emailId} as read`)
+          logInfo(`markAsRead: Successfully marked email ${emailId} as read`)
         } else {
-          console.warn(`markAsRead: Email ${emailId} not found`)
+          logWarning(`markAsRead: Email ${emailId} not found`)
         }
       })
     } catch (error) {
-      console.error(`markAsRead: Error marking email ${emailId} as read:`, error)
-      console.error('markAsRead: Error details:', {
+      logError(`markAsRead: Error marking email ${emailId} as read:`, error)
+      logError('markAsRead: Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -148,10 +149,10 @@ export class EmailService {
 
   static async toggleStar(emailId: string): Promise<void> {
     try {
-      console.log(`toggleStar: Toggling star for email ${emailId}`)
+      logInfo(`toggleStar: Toggling star for email ${emailId}`)
       const db = await getDatabase()
       if (!db) {
-        console.error('toggleStar: Database not available')
+        logError('toggleStar: Database not available')
         return
       }
 
@@ -160,14 +161,14 @@ export class EmailService {
         if (email) {
           const newStarred = !email.isStarred
           email.isStarred = newStarred
-          console.log(`toggleStar: Successfully set star to ${newStarred} for email ${emailId}`)
+          logInfo(`toggleStar: Successfully set star to ${newStarred} for email ${emailId}`)
         } else {
-          console.warn(`toggleStar: Email ${emailId} not found`)
+          logWarning(`toggleStar: Email ${emailId} not found`)
         }
       })
     } catch (error) {
-      console.error(`toggleStar: Error toggling star for email ${emailId}:`, error)
-      console.error('toggleStar: Error details:', {
+      logError(`toggleStar: Error toggling star for email ${emailId}:`, error)
+      logError('toggleStar: Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -179,7 +180,7 @@ export class EmailService {
     try {
       const db = await getDatabase()
       if (!db) {
-        console.error('deleteEmail: Database not available')
+        logError('deleteEmail: Database not available')
         return
       }
 
@@ -187,11 +188,11 @@ export class EmailService {
         const email = db.objectForPrimaryKey<EmailDocument>('Email', emailId)
         if (email) {
           db.delete(email)
-          console.log(`deleteEmail: Successfully deleted email ${emailId}`)
+          logInfo(`deleteEmail: Successfully deleted email ${emailId}`)
         }
       })
     } catch (error) {
-      console.error(`deleteEmail: Error deleting email ${emailId}:`, error)
+      logError(`deleteEmail: Error deleting email ${emailId}:`, error)
     }
   }
 
@@ -212,17 +213,17 @@ export class EmailService {
 
       return Array.from(results)
     } catch (error) {
-      console.error('searchEmails: Error searching emails:', error)
+      logError('searchEmails: Error searching emails:', error)
       return []
     }
   }
 
   static async clearAllEmails(): Promise<void> {
     try {
-      console.log('clearAllEmails: Starting to clear all emails from database')
+      logInfo('clearAllEmails: Starting to clear all emails from database')
       const db = await getDatabase()
       if (!db) {
-        console.error('clearAllEmails: Database not available')
+        logError('clearAllEmails: Database not available')
         return
       }
 
@@ -230,11 +231,11 @@ export class EmailService {
         const allEmails = db.objects<EmailDocument>('Email')
         const emailCount = allEmails.length
         db.delete(allEmails)
-        console.log(`clearAllEmails: Successfully deleted ${emailCount} emails`)
+        logInfo(`clearAllEmails: Successfully deleted ${emailCount} emails`)
       })
     } catch (error) {
-      console.error('clearAllEmails: Error clearing all emails:', error)
-      console.error('clearAllEmails: Error details:', {
+      logError('clearAllEmails: Error clearing all emails:', error)
+      logError('clearAllEmails: Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -278,7 +279,7 @@ export class AccountService {
 
       return account
     } catch (error) {
-      console.error('saveAccount: Error saving account:', error)
+      logError('saveAccount: Error saving account:', error)
       return null
     }
   }
@@ -294,7 +295,7 @@ export class AccountService {
 
       return Array.from(accounts)
     } catch (error) {
-      console.error('getActiveAccounts: Error getting accounts:', error)
+      logError('getActiveAccounts: Error getting accounts:', error)
       return []
     }
   }
@@ -318,7 +319,7 @@ export class AccountService {
         }
       })
     } catch (error) {
-      console.error('updateTokens: Error updating tokens:', error)
+      logError('updateTokens: Error updating tokens:', error)
     }
   }
 
@@ -336,7 +337,7 @@ export class AccountService {
         }
       })
     } catch (error) {
-      console.error('deactivateAccount: Error deactivating account:', error)
+      logError('deactivateAccount: Error deactivating account:', error)
     }
   }
 }

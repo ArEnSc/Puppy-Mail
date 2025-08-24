@@ -1,15 +1,16 @@
 import { format } from 'date-fns'
 import { RefreshCw, CheckCircle, AlertCircle, Settings, Bot, Wifi, WifiOff } from 'lucide-react'
 import { useEmailStore } from '@/store/emailStore'
-import { useSettingsStore } from '@/store/settingsStore'
+import { useLMStudioStore } from '@/store/lmStudioStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { JSX } from 'react'
 
 export function SyncStatus(): JSX.Element {
   const { isLoading, lastSyncTime, error } = useEmailStore()
   const { syncEmails } = useEmailSync()
-  const { lmStudio } = useSettingsStore()
+  const { isConnected, isAutoConnecting, isValidating, model } = useLMStudioStore()
 
   const handleOpenSettings = (): void => {
     // Dispatch a custom event to open settings
@@ -53,14 +54,19 @@ export function SyncStatus(): JSX.Element {
 
           {/* LM Studio Status */}
           <div className="flex items-center gap-2">
-            {lmStudio.isConnected ? (
+            {isAutoConnecting || isValidating ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-xs">Connecting to LM Studio...</span>
+              </>
+            ) : isConnected ? (
               <>
                 <div className="flex items-center gap-1.5">
                   <Wifi className="h-4 w-4 text-green-600" />
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
                 <span className="text-xs">
-                  LM Studio: {lmStudio.model ? lmStudio.model.split('/').pop() : 'Connected'}
+                  LM Studio: {model ? model.split('/').pop() : 'Connected'}
                 </span>
               </>
             ) : (

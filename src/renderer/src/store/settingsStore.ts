@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { API_ENDPOINTS, STORAGE_KEYS, ERROR_MESSAGES } from '@/shared/constants'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
-
+import { ipc } from '@/lib/ipc'
+import { LMSTUDIO_IPC_CHANNELS } from '../../../shared/types/lmStudio'
+import { logInfo, logError } from '@shared/logger'
 interface ApiKeyConfig {
   key: string
   isValid: boolean
@@ -24,6 +25,7 @@ interface LMStudioConfig {
   url: string
   isConnected: boolean
   isValidating: boolean
+  isAutoConnecting: boolean
   error: string | null
   lastValidated: Date | null
   model: string
@@ -43,6 +45,7 @@ interface SettingsState {
   clearGoogleAuth: () => void
   setLMStudioUrl: (url: string) => void
   setLMStudioModel: (model: string) => void
+  setLMStudioAutoConnecting: (isAutoConnecting: boolean) => void
   validateLMStudio: () => Promise<void>
   setSettingsOpen: (open: boolean) => void
   clearAllSettings: () => void
@@ -69,6 +72,7 @@ const defaultLMStudio: LMStudioConfig = {
   url: API_ENDPOINTS.LMSTUDIO_DEFAULT_URL,
   isConnected: false,
   isValidating: false,
+  isAutoConnecting: false,
   error: null,
   lastValidated: null,
   model: ''
@@ -113,17 +117,26 @@ const validateAnthropic = async (apiKey: string): Promise<void> => {
 
 const validateLMStudio = async (url: string): Promise<{ models: string[] }> => {
   try {
-    const result = await ipc.invoke<{ success: boolean; models?: string[]; error?: string }>(
-      IPC_CHANNELS.LMSTUDIO_VALIDATE,
-      url
-    )
+    logInfo('[Info] Validating LM Studio connection to:', url)
+
+    // Use the new SDK connection method
+    const result = await ipc.invoke<{
+      success: boolean
+      data?: { models: string[] }
+      error?: string
+    }>(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CONNECT, url)
+
+    logInfo('[Info] LM Studio connection result:', result)
 
     if (!result.success) {
+      logError('[Error] LM Studio connection failed:', result.error)
       throw new Error(result.error || ERROR_MESSAGES.LMSTUDIO_CONNECTION_FAILED)
     }
 
-    return { models: result.models || [] }
+    logInfo('[Info] LM Studio models found:', result.data?.models?.length || 0)
+    return { models: result.data?.models || [] }
   } catch (error) {
+    logError('[Error] LM Studio validation error:', error)
     if (error instanceof Error) {
       throw error
     }
@@ -238,6 +251,14 @@ export const useSettingsStore = create<SettingsState>()(
           }
         })),
 
+      setLMStudioAutoConnecting: (isAutoConnecting) =>
+        set((state) => ({
+          lmStudio: {
+            ...state.lmStudio,
+            isAutoConnecting
+          }
+        })),
+
       validateLMStudio: async () => {
         const state = get()
         const { url } = state.lmStudio
@@ -247,7 +268,8 @@ export const useSettingsStore = create<SettingsState>()(
             lmStudio: {
               ...state.lmStudio,
               error: 'URL is required',
-              isConnected: false
+              isConnected: false,
+              isAutoConnecting: false
             }
           }))
           return
@@ -265,13 +287,15 @@ export const useSettingsStore = create<SettingsState>()(
           const { models } = await validateLMStudio(url)
 
           // If no model is selected, select the first one
-          const selectedModel = state.lmStudio.model || models[0]
+          const currentModel = get().lmStudio.model
+          const selectedModel = currentModel || models[0]
 
           set((state) => ({
             lmStudio: {
               ...state.lmStudio,
               isConnected: true,
               isValidating: false,
+              isAutoConnecting: false,
               error: null,
               lastValidated: new Date(),
               model: selectedModel
@@ -283,6 +307,7 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.lmStudio,
               isConnected: false,
               isValidating: false,
+              isAutoConnecting: false,
               error: error instanceof Error ? error.message : 'Connection failed',
               lastValidated: null
             }

@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { ipc, IPC_CHANNELS } from '@/lib/ipc'
 import { ERROR_MESSAGES } from '@/shared/constants'
-import { logError, logInfo } from '@/shared/errorHandler'
+import { logError, logInfo } from '@shared/logger'
 
 export function useEmailSync(): { syncEmails: () => Promise<void> } {
   const { setEmails, setLoading, setError, setLastSyncTime } = useEmailStore()

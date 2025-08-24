@@ -1,5 +1,6 @@
 import { google, gmail_v1 } from 'googleapis'
 import { OAuth2Client } from 'google-auth-library'
+import { logInfo, logError } from '../../../shared/logger'
 
 export interface EmailConfig {
   clientId: string
@@ -54,7 +55,7 @@ export async function pollEmailsWithClient(
   whitelistedEmails: string[] = []
 ): Promise<Email[]> {
   try {
-    console.log(
+    logInfo(
       `pollEmailsWithClient called with maxResults: ${maxResults}, whitelisted: ${whitelistedEmails}`
     )
 
@@ -65,7 +66,7 @@ export async function pollEmailsWithClient(
         : undefined
 
     const query = fromQuery ? `{${fromQuery}}` : ''
-    console.log(`Gmail query: "${query}"`)
+    logInfo(`Gmail query: "${query}"`)
 
     // List messages
     const response = await gmail.users.messages.list({
@@ -74,7 +75,7 @@ export async function pollEmailsWithClient(
       maxResults
     })
 
-    console.log(`Gmail API response: ${response.data.messages?.length || 0} messages found`)
+    logInfo(`Gmail API response: ${response.data.messages?.length || 0} messages found`)
 
     if (!response.data.messages) {
       return []
@@ -97,7 +98,7 @@ export async function pollEmailsWithClient(
 
     return emails
   } catch (error) {
-    console.error('Error polling emails:', error)
+    logError('Error polling emails:', error)
     throw new Error(
       `Failed to poll emails: ${error instanceof Error ? error.message : String(error)}`
     )
