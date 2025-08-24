@@ -1,6 +1,6 @@
 import { ipcMain, IpcMainEvent } from 'electron'
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
-import { lmStudioAgentTools } from '../tools/lmStudioAgentTools'
+import { emailTools } from '../tools/emailTools'
 import type { ChatMessage } from '@lmstudio/sdk'
 import { logInfo, logError } from '../../shared/logger'
 import {
@@ -154,7 +154,7 @@ export function setupLMStudioSDKHandlers(): void {
         }
 
         // Use act() with our tools
-        const tools = enableTools ? lmStudioAgentTools : []
+        const tools = enableTools ? emailTools : []
 
         await model.act(chat, tools, {
           onRoundStart: (roundIndex) => {

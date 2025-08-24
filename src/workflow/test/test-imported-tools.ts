@@ -4,7 +4,7 @@
  */
 
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
-import { lmStudioAgentTools } from '../../main/tools/lmStudioAgentTools'
+import { emailTools } from '../../main/tools/emailTools'
 import * as readline from 'readline/promises'
 import chalk from 'chalk'
 import { ToolCallRequest, ToolCallResult } from '@lmstudio/sdk'
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
 
   const model = models[0]
   console.log(chalk.green(`✅ Connected to: ${model.identifier}`))
-  console.log(chalk.blue(`📧 Tools: ${lmStudioAgentTools.map((t) => t.name).join(', ')}\n`))
+  console.log(chalk.blue(`📧 Tools: ${emailTools.map((t) => t.name).join(', ')}\n`))
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     let messageCount = 0
 
     // Use act() to handle tool calling automatically
-    await model.act(chat, lmStudioAgentTools, {
+    await model.act(chat, emailTools, {
       onRoundStart: (round) => {
         console.log(chalk.cyan.bold(`\n${'═'.repeat(50)}`))
         console.log(chalk.cyan.bold(`🔄 [Round ${round}] START`))
