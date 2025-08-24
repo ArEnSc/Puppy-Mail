@@ -7,7 +7,8 @@ import {
   EmailFilter,
   EmailComposition,
   EmailAddress,
-  EmailAttachment
+  EmailAttachment,
+  EMAIL_IPC_CHANNELS
 } from '../../shared/types/email'
 import { logInfo, logError } from '../../shared/logger'
 import { getCleanEmail } from '../utils/emailSanitizer'
@@ -505,7 +506,7 @@ export class UnifiedEmailService {
 
   private setupIpcHandlers(): void {
     // Fetch emails from database
-    ipcMain.handle('email:fetch', async () => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_FETCH, async () => {
       try {
         const emails = await this.getLocalEmails({ limit: 300 })
         return emails.map((email) => this.transformForRenderer(email))
@@ -516,13 +517,13 @@ export class UnifiedEmailService {
     })
 
     // Sync emails from Gmail
-    ipcMain.handle('email:sync', async () => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_SYNC, async () => {
       try {
         await this.fetchEmails({ limit: 300 }, true)
         this.lastSyncTime = new Date()
 
         BrowserWindow.getAllWindows().forEach((window) => {
-          window.webContents.send('email:syncComplete', {
+          window.webContents.send(EMAIL_IPC_CHANNELS.EMAIL_SYNC_COMPLETE, {
             timestamp: this.lastSyncTime,
             success: true
           })
@@ -536,7 +537,7 @@ export class UnifiedEmailService {
     })
 
     // Start polling
-    ipcMain.handle('email:startPolling', async (_, intervalMinutes?: number) => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_START_POLLING, async (_, intervalMinutes?: number) => {
       try {
         this.startPolling(intervalMinutes || 5)
         return { success: true }
@@ -547,19 +548,19 @@ export class UnifiedEmailService {
     })
 
     // Stop polling
-    ipcMain.handle('email:stopPolling', async () => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_STOP_POLLING, async () => {
       this.stopPolling()
       return { success: true }
     })
 
     // Mark as read
-    ipcMain.handle('email:markAsRead', async (_, emailId: string) => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_MARK_AS_READ, async (_, emailId: string) => {
       await this.updateEmailStatus(emailId, { isRead: true })
       return { success: true }
     })
 
     // Toggle star
-    ipcMain.handle('email:toggleStar', async (_, emailId: string) => {
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_TOGGLE_STAR, async (_, emailId: string) => {
       const emails = await this.getLocalEmails({ limit: 1 })
       const email = emails.find((e) => e.id === emailId)
 
@@ -568,6 +569,26 @@ export class UnifiedEmailService {
       }
 
       return { success: true }
+    })
+
+    // Clear all emails
+    ipcMain.handle(EMAIL_IPC_CHANNELS.EMAIL_CLEAR_ALL, async () => {
+      try {
+        const database = await getDatabase()
+        if (database) {
+          const emails = database.objects(EmailDocument)
+          database.write(() => {
+            database.delete(emails)
+          })
+        }
+        return { success: true }
+      } catch (error) {
+        logError('[UnifiedEmailService] Clear all emails error:', error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to clear emails'
+        }
+      }
     })
 
     // Send email
@@ -592,14 +613,14 @@ export class UnifiedEmailService {
       cc: email.cc || [],
       date: email.date,
       body: email.body,
-      text: cleanEmail.text,
+      cleanBody: cleanEmail.text,
       snippet: email.snippet,
       labels: email.labels,
       isRead: email.isRead,
       isStarred: email.isStarred,
       isImportant: email.isImportant,
-      hasAttachments: email.attachments.length > 0,
-      attachments: cleanEmail.attachments
+      attachments: email.attachments,
+      categorizedAttachments: cleanEmail.attachments
     }
   }
 
@@ -607,7 +628,7 @@ export class UnifiedEmailService {
     const transformedEmails = emails.map((email) => this.transformForRenderer(email))
 
     BrowserWindow.getAllWindows().forEach((window) => {
-      window.webContents.send('email:newEmails', transformedEmails)
+      window.webContents.send(EMAIL_IPC_CHANNELS.EMAIL_NEW_EMAILS, transformedEmails)
     })
   }
 }

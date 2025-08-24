@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useEmailStore } from '@/store/emailStore'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+import { ipc } from '@/lib/ipc'
+import { EMAIL_IPC_CHANNELS } from '@shared/types/email'
 import { ERROR_MESSAGES } from '@/shared/constants'
 import { logError, logInfo } from '@shared/logger'
 import type { Email } from '@shared/types/email'
@@ -15,13 +16,13 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
 
     try {
       const result = await ipc.invoke<{ success: boolean; timestamp: string }>(
-        IPC_CHANNELS.EMAIL_SYNC
+        EMAIL_IPC_CHANNELS.EMAIL_SYNC
       )
 
       if (result.success && result.timestamp) {
         setLastSyncTime(new Date(result.timestamp))
         // Fetch updated emails from database
-        const emails = await ipc.invoke<Email[]>(IPC_CHANNELS.EMAIL_FETCH)
+        const emails = await ipc.invoke<Email[]>(EMAIL_IPC_CHANNELS.EMAIL_FETCH)
         setEmails(emails)
       }
     } catch (error) {
@@ -40,7 +41,7 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
 
       try {
         if (ipc.isAvailable()) {
-          const emails = await ipc.invoke<Email[]>(IPC_CHANNELS.EMAIL_FETCH)
+          const emails = await ipc.invoke<Email[]>(EMAIL_IPC_CHANNELS.EMAIL_FETCH)
           setEmails(emails)
         } else {
           // Development fallback
@@ -69,7 +70,7 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
       setLastSyncTime(new Date(data.timestamp))
       // Fetch updated emails from database after sync completes
       try {
-        const emails = await ipc.invoke<Email[]>(IPC_CHANNELS.EMAIL_FETCH)
+        const emails = await ipc.invoke<Email[]>(EMAIL_IPC_CHANNELS.EMAIL_FETCH)
         setEmails(emails)
       } catch (error) {
         logError(error as Error, 'EMAIL_FETCH_AFTER_SYNC_ERROR')
@@ -78,16 +79,16 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
 
     // Set up event listeners
     const unsubscribeNewEmails = ipc.on(
-      IPC_CHANNELS.EMAIL_NEW_EMAILS,
+      EMAIL_IPC_CHANNELS.EMAIL_NEW_EMAILS,
       handleNewEmails as (...args: unknown[]) => void
     )
     const unsubscribeSyncComplete = ipc.on(
-      IPC_CHANNELS.EMAIL_SYNC_COMPLETE,
+      EMAIL_IPC_CHANNELS.EMAIL_SYNC_COMPLETE,
       handleSyncComplete as (...args: unknown[]) => void
     )
 
     // Start polling
-    ipc.invoke(IPC_CHANNELS.EMAIL_START_POLLING).catch((error) => {
+    ipc.invoke(EMAIL_IPC_CHANNELS.EMAIL_START_POLLING).catch((error) => {
       logError(error, 'EMAIL_POLLING_START_ERROR')
     })
 
@@ -95,7 +96,7 @@ export function useEmailSync(): { syncEmails: () => Promise<void> } {
     return () => {
       unsubscribeNewEmails()
       unsubscribeSyncComplete()
-      ipc.invoke(IPC_CHANNELS.EMAIL_STOP_POLLING).catch((error) => {
+      ipc.invoke(EMAIL_IPC_CHANNELS.EMAIL_STOP_POLLING).catch((error) => {
         logError(error, 'EMAIL_POLLING_STOP_ERROR')
       })
     }

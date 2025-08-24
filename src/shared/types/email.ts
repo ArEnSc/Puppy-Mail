@@ -81,3 +81,20 @@ export interface EmailComposition {
     mimeType: string
   }>
 }
+
+export const EMAIL_IPC_CHANNELS = {
+  // Email operations
+  EMAIL_FETCH: 'email:fetch',
+  EMAIL_SYNC: 'email:sync',
+  EMAIL_START_POLLING: 'email:startPolling',
+  EMAIL_STOP_POLLING: 'email:stopPolling',
+  EMAIL_MARK_AS_READ: 'email:markAsRead',
+  EMAIL_TOGGLE_STAR: 'email:toggleStar',
+  EMAIL_CLEAR_ALL: 'email:clearAll',
+
+  // Email events
+  EMAIL_NEW_EMAILS: 'email:newEmails',
+  EMAIL_SYNC_COMPLETE: 'email:syncComplete'
+} as const
+
+export type EmailIPCChannel = (typeof EMAIL_IPC_CHANNELS)[keyof typeof EMAIL_IPC_CHANNELS]

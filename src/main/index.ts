@@ -7,6 +7,7 @@ import { GmailAuthService, setupAuthHandlers } from './auth/authService'
 import { UnifiedEmailService } from './services/UnifiedEmailService'
 import { createDatabase, closeDatabase } from './db/database'
 import { logInfo, logError } from '../shared/logger'
+import { AUTH_IPC_CHANNELS } from '../shared/types/auth'
 
 import { setupLMStudioSDKHandlers } from './ipc/lmStudioSDKHandlers'
 
@@ -162,7 +163,7 @@ app.whenReady().then(async () => {
   setupLMStudioSDKHandlers()
 
   // Handle the existing google-oauth-start event to bridge with new auth system
-  ipcMain.on('google-oauth-start', async (event) => {
+  ipcMain.on(AUTH_IPC_CHANNELS.AUTH_GOOGLE_START, async (event) => {
     try {
       const authUrl = await gmailAuthService.getAuthUrl()
 
@@ -251,7 +252,7 @@ app.whenReady().then(async () => {
       )
 
       // Send success response
-      event.reply('google-oauth-complete', {
+      event.reply(AUTH_IPC_CHANNELS.AUTH_GOOGLE_COMPLETE, {
         accessToken: 'stored-securely',
         refreshToken: 'stored-securely',
         expiresAt: new Date().getTime() + 3600000,
@@ -260,7 +261,7 @@ app.whenReady().then(async () => {
       })
     } catch (error) {
       logError('Google OAuth error:', error)
-      event.reply('google-oauth-complete', {
+      event.reply(AUTH_IPC_CHANNELS.AUTH_GOOGLE_COMPLETE, {
         error: error instanceof Error ? error.message : 'Authentication failed'
       })
     }

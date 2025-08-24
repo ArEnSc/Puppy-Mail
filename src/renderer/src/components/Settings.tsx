@@ -3,7 +3,9 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useLMStudioStore } from '@/store/lmStudioStore'
 import { useEmailStore } from '@/store/emailStore'
 import { useEmailSync } from '@/hooks/useEmailSync'
-import { ipc, IPC_CHANNELS } from '@/lib/ipc'
+import { ipc } from '@/lib/ipc'
+import { EMAIL_IPC_CHANNELS } from '@shared/types/email'
+import { AUTH_IPC_CHANNELS } from '@shared/types/auth'
 import { logInfo, logError } from '@shared/logger'
 import {
   Dialog,
@@ -153,7 +155,7 @@ export function Settings(): JSX.Element {
     if (isSettingsOpen && ipc.isAvailable()) {
       logInfo('Checking auth status...')
       ipc
-        .invoke(IPC_CHANNELS.AUTH_CHECK)
+        .invoke(AUTH_IPC_CHANNELS.AUTH_CHECK)
         .then((isAuthenticated) => {
           logInfo('Auth check result:', isAuthenticated)
           if (isAuthenticated) {
@@ -233,13 +235,13 @@ export function Settings(): JSX.Element {
 
         // Set up the listener first
         ipc.once(
-          IPC_CHANNELS.AUTH_GOOGLE_COMPLETE,
+          AUTH_IPC_CHANNELS.AUTH_GOOGLE_COMPLETE,
           handleOAuthComplete as (...args: unknown[]) => void
         )
 
         // Then send the start event
         logInfo('Sending google-oauth-start')
-        ipc.send(IPC_CHANNELS.AUTH_GOOGLE_START)
+        ipc.send(AUTH_IPC_CHANNELS.AUTH_GOOGLE_START)
       } else {
         // Fallback for development/testing
         logInfo('No Electron IPC available')
@@ -261,7 +263,7 @@ export function Settings(): JSX.Element {
     try {
       // Clear from database
       if (ipc.isAvailable()) {
-        await ipc.invoke(IPC_CHANNELS.EMAIL_CLEAR_ALL)
+        await ipc.invoke(EMAIL_IPC_CHANNELS.EMAIL_CLEAR_ALL)
       }
       // Clear from store
       clearAllEmails()

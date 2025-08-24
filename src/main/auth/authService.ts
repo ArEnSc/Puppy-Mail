@@ -5,6 +5,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import { app } from 'electron'
 import { logInfo, logError } from '../../shared/logger'
+import { AUTH_IPC_CHANNELS } from '../../shared/types/auth'
 
 interface AuthTokens {
   access_token?: string | null
@@ -169,7 +170,7 @@ export class GmailAuthService {
 }
 
 export function setupAuthHandlers(authService: GmailAuthService): void {
-  ipcMain.handle('auth:check', async () => {
+  ipcMain.handle(AUTH_IPC_CHANNELS.AUTH_CHECK, async () => {
     return authService.isAuthenticated()
   })
 

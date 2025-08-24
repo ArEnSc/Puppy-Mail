@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import { ipc, IPC_CHANNELS } from '@renderer/lib/ipc'
+import { ipc } from '@renderer/lib/ipc'
+import { EMAIL_IPC_CHANNELS } from '@shared/types/email'
 import { logInfo, logError } from '@shared/logger'
 export interface Email {
   id: string
@@ -210,7 +211,7 @@ export const useEmailStore = create<EmailState>()(
           }))
           // Sync to database
           if (ipc.isAvailable()) {
-            ipc.invoke(IPC_CHANNELS.EMAIL_MARK_AS_READ, id).catch(logError)
+            ipc.invoke(EMAIL_IPC_CHANNELS.EMAIL_MARK_AS_READ, id).catch(logError)
           }
         },
 
@@ -229,7 +230,7 @@ export const useEmailStore = create<EmailState>()(
           }))
           // Sync to database
           if (ipc.isAvailable()) {
-            ipc.invoke(IPC_CHANNELS.EMAIL_TOGGLE_STAR, id).catch(logError)
+            ipc.invoke(EMAIL_IPC_CHANNELS.EMAIL_TOGGLE_STAR, id).catch(logError)
           }
         },
 
