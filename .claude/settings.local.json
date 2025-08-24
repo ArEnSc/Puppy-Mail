@@ -20,7 +20,8 @@
       "Bash(od:*)",
       "Bash(npm run dev:*)",
       "WebFetch(domain:github.com)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

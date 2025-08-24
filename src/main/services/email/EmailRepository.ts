@@ -1,7 +1,6 @@
-import { EmailRepository as IEmailRepository, Email, EmailFilter } from './EmailService'
+import { EmailRepository as IEmailRepository, Email, EmailFilter } from './emailService'
 import { getDatabase, EmailDocument } from '../../db/database'
 import { logInfo, logError } from '../../../shared/logger'
-import Realm from 'realm'
 
 export class EmailRepository implements IEmailRepository {
   async saveEmails(emails: Email[]): Promise<void> {
@@ -211,7 +210,7 @@ export class EmailRepository implements IEmailRepository {
       snippet: doc.snippet,
       body: doc.body,
       date: doc.date,
-      attachments: Array.from(doc.attachments).map(att => ({
+      attachments: Array.from(doc.attachments).map((att: any) => ({
         id: att.attachmentId,
         filename: att.filename,
         mimeType: att.mimeType,

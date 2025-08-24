@@ -1,6 +1,6 @@
 import { ipcMain, IpcMainEvent } from 'electron'
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
-import { lmStudioAgentTools } from '../lmStudioAgentTools'
+import { lmStudioAgentTools } from '../tools/lmStudioAgentTools'
 import type { ChatMessage } from '@lmstudio/sdk'
 import { logInfo, logError } from '../../shared/logger'
 import {

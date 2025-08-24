@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { EmailService, Email } from './EmailService'
+import { EmailService, Email } from './emailService'
 import { getCleanEmail } from '../../utils/emailSanitizer'
 import { logInfo, logError } from '../../../shared/logger'
 

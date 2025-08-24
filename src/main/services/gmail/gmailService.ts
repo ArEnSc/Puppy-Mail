@@ -1,6 +1,6 @@
 import { gmail_v1 } from 'googleapis'
 import { GmailAuthService } from '../../auth/authService'
-import { EmailProvider, Email, EmailComposition, EmailFilter, EmailListenOptions, EmailAddress } from './EmailService'
+import { EmailProvider, Email, EmailComposition, EmailFilter, EmailListenOptions, EmailAddress } from '../email/emailService'
 import { logInfo, logError } from '../../../shared/logger'
 
 export class GmailService implements EmailProvider {

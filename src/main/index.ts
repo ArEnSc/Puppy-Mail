@@ -10,8 +10,9 @@ import { logInfo, logError } from '../shared/logger'
 
 import { setupLMStudioSDKHandlers } from './ipc/lmStudioSDKHandlers'
 import { setupMailActionHandlers } from './ipc/mailActionHandlers'
+import { configureMailActionService } from './services/mailActionServiceManager'
 
-import { sanitizeEmailBody, extractName, extractEmailAddress } from './utils/emailSanitizer'
+// import { sanitizeEmailBody } from './utils/emailSanitizer'
 
 // Load environment variables
 dotenv.config()
@@ -111,9 +112,12 @@ app.whenReady().then(async () => {
 
   // Initialize email service
   const emailService = createEmailService(gmailAuthService)
+  logInfo('Email service initialized', { hasEmailService: !!emailService })
 
   // Connect email service to workflow triggers
-  emailService.onRawEmails(async (emails) => {
+  // TODO: Implement proper email listener for workflow triggers
+  /*
+  emailService.listenForEmails(undefined, async (emails) => {
     logInfo(`Processing ${emails.length} emails for workflow triggers`)
 
     for (const email of emails) {
@@ -152,6 +156,15 @@ app.whenReady().then(async () => {
       }
     }
   })
+  */
+
+  // Configure mail action service with the email service
+  configureMailActionService(emailService)
+  
+  // Setup Email IPC handlers
+  const { setupEmailIPC } = await import('./services/email/setupEmailIPC')
+  setupEmailIPC(emailService)
+  logInfo('Email IPC handlers registered')
 
   // Initialize LM Studio SDK handlers
   logInfo('Setting Up SDK Handlers LMStudio')

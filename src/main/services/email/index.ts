@@ -1,6 +1,6 @@
-import { EmailService } from './EmailService'
-import { GmailService } from './GmailService'
-import { EmailRepository } from './EmailRepository'
+import { EmailService } from './emailService'
+import { GmailService } from '../gmail/gmailService'
+import { EmailRepository } from './emailRepository'
 import { GmailAuthService } from '../../auth/authService'
 import { setupEmailIPC } from './setupEmailIPC'
 import { logInfo } from '../../../shared/logger'
@@ -33,4 +33,4 @@ export function getEmailService(): EmailService | null {
   return emailServiceInstance
 }
 
-export { EmailService, type Email, type EmailComposition, type EmailFilter } from './EmailService'
+export { EmailService, type Email, type EmailComposition, type EmailFilter } from './emailService'

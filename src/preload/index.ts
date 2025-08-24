@@ -91,7 +91,7 @@ const customIpcRenderer = {
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
-      ipcRenderer.off(channel, listener)
+      ipcRenderer.removeListener(channel, listener)
       return
     }
     if (electronAPI.ipcRenderer?.removeListener) {
@@ -113,11 +113,11 @@ const customIpcRenderer = {
       'mailAction:inboxUpdate'
     ]
     if (validChannels.includes(channel)) {
-      ipcRenderer.off(channel, listener)
+      ipcRenderer.removeListener(channel, listener)
       return
     }
-    if (electronAPI.ipcRenderer?.off) {
-      electronAPI.ipcRenderer.off(channel, listener)
+    if (electronAPI.ipcRenderer?.removeListener) {
+      electronAPI.ipcRenderer.removeListener(channel, listener)
     }
   },
   once: (

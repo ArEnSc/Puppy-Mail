@@ -225,7 +225,7 @@ export class EmailService {
    * Clear all listeners
    */
   clearAllListeners(): void {
-    for (const [listenerId, listener] of this.listeners) {
+    for (const [, listener] of this.listeners) {
       clearInterval(listener.intervalId)
     }
     this.listeners.clear()

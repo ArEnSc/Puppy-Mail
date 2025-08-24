@@ -1,9 +1,9 @@
 import { tool } from '@lmstudio/sdk'
 import { z } from 'zod'
-import type { EmailComposition, EmailMessage } from '../types/mailActions'
-import { EmailService } from './db/emailService'
-import { logInfo } from '../shared/logger'
-import { getMailActionService } from './services/mailActionServiceManager'
+import type { EmailComposition, EmailMessage } from '../../types/mailActions'
+import { EmailService } from '../db/emailService'
+import { logInfo } from '../../shared/logger'
+import { getMailActionService } from '../services/mailActionServiceManager'
 const mailActionService = getMailActionService()
 
 export const sendEmailTool = tool({

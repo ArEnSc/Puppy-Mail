@@ -4,7 +4,7 @@
  */
 
 import { LMStudioClient, Chat } from '@lmstudio/sdk'
-import { lmStudioAgentTools } from '../../main/lmStudioAgentTools'
+import { lmStudioAgentTools } from '../../main/tools/lmStudioAgentTools'
 import * as readline from 'readline/promises'
 import chalk from 'chalk'
 import { ToolCallRequest, ToolCallResult } from '@lmstudio/sdk'
