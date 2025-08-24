@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import * as dotenv from 'dotenv'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
-import { createEmailService } from './services/email/emailService'
+import { createEmailService } from './services/email'
 import { createDatabase, closeDatabase } from './db/database'
 import { logInfo, logError } from '../shared/logger'
 

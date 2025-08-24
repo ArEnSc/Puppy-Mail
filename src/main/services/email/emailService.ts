@@ -1,377 +1,234 @@
-import * as cron from 'node-cron'
-import { ipcMain, BrowserWindow } from 'electron'
-import { getEmailConfig, getPollInterval } from '../../config'
-import { formatEmail, FormattedEmail, Email, pollEmailsWithClient } from './emailManager'
-import { getCleanEmail } from '../../utils/emailSanitizer'
-import { EmailService as DBEmailService } from '../../db/emailService'
-import { GmailAuthService } from '../../auth/authService'
 import { logInfo, logError } from '../../../shared/logger'
 
-export class EmailService {
-  private cronJob: cron.ScheduledTask | null = null
-  private emailHandler: ((emails: FormattedEmail[]) => void) | null = null
-  private rawEmailHandler: ((emails: Email[]) => void) | null = null
-  private gmailAuthService: GmailAuthService
-  lastSyncTime: Date | null = null
-
-  constructor(gmailAuthService: GmailAuthService) {
-    this.gmailAuthService = gmailAuthService
-  }
-
-  onNewEmails(handler: (emails: FormattedEmail[]) => void): void {
-    this.emailHandler = handler
-  }
-
-  onRawEmails(handler: (emails: Email[]) => void): void {
-    this.rawEmailHandler = handler
-  }
-
-  async fetchLatestEmails(maxResults: number = 10): Promise<FormattedEmail[]> {
-    try {
-      logInfo(`fetchLatestEmails called with maxResults: ${maxResults}`)
-
-      // Check if authenticated
-      const isAuth = await this.gmailAuthService.isAuthenticated()
-      logInfo('Authentication check result:', isAuth)
-
-      if (!isAuth) {
-        throw new Error('Not authenticated with Gmail')
-      }
-
-      // Get authenticated Gmail client
-      const gmail = await this.gmailAuthService.getGmailClient()
-      logInfo('Gmail client obtained successfully')
-
-      // Get whitelisted emails from config if available
-      let whitelistedEmails: string[] = []
-      try {
-        const config = getEmailConfig()
-        whitelistedEmails = config.whitelistedEmails || []
-      } catch {
-        // Config might not be available if using OAuth, that's ok
-      }
-
-      logInfo(`Calling pollEmailsWithClient with whitelisted emails: ${whitelistedEmails}`)
-      const emails = await pollEmailsWithClient(gmail, maxResults, whitelistedEmails)
-      logInfo(`pollEmailsWithClient returned ${emails.length} emails`)
-
-      // Save to database - RxDB will handle duplicates via primary key
-      if (emails.length > 0) {
-        logInfo('Saving emails to database...')
-        try {
-          await DBEmailService.syncEmails('default', emails)
-          logInfo('Emails saved to database successfully')
-        } catch (dbError) {
-          logError('Failed to save emails to database:', dbError)
-          // Continue anyway - the emails are still fetched
-        }
-        this.lastSyncTime = new Date()
-
-        // Call raw email handler if set (for workflows)
-        if (this.rawEmailHandler) {
-          logInfo('Calling raw email handler for workflows...')
-          this.rawEmailHandler(emails)
-        }
-
-        // Notify renderer about sync completion
-        BrowserWindow.getAllWindows().forEach((window) => {
-          window.webContents.send('email:syncComplete', {
-            timestamp: this.lastSyncTime,
-            count: emails.length
-          })
-        })
-        logInfo('Sync complete notification sent')
-      } else {
-        logInfo('No emails returned from poll')
-      }
-
-      return emails.map(formatEmail)
-    } catch (error) {
-      logError('fetchLatestEmails: Error fetching emails:', error)
-      logError('fetchLatestEmails: Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      })
-      throw error
-    }
-  }
-
-  startPolling(): void {
-    const interval = getPollInterval()
-    const cronExpression = `*/${interval} * * * *` // Every N minutes
-
-    logInfo(`Starting email polling every ${interval} minutes`)
-
-    this.cronJob = cron.schedule(cronExpression, async () => {
-      try {
-        const emails = await this.fetchLatestEmails()
-        if (this.emailHandler && emails.length > 0) {
-          this.emailHandler(emails)
-        }
-        // Raw handler is called inside fetchLatestEmails
-      } catch (error) {
-        logError('Error during scheduled email poll:', error)
-      }
-    })
-
-    // Also fetch immediately on start
-    this.fetchLatestEmails()
-      .then((emails) => {
-        if (this.emailHandler && emails.length > 0) {
-          this.emailHandler(emails)
-        }
-      })
-      .catch(logError)
-  }
-
-  stopPolling(): void {
-    if (this.cronJob) {
-      this.cronJob.stop()
-      this.cronJob = null
-      logInfo('Email polling stopped')
-    }
-  }
+// Email types
+export interface EmailAddress {
+  name: string
+  email: string
 }
 
-// Transform email to match Zustand store format
-interface StoreEmail {
+export interface Email {
   id: string
   threadId: string
+  from: EmailAddress
+  to: EmailAddress[]
+  cc?: EmailAddress[]
   subject: string
-  from: {
-    name: string
-    email: string
-  }
-  to: Array<{
-    name: string
-    email: string
-  }>
-  cc: Array<{
-    name: string
-    email: string
-  }>
-  date: Date
   snippet: string
   body: string
-  cleanBody: string
-  isRead: boolean
-  isStarred: boolean
-  isImportant: boolean
-  labels: string[]
+  date: Date
   attachments: Array<{
     id: string
     filename: string
     mimeType: string
     size: number
   }>
-  categorizedAttachments: {
-    images: Array<{ id: string; filename: string; mimeType: string; size: number }>
-    pdfs: Array<{ id: string; filename: string; mimeType: string; size: number }>
-    videos: Array<{ id: string; filename: string; mimeType: string; size: number }>
-    others: Array<{ id: string; filename: string; mimeType: string; size: number }>
-  }
+  labels: string[]
+  isRead: boolean
+  isStarred: boolean
+  isImportant: boolean
 }
 
-function transformEmailForStore(
-  email: Email & { isRead?: boolean; isStarred?: boolean; labels?: string[] }
-): StoreEmail {
-  const senderMatch = email.from.match(/(.*?)\s*<(.+?)>/) || [null, email.from, email.from]
-  const [, senderName, senderEmail] = senderMatch
-
-  // Get clean version of the email
-  const attachmentsWithId = email.attachments.map((att) => ({
-    id: att.attachmentId,
-    filename: att.filename,
-    mimeType: att.mimeType,
-    size: att.size
-  }))
-  const cleanEmail = getCleanEmail(email.body, attachmentsWithId)
-
-  return {
-    id: email.id,
-    threadId: email.threadId,
-    subject: email.subject,
-    from: {
-      name: senderName?.trim() || senderEmail,
-      email: senderEmail
-    },
-    to: [
-      {
-        name: email.to,
-        email: email.to
-      }
-    ],
-    cc: [],
-    date: email.date,
-    snippet: email.snippet,
-    body: email.body,
-    cleanBody: cleanEmail.text,
-    isRead: email.isRead ?? false,
-    isStarred: email.isStarred ?? false,
-    isImportant: email.labels ? email.labels.includes('IMPORTANT') : false,
-    labels: email.labels || ['inbox'],
-    attachments: email.attachments.map((att) => ({
-      id: att.attachmentId,
-      filename: att.filename,
-      mimeType: att.mimeType,
-      size: att.size
-    })),
-    categorizedAttachments: cleanEmail.attachments
-  }
+export interface EmailComposition {
+  to: string[]
+  cc?: string[]
+  bcc?: string[]
+  subject: string
+  body: string
+  attachments?: Array<{
+    filename: string
+    content: Buffer
+    mimeType: string
+  }>
 }
 
-// Set up IPC handlers for email operations
-export function setupEmailIPC(service: EmailService): void {
-  // Fetch emails from database
-  ipcMain.handle('email:fetch', async () => {
+export interface EmailFilter {
+  from?: string
+  to?: string
+  subject?: string
+  labels?: string[]
+  dateFrom?: Date
+  dateTo?: Date
+  isRead?: boolean
+  isStarred?: boolean
+  limit?: number
+}
+
+export interface EmailListenOptions {
+  pollInterval?: number // in minutes
+  filter?: EmailFilter
+}
+
+// Service interfaces
+export interface EmailProvider {
+  sendEmail(composition: EmailComposition): Promise<{ success: boolean; messageId?: string; error?: string }>
+  fetchEmails(filter?: EmailFilter): Promise<Email[]>
+  startListening(options: EmailListenOptions, callback: (emails: Email[]) => void): string
+  stopListening(listenerId: string): void
+}
+
+export interface EmailRepository {
+  saveEmails(emails: Email[]): Promise<void>
+  getEmails(filter?: EmailFilter): Promise<Email[]>
+  updateEmail(id: string, updates: Partial<Email>): Promise<void>
+  deleteEmail(id: string): Promise<void>
+  clearAll(): Promise<void>
+}
+
+// Main EmailService class
+export class EmailService {
+  private provider: EmailProvider
+  private repository: EmailRepository
+  private listeners: Map<string, { intervalId: NodeJS.Timeout; callback: (emails: Email[]) => void }> = new Map()
+
+  constructor(provider: EmailProvider, repository: EmailRepository) {
+    this.provider = provider
+    this.repository = repository
+  }
+
+  /**
+   * Send an email through the provider
+   */
+  async sendEmail(composition: EmailComposition): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const dbEmails = await DBEmailService.getEmails(300, 0)
-      return dbEmails.map((doc) => {
-        // Convert Realm object to plain object
-        const plainDoc = {
-          id: doc.id,
-          threadId: doc.threadId,
-          from: doc.from,
-          to: Array.from(doc.to).join(', '),
-          subject: doc.subject,
-          snippet: doc.snippet,
-          body: doc.body,
-          date: doc.date,
-          attachments: Array.from(doc.attachments),
-          labels: Array.from(doc.labels),
-          isRead: doc.isRead,
-          isStarred: doc.isStarred,
-          isImportant: doc.isImportant
+      logInfo('[EmailService] Sending email', { to: composition.to, subject: composition.subject })
+      const result = await this.provider.sendEmail(composition)
+      
+      if (result.success) {
+        logInfo('[EmailService] Email sent successfully', { messageId: result.messageId })
+      } else {
+        logError('[EmailService] Failed to send email', { error: result.error })
+      }
+      
+      return result
+    } catch (error) {
+      logError('[EmailService] Error sending email:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  /**
+   * Fetch emails from provider and sync to local database
+   */
+  async getEmails(options?: { filter?: EmailFilter; syncToDb?: boolean }): Promise<{ success: boolean; emails?: Email[]; error?: string }> {
+    try {
+      const { filter, syncToDb = true } = options || {}
+      
+      logInfo('[EmailService] Fetching emails from provider', { filter })
+      const emails = await this.provider.fetchEmails(filter)
+      
+      if (syncToDb && emails.length > 0) {
+        logInfo('[EmailService] Syncing emails to database', { count: emails.length })
+        await this.repository.saveEmails(emails)
+      }
+      
+      logInfo('[EmailService] Successfully fetched emails', { count: emails.length })
+      return { success: true, emails }
+    } catch (error) {
+      logError('[EmailService] Error fetching emails:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  /**
+   * Listen for new emails and trigger callback
+   */
+  async listenForEmails(
+    filter: EmailFilter | undefined,
+    callback: (emails: Email[]) => void
+  ): Promise<{ success: boolean; listenerId?: string; error?: string }> {
+    try {
+      const listenerId = `listener-${Date.now()}`
+      const pollInterval = 5 // default 5 minutes
+      
+      logInfo('[EmailService] Starting email listener', { listenerId, pollInterval })
+      
+      // Initial fetch
+      const initialResult = await this.getEmails({ filter })
+      if (initialResult.success && initialResult.emails) {
+        callback(initialResult.emails)
+      }
+      
+      // Set up polling
+      const intervalId = setInterval(async () => {
+        const result = await this.getEmails({ filter })
+        if (result.success && result.emails && result.emails.length > 0) {
+          callback(result.emails)
         }
-
-        return transformEmailForStore({
-          ...plainDoc,
-          internalDate: new Date(plainDoc.date).getTime().toString()
-        })
-      })
+      }, pollInterval * 60 * 1000)
+      
+      this.listeners.set(listenerId, { intervalId, callback })
+      
+      logInfo('[EmailService] Email listener started', { listenerId })
+      return { success: true, listenerId }
     } catch (error) {
-      logError('Error fetching emails from database:', error)
-      // Return empty array instead of throwing to keep the app functional
-      return []
+      logError('[EmailService] Error starting email listener:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
-  })
+  }
 
-  // Sync emails from Gmail and save to database
-  ipcMain.handle('email:sync', async () => {
+  /**
+   * Stop listening for emails
+   */
+  stopListening(listenerId: string): void {
+    const listener = this.listeners.get(listenerId)
+    if (listener) {
+      clearInterval(listener.intervalId)
+      this.listeners.delete(listenerId)
+      logInfo('[EmailService] Stopped email listener', { listenerId })
+    }
+  }
+
+  /**
+   * Analyze emails from local database (for AI)
+   */
+  async analyzeEmails(
+    emailFilter: EmailFilter | undefined,
+    prompt: string
+  ): Promise<{ success: boolean; analysis?: string; emails?: Email[]; error?: string }> {
     try {
-      logInfo('Email sync requested')
-      const emails = await service.fetchLatestEmails(300)
-      logInfo(`Sync completed: fetched ${emails.length} emails`)
-      return { success: true, timestamp: service.lastSyncTime }
-    } catch (error) {
-      logError('Error syncing emails:', error)
-      throw error
-    }
-  })
-
-  // Start polling
-  ipcMain.handle('email:startPolling', async (_, intervalMinutes?: number) => {
-    const interval = intervalMinutes || getPollInterval()
-    service.stopPolling() // Stop any existing polling
-
-    // Set up handler to broadcast new emails
-    service.onNewEmails(async () => {
-      // Instead of re-fetching, get emails from database after sync
-      try {
-        const dbEmails = await DBEmailService.getEmails(300, 0)
-        const transformedEmails = dbEmails.map((doc) => {
-          // Convert Realm object to plain object
-          const plainDoc = {
-            id: doc.id,
-            threadId: doc.threadId,
-            from: doc.from,
-            to: Array.from(doc.to).join(', '),
-            subject: doc.subject,
-            snippet: doc.snippet,
-            body: doc.body,
-            date: doc.date,
-            attachments: Array.from(doc.attachments),
-            labels: Array.from(doc.labels),
-            isRead: doc.isRead,
-            isStarred: doc.isStarred
-          }
-
-          return transformEmailForStore({
-            ...plainDoc,
-            internalDate: new Date(plainDoc.date).getTime().toString()
-          })
-        })
-        BrowserWindow.getAllWindows().forEach((window) => {
-          window.webContents.send('email:newEmails', transformedEmails)
-        })
-      } catch (error) {
-        logError('Error broadcasting new emails:', error)
+      logInfo('[EmailService] Analyzing emails from database', { filter: emailFilter, prompt })
+      
+      // Always read from local database for AI analysis
+      const emails = await this.repository.getEmails(emailFilter)
+      
+      if (emails.length === 0) {
+        return { success: true, analysis: 'No emails found matching the criteria', emails: [] }
       }
-    })
-
-    service.startPolling()
-    return { success: true, interval }
-  })
-
-  // Stop polling
-  ipcMain.handle('email:stopPolling', async () => {
-    service.stopPolling()
-    return { success: true }
-  })
-
-  // Mark email as read
-  ipcMain.handle('email:markAsRead', async (_, emailId: string) => {
-    try {
-      await DBEmailService.markAsRead(emailId)
-      return { success: true }
+      
+      // Here you would integrate with your AI service
+      // For now, returning a placeholder
+      const analysis = `Found ${emails.length} emails for analysis. AI analysis would be performed here with prompt: "${prompt}"`
+      
+      logInfo('[EmailService] Email analysis complete', { emailCount: emails.length })
+      return { success: true, analysis, emails }
     } catch (error) {
-      logError('Error marking email as read:', error)
-      throw error
+      logError('[EmailService] Error analyzing emails:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
-  })
+  }
 
-  // Toggle star status
-  ipcMain.handle('email:toggleStar', async (_, emailId: string) => {
-    try {
-      await DBEmailService.toggleStar(emailId)
-      return { success: true }
-    } catch (error) {
-      logError('Error toggling star:', error)
-      throw error
+  /**
+   * Get emails from local database only (no provider sync)
+   */
+  async getLocalEmails(filter?: EmailFilter): Promise<Email[]> {
+    return this.repository.getEmails(filter)
+  }
+
+  /**
+   * Update email in local database
+   */
+  async updateLocalEmail(id: string, updates: Partial<Email>): Promise<void> {
+    return this.repository.updateEmail(id, updates)
+  }
+
+  /**
+   * Clear all listeners
+   */
+  clearAllListeners(): void {
+    for (const [listenerId, listener] of this.listeners) {
+      clearInterval(listener.intervalId)
     }
-  })
-
-  // Clear all emails from database
-  ipcMain.handle('email:clearAll', async () => {
-    try {
-      await DBEmailService.clearAllEmails()
-      return { success: true }
-    } catch (error) {
-      logError('Error clearing all emails:', error)
-      throw error
-    }
-  })
-}
-
-// Example usage
-export function createEmailService(gmailAuthService: GmailAuthService): EmailService {
-  const service = new EmailService(gmailAuthService)
-
-  // Set up handler for new emails
-  service.onNewEmails((emails) => {
-    logInfo(`Received ${emails.length} new emails:`)
-    emails.forEach((email) => {
-      logInfo(`- From: ${email.sender}`)
-      logInfo(`  Subject: ${email.subject}`)
-      logInfo(`  Preview: ${email.preview}`)
-      logInfo(`  Has Attachments: ${email.hasAttachments}`)
-      logInfo('---')
-    })
-  })
-
-  // Set up IPC handlers
-  setupEmailIPC(service)
-
-  return service
+    this.listeners.clear()
+    logInfo('[EmailService] Cleared all email listeners')
+  }
 }
