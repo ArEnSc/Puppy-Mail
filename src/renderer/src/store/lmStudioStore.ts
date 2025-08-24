@@ -86,7 +86,10 @@ interface LMStudioState {
   registerEventHandlers: (
     sessionId: string,
     callbacks: {
-      onFragment?: (content: string) => void
+      onFragment?: (
+        content: string,
+        reasoningType?: 'none' | 'reasoning' | 'reasoningStartTag' | 'reasoningEndTag'
+      ) => void
       onError?: (error: string) => void
       onComplete?: () => void
       onToolCall?: (toolCall: ToolCall) => void
@@ -335,25 +338,41 @@ export const useLMStudioStore = create<LMStudioState>()(
           const state = get()
           const session = state.sessions[sessionId]
 
-          if (session?.streamingMessageId) {
+          if (session?.streamingMessageId && data.content) {
+            // Skip structural fragments - they're likely special tokens
+            if (data.isStructural) {
+              return
+            }
+
             set((draft) => {
               const message = draft.sessions[sessionId].messages.find(
                 (m) => m.id === session.streamingMessageId
               )
               if (message) {
-                message.content += data.content
+                // Append to reasoning or content based on reasoningType
+                if (data.reasoningType === 'reasoning') {
+                  if (!message.reasoning) {
+                    message.reasoning = ''
+                  }
+                  message.reasoning += data.content
+                } else if (data.reasoningType === 'none' || !data.reasoningType) {
+                  message.content += data.content
+                }
+                // Skip reasoningStartTag and reasoningEndTag
               }
             })
 
-            callbacks.onFragment?.(data.content)
+            callbacks.onFragment?.(data.content, data.reasoningType)
           }
         }
 
         const handleComplete = (): void => {
           set((draft) => {
             if (draft.sessions[sessionId]) {
-              draft.sessions[sessionId].isStreaming = false
-              draft.sessions[sessionId].streamingMessageId = null
+              const session = draft.sessions[sessionId]
+
+              session.isStreaming = false
+              session.streamingMessageId = null
             }
           })
 

@@ -52,6 +52,8 @@ export interface LMStudioMessagePayload {
 export interface LMStudioFragmentPayload {
   content: string
   tokenCount?: number
+  reasoningType?: 'none' | 'reasoning' | 'reasoningStartTag' | 'reasoningEndTag'
+  isStructural?: boolean
 }
 
 export interface LMStudioErrorPayload {
