@@ -157,6 +157,7 @@ export function setupLMStudioSDKHandlers(): void {
         const tools = enableTools ? emailTools : []
 
         await model.act(chat, tools, {
+          allowParallelToolExecution: false, // Explicitly enforce sequential tool execution
           onRoundStart: (roundIndex) => {
             event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ROUND_START, {
               roundIndex
