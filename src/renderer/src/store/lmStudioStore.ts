@@ -563,27 +563,38 @@ export const useLMStudioStore = create<LMStudioState>()(
         // Handle message events which include tool call results
         const handleMessage = (_event: unknown, data: LMStudioMessagePayload): void => {
           logInfo('Received message with potential tool results:', data)
-          
+
           // Tool results come as part of messages after tool execution
-          if (data.toolCallResults && Array.isArray(data.toolCallResults) && data.toolCallResults.length > 0) {
+          if (
+            data.toolCallResults &&
+            Array.isArray(data.toolCallResults) &&
+            data.toolCallResults.length > 0
+          ) {
             const state = get()
             const session = state.sessions[sessionId]
-            
+
             if (session) {
               set((draft) => {
                 // Find the most recent assistant message with function calls
                 const messages = draft.sessions[sessionId].messages
-                const lastAssistantMessage = [...messages].reverse().find(m => 
-                  m.role === 'assistant' && m.functionCalls && m.functionCalls.length > 0
-                )
-                
-                if (lastAssistantMessage && lastAssistantMessage.functionCalls) {
+                const lastAssistantMessage = [...messages]
+                  .reverse()
+                  .find(
+                    (m) => m.role === 'assistant' && m.functionCalls && m.functionCalls.length > 0
+                  )
+
+                if (
+                  lastAssistantMessage &&
+                  lastAssistantMessage.functionCalls &&
+                  data.toolCallResults
+                ) {
                   // Map tool results to function calls
-                  data.toolCallResults.forEach((result: any, index: number) => {
+                  data.toolCallResults.forEach((result: unknown, index: number) => {
                     if (lastAssistantMessage.functionCalls![index]) {
                       // Update the function call with its result
                       if (result && typeof result === 'object') {
-                        lastAssistantMessage.functionCalls![index].result = result.content || result
+                        const res = result as { content?: unknown }
+                        lastAssistantMessage.functionCalls![index].result = res.content || result
                       }
                     }
                   })

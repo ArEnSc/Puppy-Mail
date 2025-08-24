@@ -82,6 +82,7 @@ export function ChatView(): JSX.Element {
 
       return cleanup
     }
+    return
   }, [
     activeSessionId,
     createSession,
@@ -320,7 +321,7 @@ export function ChatView(): JSX.Element {
                                           Result:
                                         </div>
                                         <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                                          {typeof call.result === 'object' 
+                                          {typeof call.result === 'object'
                                             ? JSON.stringify(call.result, null, 2)
                                             : String(call.result)}
                                         </div>

@@ -15,7 +15,9 @@ const folderIcons = {
   trash: Trash2
 }
 
-export function FolderList(): JSX.Element {
+import React from 'react'
+
+export function FolderList(): React.JSX.Element {
   const {
     folders,
     selectedFolderId,

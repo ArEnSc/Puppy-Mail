@@ -26,7 +26,7 @@ class IPCClient {
     }
 
     try {
-      return await window.electron.ipcRenderer.invoke(channel, ...args)
+      return (await window.electron.ipcRenderer.invoke(channel, ...args)) as T
     } catch (error) {
       logError(`IPC error on channel ${channel}:`, error)
       throw error

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { ChevronDown, ChevronRight, MessageSquare, User, Bot, AlertCircle } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -18,7 +18,7 @@ export function PromptDisplay({
   prompt,
   messages,
   className = ''
-}: PromptDisplayProps): JSX.Element {
+}: PromptDisplayProps): React.JSX.Element {
   const [expandedPrompt, setExpandedPrompt] = useState(false)
   const [expandedMessages, setExpandedMessages] = useState(false)
 
@@ -30,7 +30,7 @@ export function PromptDisplay({
     setExpandedMessages((prev) => !prev)
   }
 
-  const getRoleIcon = (role: string): JSX.Element => {
+  const getRoleIcon = (role: string): React.JSX.Element => {
     switch (role) {
       case 'user':
         return <User className="h-4 w-4" />

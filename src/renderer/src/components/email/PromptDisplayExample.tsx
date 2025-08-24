@@ -1,7 +1,8 @@
+import React from 'react'
 import { PromptDisplay } from './PromptDisplay'
 
 // Example usage of PromptDisplay component
-export function PromptDisplayExample(): JSX.Element {
+export function PromptDisplayExample(): React.JSX.Element {
   const examplePrompt = `You are an AI assistant helping with email management tasks.
 Your goal is to help users organize, prioritize, and respond to their emails efficiently.
 You should be professional, concise, and helpful in your responses.`

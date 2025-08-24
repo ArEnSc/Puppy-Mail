@@ -317,12 +317,20 @@ export class UnifiedEmailService {
       snippet: doc.snippet,
       body: doc.body,
       date: doc.date,
-      attachments: Array.from(doc.attachments).map((att: any) => ({
-        id: att.attachmentId,
-        filename: att.filename,
-        mimeType: att.mimeType,
-        size: att.size
-      })),
+      attachments: Array.from(doc.attachments).map((att) => {
+        const attachment = att as {
+          attachmentId: string
+          filename: string
+          mimeType: string
+          size: number
+        }
+        return {
+          id: attachment.attachmentId,
+          filename: attachment.filename,
+          mimeType: attachment.mimeType,
+          size: attachment.size
+        }
+      }),
       labels: Array.from(doc.labels),
       isRead: doc.isRead,
       isStarred: doc.isStarred,
@@ -570,7 +578,9 @@ export class UnifiedEmailService {
     logInfo('[UnifiedEmailService] IPC handlers registered')
   }
 
-  private transformForRenderer(email: Email): any {
+  private transformForRenderer(
+    email: Email
+  ): Email & { cleanBody: string; categorizedAttachments: Record<string, EmailAttachment[]> } {
     const cleanEmail = getCleanEmail(email.body, email.attachments)
 
     return {

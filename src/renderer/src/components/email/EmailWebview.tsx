@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { ipc } from '@/lib/ipc'
 
 interface EmailWebviewProps {
@@ -6,7 +6,10 @@ interface EmailWebviewProps {
   className?: string
 }
 
-export function EmailWebview({ htmlContent, className = '' }: EmailWebviewProps): JSX.Element {
+export function EmailWebview({
+  htmlContent,
+  className = ''
+}: EmailWebviewProps): React.JSX.Element {
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { FolderList } from './FolderList'
 import { EmailList } from './EmailList'
 import { EmailDetail } from './EmailDetail'
@@ -7,7 +7,7 @@ import { ChatView } from './ChatView'
 import { SyncStatus } from '@/components/SyncStatus'
 import { useEmailStore } from '@/store/emailStore'
 
-export function EmailLayout(): JSX.Element {
+export function EmailLayout(): React.JSX.Element {
   // Get panel widths from store
   const { folderListWidth, emailListWidth, setPanelSizes, selectedAutomatedTask } = useEmailStore()
 
@@ -65,7 +65,7 @@ export function EmailLayout(): JSX.Element {
     }
   }, [folderListWidth, emailListWidth, setPanelSizes])
 
-  const handleResizeStart = (ref: React.RefObject<HTMLDivElement>): void => {
+  const handleResizeStart = (ref: React.RefObject<HTMLDivElement | null>): void => {
     if (ref.current) {
       ref.current.dataset.resizing = 'true'
       document.body.style.cursor = 'col-resize'
