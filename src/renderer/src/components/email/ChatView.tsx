@@ -15,7 +15,8 @@ import {
   Code,
   Zap,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Clock
 } from 'lucide-react'
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
@@ -229,7 +230,7 @@ export function ChatView(): JSX.Element {
                   )}
 
                   {/* Message content */}
-                  <p className="text-sm whitespace-pre-wrap break-words">
+                  <div className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
                       (isStreaming && message.id === streamingMessageId && !message.reasoning ? (
                         <AnimatedShinyText className="text-sm">Thinking...</AnimatedShinyText>
@@ -239,7 +240,7 @@ export function ChatView(): JSX.Element {
                     {isStreaming && message.id === streamingMessageId && message.content && (
                       <span className="inline-block ml-1 animate-pulse">▋</span>
                     )}
-                  </p>
+                  </div>
 
                   {/* Reasoning section */}
                   {message.role === 'assistant' && message.reasoning && (
@@ -258,12 +259,12 @@ export function ChatView(): JSX.Element {
 
                       {expandedReasonings.has(message.id) && (
                         <div className="mt-2 pl-4">
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                          <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
                             {message.reasoning}
                             {isStreaming && message.id === streamingMessageId && (
                               <span className="inline-block ml-1 animate-pulse">▋</span>
                             )}
-                          </p>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -296,24 +297,42 @@ export function ChatView(): JSX.Element {
                                 key={index}
                                 className="pl-4 text-xs font-mono bg-muted/50 rounded p-2"
                               >
-                                <div className="font-semibold text-primary mb-1">
-                                  {call.name}({JSON.stringify(call.arguments, null, 2)})
-                                </div>
-                                {call.result !== undefined && (
-                                  <div className="mt-1">
-                                    <span className="text-green-600 dark:text-green-400">→ </span>
-                                    <span className="text-muted-foreground">
-                                      {JSON.stringify(call.result, null, 2)}
+                                {call.isStreaming ? (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Clock className="h-3 w-3 animate-pulse" />
+                                    <span className="italic">
+                                      {call.name === 'Loading...'
+                                        ? 'Preparing function call...'
+                                        : `Calling ${call.name}...`}
                                     </span>
                                   </div>
-                                )}
-                                {call.error && (
-                                  <div className="mt-1">
-                                    <span className="text-red-600 dark:text-red-400">✗ </span>
-                                    <span className="text-red-600 dark:text-red-400">
-                                      {call.error}
-                                    </span>
-                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="font-semibold text-primary mb-1">
+                                      {call.name}
+                                      {call.arguments && Object.keys(call.arguments).length > 0 && (
+                                        <>({JSON.stringify(call.arguments, null, 2)})</>
+                                      )}
+                                    </div>
+                                    {call.result !== undefined && (
+                                      <div className="mt-1">
+                                        <span className="text-green-600 dark:text-green-400">
+                                          →{' '}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {JSON.stringify(call.result, null, 2)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {call.error && (
+                                      <div className="mt-1">
+                                        <span className="text-red-600 dark:text-red-400">✗ </span>
+                                        <span className="text-red-600 dark:text-red-400">
+                                          {call.error}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             ))}
@@ -381,9 +400,9 @@ export function ChatView(): JSX.Element {
                     </div>
                   )}
 
-                  <p className="mt-1 text-xs opacity-70">
+                  <div className="mt-1 text-xs opacity-70">
                     {message.timestamp.toLocaleTimeString()}
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,13 +1,21 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
+import { enableMapSet } from 'immer'
 import { ipc } from '@/lib/ipc'
 import { LMSTUDIO_IPC_CHANNELS } from '@shared/types/lmStudio'
+
+// Enable MapSet plugin for Immer to support Map and Set
+enableMapSet()
 import type {
   LMStudioResponse,
   LMStudioChatSessionResponse,
   LMStudioFragmentPayload,
-  LMStudioErrorPayload
+  LMStudioErrorPayload,
+  LMStudioToolCallStartPayload,
+  LMStudioToolCallNamePayload,
+  LMStudioToolCallEndPayload,
+  LMStudioToolCallFinalizedPayload
 } from '@shared/types/lmStudio'
 import { logInfo, logError } from '@shared/logger'
 import { API_ENDPOINTS } from '@/shared/constants'
@@ -22,6 +30,8 @@ interface FunctionCall {
   arguments: Record<string, unknown>
   result?: unknown
   error?: string
+  isStreaming?: boolean
+  toolCallId?: string
 }
 
 interface Message {
@@ -35,12 +45,21 @@ interface Message {
   contextMessages?: Array<{ role: string; content: string }>
 }
 
+interface ToolCallTracker {
+  roundIndex: number
+  callId: number
+  toolCallId?: string
+  name?: string
+  functionCallIndex?: number
+}
+
 interface ChatSession {
   id: string
   systemPrompt?: string
   messages: Message[]
   isStreaming: boolean
   streamingMessageId: string | null
+  activeToolCalls?: Map<string, ToolCallTracker>
 }
 
 interface LMStudioState {
@@ -371,6 +390,19 @@ export const useLMStudioStore = create<LMStudioState>()(
             if (draft.sessions[sessionId]) {
               const session = draft.sessions[sessionId]
 
+              // Clean up streaming tool calls
+              if (session.streamingMessageId) {
+                const message = session.messages.find((m) => m.id === session.streamingMessageId)
+                if (message?.functionCalls) {
+                  message.functionCalls.forEach((call) => {
+                    if (call.isStreaming) {
+                      call.isStreaming = false
+                    }
+                  })
+                }
+              }
+
+              session.activeToolCalls = undefined
               session.isStreaming = false
               session.streamingMessageId = null
             }
@@ -401,32 +433,130 @@ export const useLMStudioStore = create<LMStudioState>()(
           callbacks.onError?.(data.error)
         }
 
-        const handleToolCallEnd = (_event: unknown, data: { toolCall?: ToolCall }): void => {
-          if (data.toolCall) {
-            const state = get()
-            const session = state.sessions[sessionId]
+        const handleToolCallStart = (_event: unknown, data: LMStudioToolCallStartPayload): void => {
+          const key = `${data.roundIndex}-${data.callId}`
 
-            if (session?.streamingMessageId) {
-              set((draft) => {
-                const message = draft.sessions[sessionId].messages.find(
-                  (m) => m.id === session.streamingMessageId
-                )
+          set((draft) => {
+            const session = draft.sessions[sessionId]
+            if (session) {
+              if (!session.activeToolCalls) {
+                session.activeToolCalls = new Map()
+              }
+
+              const tracker: ToolCallTracker = {
+                roundIndex: data.roundIndex,
+                callId: data.callId,
+                toolCallId: data.toolCallId
+              }
+
+              if (session.streamingMessageId) {
+                const message = session.messages.find((m) => m.id === session.streamingMessageId)
                 if (message) {
-                  const functionCall: FunctionCall = {
-                    name: data.toolCall!.name,
-                    arguments: data.toolCall!.arguments || {}
-                  }
-
                   if (!message.functionCalls) {
                     message.functionCalls = []
                   }
+
+                  const functionCall: FunctionCall = {
+                    name: 'Loading...',
+                    arguments: {},
+                    isStreaming: true,
+                    toolCallId: data.toolCallId
+                  }
+
+                  tracker.functionCallIndex = message.functionCalls.length
                   message.functionCalls.push(functionCall)
                 }
-              })
-            }
+              }
 
-            callbacks.onToolCall?.(data.toolCall)
+              session.activeToolCalls.set(key, tracker)
+            }
+          })
+        }
+
+        const handleToolCallName = (_event: unknown, data: LMStudioToolCallNamePayload): void => {
+          const key = `${data.roundIndex}-${data.callId}`
+
+          set((draft) => {
+            const session = draft.sessions[sessionId]
+            const tracker = session?.activeToolCalls?.get(key)
+
+            if (tracker) {
+              tracker.name = data.name
+
+              if (session.streamingMessageId && tracker.functionCallIndex !== undefined) {
+                const message = session.messages.find((m) => m.id === session.streamingMessageId)
+                if (message?.functionCalls?.[tracker.functionCallIndex]) {
+                  message.functionCalls[tracker.functionCallIndex].name = data.name
+                }
+              }
+            }
+          })
+        }
+
+        const handleToolCallEnd = (_event: unknown, data: LMStudioToolCallEndPayload): void => {
+          const key = `${data.roundIndex}-${data.callId}`
+
+          set((draft) => {
+            const session = draft.sessions[sessionId]
+            const tracker = session?.activeToolCalls?.get(key)
+
+            if (tracker && session.streamingMessageId) {
+              const message = session.messages.find((m) => m.id === session.streamingMessageId)
+
+              if (
+                message &&
+                tracker.functionCallIndex !== undefined &&
+                message.functionCalls?.[tracker.functionCallIndex]
+              ) {
+                const toolCallData = data.toolCall
+                if (toolCallData) {
+                  const functionCall = message.functionCalls[tracker.functionCallIndex]
+                  functionCall.name = toolCallData.name || tracker.name || 'Unknown'
+                  functionCall.arguments = toolCallData.arguments || {}
+                  functionCall.isStreaming = false
+                }
+              }
+            }
+          })
+
+          if (data.toolCall && data.toolCall.name) {
+            callbacks.onToolCall?.({
+              name: data.toolCall.name,
+              arguments: data.toolCall.arguments
+            })
           }
+        }
+
+        const handleToolCallFinalized = (
+          _event: unknown,
+          data: LMStudioToolCallFinalizedPayload
+        ): void => {
+          const key = `${data.roundIndex}-${data.callId}`
+
+          set((draft) => {
+            const session = draft.sessions[sessionId]
+            const tracker = session?.activeToolCalls?.get(key)
+
+            if (tracker && session.streamingMessageId) {
+              const message = session.messages.find((m) => m.id === session.streamingMessageId)
+
+              if (
+                message &&
+                tracker.functionCallIndex !== undefined &&
+                message.functionCalls?.[tracker.functionCallIndex]
+              ) {
+                const toolCallData = data.toolCall
+                if (toolCallData) {
+                  const functionCall = message.functionCalls[tracker.functionCallIndex]
+                  functionCall.name = toolCallData.name || functionCall.name
+                  functionCall.arguments = toolCallData.arguments || functionCall.arguments
+                  functionCall.isStreaming = false
+                }
+              }
+
+              session.activeToolCalls?.delete(key)
+            }
+          })
         }
 
         // Register handlers
@@ -442,9 +572,21 @@ export const useLMStudioStore = create<LMStudioState>()(
           LMSTUDIO_IPC_CHANNELS.LMSTUDIO_ERROR,
           handleError as (...args: unknown[]) => void
         )
-        const unsubscribeToolCall = ipc.on(
+        const unsubscribeToolCallStart = ipc.on(
+          LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_START,
+          handleToolCallStart as (...args: unknown[]) => void
+        )
+        const unsubscribeToolCallName = ipc.on(
+          LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_NAME,
+          handleToolCallName as (...args: unknown[]) => void
+        )
+        const unsubscribeToolCallEnd = ipc.on(
           LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_END,
           handleToolCallEnd as (...args: unknown[]) => void
+        )
+        const unsubscribeToolCallFinalized = ipc.on(
+          LMSTUDIO_IPC_CHANNELS.LMSTUDIO_TOOL_CALL_FINALIZED,
+          handleToolCallFinalized as (...args: unknown[]) => void
         )
 
         // Return cleanup function
@@ -452,7 +594,10 @@ export const useLMStudioStore = create<LMStudioState>()(
           unsubscribeFragment()
           unsubscribeComplete()
           unsubscribeError()
-          unsubscribeToolCall()
+          unsubscribeToolCallStart()
+          unsubscribeToolCallName()
+          unsubscribeToolCallEnd()
+          unsubscribeToolCallFinalized()
         }
       }
     })),
