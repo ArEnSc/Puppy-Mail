@@ -180,7 +180,8 @@ export function setupLMStudioSDKHandlers(): void {
             event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_FRAGMENT, {
               content: fragment.content,
               tokenCount: fragment.tokensCount,
-              reasoningType: fragment.reasoningType
+              reasoningType: fragment.reasoningType,
+              isStructural: fragment.isStructural
             } as LMStudioFragmentPayload)
           },
           onToolCallRequestStart: (roundIndex, callId, info) => {

@@ -43,14 +43,6 @@ interface ChatSession {
   streamingMessageId: string | null
 }
 
-// Regex pattern to match special tokens like <|some text|>
-const SPECIAL_TOKEN_PATTERN = /<\|[^|]*\|>/g
-
-// Function to remove special tokens from content
-const removeSpecialTokens = (content: string): string => {
-  return content.replace(SPECIAL_TOKEN_PATTERN, '')
-}
-
 interface LMStudioState {
   // Connection state
   url: string
@@ -60,9 +52,6 @@ interface LMStudioState {
   isAutoConnecting: boolean
   error: string | null
   lastValidated: Date | null
-
-  // Settings
-  filterSpecialTokens: boolean
 
   // Chat sessions
   sessions: Record<string, ChatSession>
@@ -74,9 +63,6 @@ interface LMStudioState {
   setAutoConnecting: (isAutoConnecting: boolean) => void
   connect: () => Promise<void>
   disconnect: () => void
-
-  // Actions - Settings
-  setFilterSpecialTokens: (filter: boolean) => void
 
   // Actions - Chat
   createSession: (systemPrompt?: string) => string
@@ -122,9 +108,6 @@ export const useLMStudioStore = create<LMStudioState>()(
       isAutoConnecting: false,
       error: null,
       lastValidated: null,
-
-      // Initial settings
-      filterSpecialTokens: false, // Default to NOT filtering tokens
 
       // Initial chat state
       sessions: {},
@@ -210,12 +193,6 @@ export const useLMStudioStore = create<LMStudioState>()(
         // Disconnect via IPC
         ipc.send(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_DISCONNECT)
       },
-
-      // Settings actions
-      setFilterSpecialTokens: (filter) =>
-        set((draft) => {
-          draft.filterSpecialTokens = filter
-        }),
 
       // Chat actions
       createSession: (systemPrompt) => {
@@ -361,36 +338,26 @@ export const useLMStudioStore = create<LMStudioState>()(
           const state = get()
           const session = state.sessions[sessionId]
 
-          if (session?.streamingMessageId) {
-            // Only filter special tokens from non-reasoning content
-            const content =
-              data.reasoningType === 'reasoning'
-                ? data.content // Keep reasoning content as-is
-                : state.filterSpecialTokens
-                  ? removeSpecialTokens(data.content)
-                  : data.content
-
-            if (content) {
-              set((draft) => {
-                const message = draft.sessions[sessionId].messages.find(
-                  (m) => m.id === session.streamingMessageId
-                )
-                if (message) {
-                  // Append to reasoning or content based on reasoningType
-                  if (data.reasoningType === 'reasoning') {
-                    if (!message.reasoning) {
-                      message.reasoning = ''
-                    }
-                    message.reasoning += content
-                  } else if (data.reasoningType === 'none' || !data.reasoningType) {
-                    message.content += content
+          if (session?.streamingMessageId && data.content) {
+            set((draft) => {
+              const message = draft.sessions[sessionId].messages.find(
+                (m) => m.id === session.streamingMessageId
+              )
+              if (message) {
+                // Append to reasoning or content based on reasoningType
+                if (data.reasoningType === 'reasoning') {
+                  if (!message.reasoning) {
+                    message.reasoning = ''
                   }
-                  // Skip reasoningStartTag and reasoningEndTag
+                  message.reasoning += data.content
+                } else if (data.reasoningType === 'none' || !data.reasoningType) {
+                  message.content += data.content
                 }
-              })
+                // Skip reasoningStartTag and reasoningEndTag
+              }
+            })
 
-              callbacks.onFragment?.(content, data.reasoningType)
-            }
+            callbacks.onFragment?.(data.content, data.reasoningType)
           }
         }
 
@@ -398,15 +365,6 @@ export const useLMStudioStore = create<LMStudioState>()(
           set((draft) => {
             if (draft.sessions[sessionId]) {
               const session = draft.sessions[sessionId]
-
-              // Final cleanup of special tokens in the completed message (if enabled)
-              if (draft.filterSpecialTokens && session.streamingMessageId) {
-                const message = session.messages.find((m) => m.id === session.streamingMessageId)
-                if (message) {
-                  message.content = removeSpecialTokens(message.content)
-                  // Don't remove special tokens from reasoning - we want to see the raw thought process
-                }
-              }
 
               session.isStreaming = false
               session.streamingMessageId = null
