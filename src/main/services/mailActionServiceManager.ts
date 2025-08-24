@@ -1,10 +1,10 @@
 import { EmailService } from './email/emailService'
 import { logInfo } from '../../shared/logger'
-import { 
-  EmailComposition, 
-  ScheduledEmail, 
-  LabelOperation, 
-  EmailMessage 
+import {
+  EmailComposition,
+  ScheduledEmail,
+  LabelOperation,
+  EmailMessage
 } from '../../types/mailActions'
 
 class MailActionService {
@@ -15,19 +15,21 @@ class MailActionService {
     logInfo('[MailActionService] Email service configured')
   }
 
-  async sendEmail(composition: EmailComposition): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendEmail(
+    composition: EmailComposition
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.emailService) {
       return { success: false, error: 'Email service not configured' }
     }
 
     // Convert EmailComposition to the format expected by EmailService
     const emailServiceComposition = {
-      to: composition.to.map(addr => addr.email),
-      cc: composition.cc?.map(addr => addr.email),
-      bcc: composition.bcc?.map(addr => addr.email),
+      to: composition.to.map((addr) => addr.email),
+      cc: composition.cc?.map((addr) => addr.email),
+      bcc: composition.bcc?.map((addr) => addr.email),
       subject: composition.subject,
       body: composition.body,
-      attachments: composition.attachments?.map(path => ({
+      attachments: composition.attachments?.map((path) => ({
         filename: path.split('/').pop() || 'attachment',
         content: Buffer.from(''), // Would need to read file
         mimeType: 'application/octet-stream'
@@ -37,7 +39,9 @@ class MailActionService {
     return this.emailService.sendEmail(emailServiceComposition)
   }
 
-  async scheduleEmail(_scheduled: ScheduledEmail): Promise<{ success: boolean; scheduledId?: string; error?: string }> {
+  async scheduleEmail(
+    _scheduled: ScheduledEmail
+  ): Promise<{ success: boolean; scheduledId?: string; error?: string }> {
     // TODO: Implement email scheduling
     return { success: false, error: 'Email scheduling not yet implemented' }
   }
@@ -48,19 +52,30 @@ class MailActionService {
   }
 
   // Add missing methods
-  async addLabels(_emailId: string, _labelIds: string[]): Promise<{ success: boolean; error?: string }> {
+  async addLabels(
+    _emailId: string,
+    _labelIds: string[]
+  ): Promise<{ success: boolean; error?: string }> {
     return { success: false, error: 'Label operations not yet implemented' }
   }
 
-  async removeLabels(_emailId: string, _labelIds: string[]): Promise<{ success: boolean; error?: string }> {
+  async removeLabels(
+    _emailId: string,
+    _labelIds: string[]
+  ): Promise<{ success: boolean; error?: string }> {
     return { success: false, error: 'Label operations not yet implemented' }
   }
 
-  async listenToInbox(_filter: any, _callback: (emails: EmailMessage[]) => void): Promise<{ success: boolean; listenerId?: string; error?: string }> {
+  async listenToInbox(
+    _filter: any,
+    _callback: (emails: EmailMessage[]) => void
+  ): Promise<{ success: boolean; listenerId?: string; error?: string }> {
     return { success: false, error: 'Inbox listening not yet implemented' }
   }
 
-  async getEmails(filter?: any): Promise<{ success: boolean; emails?: EmailMessage[]; error?: string }> {
+  async getEmails(
+    filter?: any
+  ): Promise<{ success: boolean; emails?: EmailMessage[]; error?: string }> {
     if (!this.emailService) {
       return { success: false, error: 'Email service not configured' }
     }
@@ -68,7 +83,7 @@ class MailActionService {
     const result = await this.emailService.getEmails({ filter })
     if (result.success && result.emails) {
       // Convert to EmailMessage format
-      const emailMessages: EmailMessage[] = result.emails.map(email => ({
+      const emailMessages: EmailMessage[] = result.emails.map((email) => ({
         id: email.id,
         from: email.from,
         to: email.to,
@@ -96,7 +111,7 @@ class MailActionService {
     }
 
     return this.emailService.listenForEmails(filter, (emails) => {
-      const emailMessages: EmailMessage[] = emails.map(email => ({
+      const emailMessages: EmailMessage[] = emails.map((email) => ({
         id: email.id,
         from: email.from,
         to: email.to,
@@ -114,14 +129,17 @@ class MailActionService {
     })
   }
 
-  async analyzeEmails(filter: any, prompt: string): Promise<{ success: boolean; analysis?: string; emails?: EmailMessage[]; error?: string }> {
+  async analyzeEmails(
+    filter: any,
+    prompt: string
+  ): Promise<{ success: boolean; analysis?: string; emails?: EmailMessage[]; error?: string }> {
     if (!this.emailService) {
       return { success: false, error: 'Email service not configured' }
     }
 
     const result = await this.emailService.analyzeEmails(filter, prompt)
     if (result.success && result.emails) {
-      const emailMessages: EmailMessage[] = result.emails.map(email => ({
+      const emailMessages: EmailMessage[] = result.emails.map((email) => ({
         id: email.id,
         from: email.from,
         to: email.to,

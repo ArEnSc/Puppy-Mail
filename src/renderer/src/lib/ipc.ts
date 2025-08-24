@@ -107,15 +107,5 @@ export const IPC_CHANNELS = {
   // Auth operations
   AUTH_CHECK: 'auth:check',
   AUTH_GOOGLE_START: 'google-oauth-start',
-  AUTH_GOOGLE_COMPLETE: 'google-oauth-complete',
-
-  // LM Studio operations (legacy - still used by ChatView)
-  LMSTUDIO_VALIDATE: 'lmstudio:validate',
-  LMSTUDIO_STREAM: 'lmstudio:stream',
-
-  // LM Studio events (legacy - still used by ChatView)
-  LMSTUDIO_STREAM_CHUNK: 'lmstudio:stream:chunk',
-  LMSTUDIO_STREAM_ERROR: 'lmstudio:stream:error',
-  LMSTUDIO_STREAM_COMPLETE: 'lmstudio:stream:complete',
-  LMSTUDIO_STREAM_FUNCTION_CALL: 'lmstudio:stream:functionCall'
+  AUTH_GOOGLE_COMPLETE: 'google-oauth-complete'
 } as const
