@@ -3,7 +3,7 @@ import { EmailLayout } from './components/email/EmailLayout'
 import { Settings } from './components/Settings'
 import { useEmailSync } from './hooks/useEmailSync'
 import { useLMStudioStore } from './store/lmStudioStore'
-import { logInfo } from '@shared/logger'
+import { logError, logInfo } from '@shared/logger'
 
 function App(): React.JSX.Element {
   // Sync emails with Gmail
@@ -32,7 +32,7 @@ function App(): React.JSX.Element {
           setAutoConnecting(false)
         })
         .catch((error) => {
-          logInfo('Auto-connect failed:', error)
+          logError('Auto-connect failed:', error)
           setAutoConnecting(false)
         })
     }

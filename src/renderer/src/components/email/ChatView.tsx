@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, JSX } from 'react'
+import { useState, useRef, useEffect, type JSX } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { useLMStudioStore } from '@/store/lmStudioStore'
+import { useAutoScroll, useAutoResizeTextarea } from '@/hooks/layoutHooks'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -19,23 +20,6 @@ import {
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 
-// Using the Message type from lmStudioStore
-type Message = {
-  prompt?: string
-  contextMessages?: Array<{ role: string; content: string }>
-  id: string
-  role: 'system' | 'assistant' | 'user' | 'error'
-  content: string
-  reasoning?: string
-  functionCalls?: Array<{
-    name: string
-    arguments: Record<string, unknown>
-    result?: unknown
-    error?: string
-  }>
-  timestamp: Date
-}
-
 export function ChatView(): JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
   const {
@@ -43,50 +27,20 @@ export function ChatView(): JSX.Element {
     isAutoConnecting,
     isValidating,
     model,
+    sessions,
+    activeSessionId,
     createSession,
-    sendMessage: sendToLMStudio,
+    setActiveSession,
+    sendMessage,
     initializeChat,
-    registerEventHandlers,
-    sessions
+    registerEventHandlers
   } = useLMStudioStore()
-  const prompt =
-    'You are Chloe a Sassy, Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise.'
 
-  // Session management
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const session = sessionId && sessions[sessionId] ? sessions[sessionId] : null
-  const isStreaming = session?.isStreaming || false
+  const systemPrompt =
+    'You are Chloe, a sassy Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise, and occasionally show your playful personality.'
 
-  // Initialize session and event handlers on mount
-  useEffect(() => {
-    const newSessionId = createSession(prompt)
-    setSessionId(newSessionId)
-    initializeChat(newSessionId, prompt)
-
-    // Register event handlers
-    const cleanup = registerEventHandlers(newSessionId, {
-      onFragment: () => {
-        // State is managed in the store, but we can add custom logic here if needed
-      },
-      onError: (error: string) => {
-        logError('LM Studio error:', error)
-      },
-      onComplete: () => {
-        // Completion is handled in the store
-      },
-      onToolCall: () => {
-        // Tool calls are handled in the store
-      }
-    })
-
-    return cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  // Use messages from the session in the store
-  const messages = session?.messages || []
+  // UI state
   const [inputValue, setInputValue] = useState('')
-  // Streaming state from store
-  const streamingMessageId = session?.streamingMessageId || null
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set())
   const [expandedFunctionCalls, setExpandedFunctionCalls] = useState<Set<string>>(new Set())
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
@@ -94,68 +48,74 @@ export function ChatView(): JSX.Element {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        '[data-radix-scroll-area-viewport]'
-      )
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
-      }
-    }
-  }, [messages])
+  // Get current session from store
+  const currentSession = activeSessionId ? sessions[activeSessionId] : null
+  const messages = currentSession?.messages || []
+  const isStreaming = currentSession?.isStreaming || false
+  const streamingMessageId = currentSession?.streamingMessageId || null
 
+  // Initialize session on mount
   useEffect(() => {
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
-  }, [inputValue])
+    if (!activeSessionId) {
+      const sessionId = createSession(systemPrompt)
+      setActiveSession(sessionId)
 
-  // Add initial message when session is created
-  useEffect(() => {
-    if (sessionId && messages.length === 0) {
-      const lmStudioStore = useLMStudioStore.getState()
-      lmStudioStore.addMessage(sessionId, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content:
-          "Hello! I'm ready to help you with your automated tasks. What would you like to configure?",
-        timestamp: new Date(),
-        prompt: prompt,
-        contextMessages: [
-          {
-            role: 'system',
-            content: prompt
-          }
-        ]
+      // Initialize chat and add welcome message
+      initializeChat(sessionId, systemPrompt).then(() => {
+        const store = useLMStudioStore.getState()
+        store.addMessage(sessionId, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content:
+            "Woof! 🐾 I'm Chloe, your email automation assistant. I'm here to help you configure automated tasks. What would you like to set up today?",
+          timestamp: new Date()
+        })
       })
+
+      // Register event handlers
+      const cleanup = registerEventHandlers(sessionId, {
+        onError: (error: string) => {
+          logError('LM Studio chat error:', error)
+        }
+      })
+
+      return cleanup
     }
-  }, [sessionId, messages.length, prompt])
+  }, [
+    activeSessionId,
+    createSession,
+    setActiveSession,
+    initializeChat,
+    registerEventHandlers,
+    systemPrompt
+  ])
+
+  // Auto-scroll to bottom when messages change
+  useAutoScroll(scrollAreaRef, [messages])
+
+  // Auto-resize textarea based on content
+  useAutoResizeTextarea(textareaRef, inputValue)
 
   const handleSend = async (): Promise<void> => {
-    if (inputValue.trim() && !isStreaming && sessionId) {
-      const content = inputValue.trim()
-      setInputValue('')
+    if (!inputValue.trim() || isStreaming || !activeSessionId) return
 
-      // Check if LM Studio is connected
-      if (!isConnected || !model || !sessionId) {
-        const errorMessage: Message = {
-          id: crypto.randomUUID(),
-          role: 'error',
-          content: 'Please connect to LM Studio in the settings first.',
-          timestamp: new Date()
-        }
-        const lmStudioStore = useLMStudioStore.getState()
-        lmStudioStore.addMessage(sessionId || '', errorMessage)
-        return
-      }
+    const content = inputValue.trim()
+    setInputValue('')
 
-      // Send message through the store
-      await sendToLMStudio(sessionId, content, enableFunctions)
+    // Check connection status
+    if (!isConnected || !model) {
+      const store = useLMStudioStore.getState()
+      store.addMessage(activeSessionId, {
+        id: crypto.randomUUID(),
+        role: 'error',
+        content: 'Please connect to LM Studio in the settings first.',
+        timestamp: new Date()
+      })
+      return
     }
+
+    // Send message through store
+    await sendMessage(activeSessionId, content, enableFunctions)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent): void => {
@@ -201,6 +161,36 @@ export function ChatView(): JSX.Element {
     })
   }
 
+  const getTaskTitle = (): string => {
+    switch (selectedAutomatedTask) {
+      case 'daily-summary':
+        return 'Daily Summary Configuration'
+      case 'email-cleanup':
+        return 'Email Cleanup Configuration'
+      default:
+        return 'Email Automation Assistant'
+    }
+  }
+
+  const getConnectionStatus = (): JSX.Element | null => {
+    if (isAutoConnecting || isValidating) {
+      return (
+        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Connecting to LM Studio...
+        </p>
+      )
+    }
+
+    if (isConnected && model) {
+      return (
+        <p className="text-xs text-muted-foreground mt-1">Connected to {model.split('/').pop()}</p>
+      )
+    }
+
+    return null
+  }
+
   return (
     <div className="relative flex h-full flex-col">
       <FlickeringGrid
@@ -211,18 +201,10 @@ export function ChatView(): JSX.Element {
         maxOpacity={0.15}
         flickerChance={0.1}
       />
+
       <div className="relative z-10 border-b border-border p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <h2 className="text-lg font-semibold">
-          {selectedAutomatedTask === 'daily-summary' && 'Daily Summary Configuration'}
-          {selectedAutomatedTask === 'email-cleanup' && 'Email Cleanup Configuration'}
-          {!selectedAutomatedTask && 'Task Assistant'}
-        </h2>
-        {(isAutoConnecting || isValidating) && (
-          <p className="text-xs text-muted-foreground mt-1">Connecting to LM Studio...</p>
-        )}
-        {isConnected && !isAutoConnecting && !isValidating && (
-          <p className="text-xs text-muted-foreground mt-1">Connected to {model}</p>
-        )}
+        <h2 className="text-lg font-semibold">{getTaskTitle()}</h2>
+        {getConnectionStatus()}
       </div>
 
       <ScrollArea ref={scrollAreaRef} className="relative z-10 flex-1 p-4">
@@ -243,7 +225,7 @@ export function ChatView(): JSX.Element {
                   {message.role === 'error' && (
                     <div className="flex items-start gap-2 mb-2">
                       <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                      <span className="font-semibold text-sm">LM Studio Error</span>
+                      <span className="font-semibold text-sm">Connection Error</span>
                     </div>
                   )}
 
@@ -260,37 +242,35 @@ export function ChatView(): JSX.Element {
                     )}
                   </p>
 
-                  {/* Reasoning section - collapsible, only for assistant messages */}
-                  {message.role === 'assistant' &&
-                    message.reasoning !== undefined &&
-                    message.reasoning && (
-                      <div className="mt-2 border-t border-border/50 pt-2">
-                        <button
-                          onClick={() => toggleReasoning(message.id)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {expandedReasonings.has(message.id) ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                          <span className="font-medium">Reasoning</span>
-                        </button>
-
-                        {expandedReasonings.has(message.id) && (
-                          <div className="mt-2 pl-4">
-                            <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
-                              {message.reasoning}
-                              {isStreaming && message.id === streamingMessageId && (
-                                <span className="inline-block ml-1 animate-pulse">▋</span>
-                              )}
-                            </p>
-                          </div>
+                  {/* Reasoning section */}
+                  {message.role === 'assistant' && message.reasoning && (
+                    <div className="mt-2 border-t border-border/50 pt-2">
+                      <button
+                        onClick={() => toggleReasoning(message.id)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {expandedReasonings.has(message.id) ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
                         )}
-                      </div>
-                    )}
+                        <span className="font-medium">Reasoning</span>
+                      </button>
 
-                  {/* Function calls section - collapsible, only for assistant messages */}
+                      {expandedReasonings.has(message.id) && (
+                        <div className="mt-2 pl-4">
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                            {message.reasoning}
+                            {isStreaming && message.id === streamingMessageId && (
+                              <span className="inline-block ml-1 animate-pulse">▋</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Function calls section */}
                   {message.role === 'assistant' &&
                     message.functionCalls &&
                     message.functionCalls.length > 0 && (
@@ -343,7 +323,7 @@ export function ChatView(): JSX.Element {
                       </div>
                     )}
 
-                  {/* Prompt and Context section - collapsible, only for assistant messages */}
+                  {/* Prompt and Context section */}
                   {message.role === 'assistant' && message.prompt && message.contextMessages && (
                     <div className="mt-2 border-t border-border/50 pt-2">
                       <button
@@ -356,7 +336,7 @@ export function ChatView(): JSX.Element {
                           <ChevronRight className="h-3 w-3" />
                         )}
                         <MessageSquare className="h-3 w-3" />
-                        <span className="font-medium">Prompt & Context</span>
+                        <span className="font-medium">Context</span>
                       </button>
 
                       {expandedPrompts.has(message.id) && (
@@ -369,47 +349,38 @@ export function ChatView(): JSX.Element {
                               {message.prompt}
                             </div>
                           </div>
-                          <div className="pl-4">
-                            <div className="text-xs font-medium text-muted-foreground mb-1">
-                              Context Messages ({message.contextMessages.length}):
-                            </div>
-                            <div className="space-y-1 max-h-48 overflow-y-auto">
-                              {message.contextMessages.map((msg, idx) => (
-                                <div
-                                  key={idx}
-                                  className={`text-xs rounded p-2 ${
-                                    msg.role === 'user'
-                                      ? 'bg-primary/10'
-                                      : msg.role === 'assistant'
-                                        ? 'bg-muted/50'
-                                        : 'bg-secondary/50'
-                                  }`}
-                                >
-                                  <div className="font-medium capitalize mb-1">{msg.role}:</div>
-                                  <div className="whitespace-pre-wrap break-words">
-                                    {msg.content.length > 200
-                                      ? msg.content.substring(0, 200) + '...'
-                                      : msg.content}
+                          {message.contextMessages.length > 0 && (
+                            <div className="pl-4">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">
+                                Context Messages ({message.contextMessages.length}):
+                              </div>
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {message.contextMessages.map((msg, idx) => (
+                                  <div
+                                    key={idx}
+                                    className={`text-xs rounded p-2 ${
+                                      msg.role === 'user'
+                                        ? 'bg-primary/10'
+                                        : msg.role === 'assistant'
+                                          ? 'bg-muted/50'
+                                          : 'bg-secondary/50'
+                                    }`}
+                                  >
+                                    <div className="font-medium capitalize mb-1">{msg.role}:</div>
+                                    <div className="whitespace-pre-wrap break-words">
+                                      {msg.content.length > 200
+                                        ? msg.content.substring(0, 200) + '...'
+                                        : msg.content}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
-
-                  {/* Show reasoning indicator while streaming but no content yet */}
-                  {message.role === 'assistant' &&
-                    isStreaming &&
-                    message.id === streamingMessageId &&
-                    !message.content &&
-                    message.reasoning && (
-                      <div className="mt-2 text-xs text-muted-foreground italic">
-                        Processing reasoning...
-                      </div>
-                    )}
 
                   <p className="mt-1 text-xs opacity-70">
                     {message.timestamp.toLocaleTimeString()}
@@ -430,32 +401,14 @@ export function ChatView(): JSX.Element {
             className={`flex items-center gap-2 ${enableFunctions ? 'text-primary' : 'text-muted-foreground'}`}
           >
             <Code className="h-4 w-4" />
-            <span>Function Calling {enableFunctions ? 'ON' : 'OFF'}</span>
+            <span>Functions {enableFunctions ? 'ON' : 'OFF'}</span>
           </Button>
           {enableFunctions && (
             <span className="text-xs text-muted-foreground">
-              Try: &quot;What&apos;s 5 + 7?&quot; or &quot;What time is it?&quot;
+              Try: &quot;What&apos;s the weather?&quot; or &quot;Calculate 15% tip on $85&quot;
             </span>
           )}
         </div>
-
-        {/* Temporary error test button */}
-        {/* <Button
-          onClick={() => {
-            const mockError: Message = {
-              id: crypto.randomUUID(),
-              role: 'error',
-              content:
-                'The number of tokens to keep from the initial prompt is greater than the context length. Try to load the model with a larger context length, or provide a shorter input.',
-              timestamp: new Date()
-            }
-            setMessages((prev) => [...prev, mockError])
-          }}
-          className="mb-2 w-full"
-          variant="destructive"
-        >
-          Test Error Message
-        </Button> */}
 
         <div className="flex gap-2">
           <Textarea
@@ -463,14 +416,16 @@ export function ChatView(): JSX.Element {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Type your message..."
+            placeholder={
+              isConnected ? 'Type your message...' : 'Connect to LM Studio to start chatting...'
+            }
             className="flex-1 min-h-[44px] max-h-[200px] resize-none"
-            disabled={isStreaming}
+            disabled={isStreaming || !isConnected}
             rows={1}
           />
           <Button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isStreaming}
+            disabled={!inputValue.trim() || isStreaming || !isConnected}
             className="self-end"
           >
             {isStreaming ? (

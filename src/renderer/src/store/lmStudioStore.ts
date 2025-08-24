@@ -445,7 +445,10 @@ export const useLMStudioStore = create<LMStudioState>()(
       }),
       onRehydrateStorage: () => (state) => {
         // Log rehydration for debugging
-        logInfo('LMStudioStore rehydrated', state ? { url: state.url, model: state.model } : 'no state')
+        logInfo(
+          'LMStudioStore rehydrated',
+          state ? { url: state.url, model: state.model } : 'no state'
+        )
       }
     }
   )
