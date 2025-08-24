@@ -333,7 +333,7 @@ export const useLMStudioStore = create<LMStudioState>()(
 
         // Get updated session state after adding user message
         const updatedSession = get().sessions[sessionId]
-        
+
         // Prepare context messages for debugging (all messages including the one just added)
         const contextMessages = updatedSession.messages.map((msg) => ({
           role: msg.role,
@@ -612,6 +612,12 @@ export const useLMStudioStore = create<LMStudioState>()(
                       if (matchingCall) {
                         // Update the matching function call with its result
                         matchingCall.result = toolResult.content || result
+                        logInfo('Tool call result:', {
+                          toolCallId: matchingCall.toolCallId,
+                          result: matchingCall.result,
+                          rawResult: result,
+                          toolResultContent: toolResult.content
+                        })
                       } else {
                         // Fallback to index-based mapping if toolCallId is not available
                         if (data.toolCallRequests) {

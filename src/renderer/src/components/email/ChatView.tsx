@@ -316,34 +316,46 @@ export function ChatView(): JSX.Element {
                                       )}
                                     </div>
                                     {call.result !== undefined && (
-                                      <div
-                                        className={`mt-2 p-2 rounded border ${
-                                          typeof call.result === 'object' &&
-                                          call.result !== null &&
-                                          'success' in call.result &&
-                                          call.result.success === false
-                                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
-                                            : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
-                                        }`}
-                                      >
-                                        <div
-                                          className={`text-xs font-medium mb-1 ${
-                                            typeof call.result === 'object' &&
-                                            call.result !== null &&
-                                            'success' in call.result &&
-                                            call.result.success === false
-                                              ? 'text-red-700 dark:text-red-400'
-                                              : 'text-green-700 dark:text-green-400'
-                                          }`}
-                                        >
-                                          Result:
-                                        </div>
-                                        <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                                          {typeof call.result === 'object'
-                                            ? JSON.stringify(call.result, null, 2)
-                                            : String(call.result)}
-                                        </div>
-                                      </div>
+                                      (() => {
+                                        // Parse result if it's a string
+                                        let resultObj = call.result;
+                                        if (typeof call.result === 'string') {
+                                          try {
+                                            resultObj = JSON.parse(call.result);
+                                          } catch {
+                                            resultObj = call.result;
+                                          }
+                                        }
+                                        
+                                        // Check if it's an error
+                                        const isError = resultObj && typeof resultObj === 'object' && 
+                                                       (resultObj.success === false || 'error' in resultObj);
+                                        
+                                        return (
+                                          <div
+                                            className={`mt-2 p-2 rounded border ${
+                                              isError
+                                                ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                                                : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                                            }`}
+                                          >
+                                            <div
+                                              className={`text-xs font-medium mb-1 ${
+                                                isError
+                                                  ? 'text-red-700 dark:text-red-400'
+                                                  : 'text-green-700 dark:text-green-400'
+                                              }`}
+                                            >
+                                              Result:
+                                            </div>
+                                            <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
+                                              {typeof call.result === 'object'
+                                                ? JSON.stringify(call.result, null, 2)
+                                                : String(call.result)}
+                                            </div>
+                                          </div>
+                                        );
+                                      })()
                                     )}
                                     {call.error && (
                                       <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
