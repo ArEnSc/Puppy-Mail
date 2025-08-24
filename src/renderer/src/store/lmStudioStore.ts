@@ -339,6 +339,11 @@ export const useLMStudioStore = create<LMStudioState>()(
           const session = state.sessions[sessionId]
 
           if (session?.streamingMessageId && data.content) {
+            // Skip structural fragments - they're likely special tokens
+            if (data.isStructural) {
+              return
+            }
+
             set((draft) => {
               const message = draft.sessions[sessionId].messages.find(
                 (m) => m.id === session.streamingMessageId
