@@ -38,7 +38,7 @@ export function ChatView(): JSX.Element {
   } = useLMStudioStore()
 
   const systemPrompt =
-    'You are Chloe, a sassy Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise, and occasionally show your playful personality.'
+    'You are Chloe, a sassy Boston Terrier and AI assistant helping users with email automation tasks. Be helpful, concise, and occasionally show your playful personality. When using tools/functions, interpret the results and provide a natural language response to the user. Never show raw JSON results or technical details like {"success":true,...} - instead, explain what happened in friendly terms.'
 
   // UI state
   const [inputValue, setInputValue] = useState('')
@@ -233,7 +233,7 @@ export function ChatView(): JSX.Element {
                   {/* Message content */}
                   <div className="text-sm whitespace-pre-wrap break-words">
                     {message.content ||
-                      (isStreaming && message.id === streamingMessageId && !message.reasoning ? (
+                      (isStreaming && message.id === streamingMessageId && !message.content ? (
                         <AnimatedShinyText className="text-sm">Thinking...</AnimatedShinyText>
                       ) : (
                         ''
@@ -316,8 +316,26 @@ export function ChatView(): JSX.Element {
                                       )}
                                     </div>
                                     {call.result !== undefined && (
-                                      <div className="mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800">
-                                        <div className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">
+                                      <div
+                                        className={`mt-2 p-2 rounded border ${
+                                          typeof call.result === 'object' &&
+                                          call.result !== null &&
+                                          'success' in call.result &&
+                                          call.result.success === false
+                                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                                            : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                                        }`}
+                                      >
+                                        <div
+                                          className={`text-xs font-medium mb-1 ${
+                                            typeof call.result === 'object' &&
+                                            call.result !== null &&
+                                            'success' in call.result &&
+                                            call.result.success === false
+                                              ? 'text-red-700 dark:text-red-400'
+                                              : 'text-green-700 dark:text-green-400'
+                                          }`}
+                                        >
                                           Result:
                                         </div>
                                         <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">

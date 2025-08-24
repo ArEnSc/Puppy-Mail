@@ -331,13 +331,24 @@ export const useLMStudioStore = create<LMStudioState>()(
           draft.sessions[sessionId].messages.push(userMessage)
         })
 
-        // Create assistant message placeholder
+        // Get updated session state after adding user message
+        const updatedSession = get().sessions[sessionId]
+        
+        // Prepare context messages for debugging (all messages including the one just added)
+        const contextMessages = updatedSession.messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content
+        }))
+
+        // Create assistant message placeholder with debugging info
         const assistantMessageId = crypto.randomUUID()
         const assistantMessage: Message = {
           id: assistantMessageId,
           role: 'assistant',
           content: '',
-          timestamp: new Date()
+          timestamp: new Date(),
+          prompt: session.systemPrompt,
+          contextMessages: contextMessages
         }
 
         set((draft) => {
