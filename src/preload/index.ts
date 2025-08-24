@@ -10,6 +10,7 @@ const customIpcRenderer = {
     const validChannels = [
       'email:fetch',
       'email:sync',
+      'email:send',
       'email:startPolling',
       'email:stopPolling',
       'auth:check',

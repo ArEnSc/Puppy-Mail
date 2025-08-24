@@ -588,13 +588,29 @@ export const useLMStudioStore = create<LMStudioState>()(
                   lastAssistantMessage.functionCalls &&
                   data.toolCallResults
                 ) {
-                  // Map tool results to function calls
-                  data.toolCallResults.forEach((result: unknown, index: number) => {
-                    if (lastAssistantMessage.functionCalls![index]) {
-                      // Update the function call with its result
-                      if (result && typeof result === 'object') {
-                        const res = result as { content?: unknown }
-                        lastAssistantMessage.functionCalls![index].result = res.content || result
+                  // Map tool results to function calls by toolCallId
+                  data.toolCallResults.forEach((result: unknown) => {
+                    if (result && typeof result === 'object') {
+                      const toolResult = result as { toolCallId?: string; content?: unknown }
+
+                      // Find the matching function call by toolCallId
+                      const matchingCall = lastAssistantMessage.functionCalls!.find(
+                        (call) => call.toolCallId === toolResult.toolCallId
+                      )
+
+                      if (matchingCall) {
+                        // Update the matching function call with its result
+                        matchingCall.result = toolResult.content || result
+                      } else {
+                        // Fallback to index-based mapping if toolCallId is not available
+                        if (data.toolCallRequests) {
+                          const results = data.toolCallRequests
+                          const index = results.indexOf(result)
+                          if (lastAssistantMessage.functionCalls![index]) {
+                            lastAssistantMessage.functionCalls![index].result =
+                              toolResult.content || result
+                          }
+                        }
                       }
                     }
                   })
