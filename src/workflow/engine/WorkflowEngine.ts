@@ -47,9 +47,7 @@ interface ProcessedInputs {
 }
 
 // Type guards
-function hasFromPreviousStep(obj: unknown): obj is { fromPreviousStep: string } {
-  return typeof obj === 'object' && obj !== null && 'fromPreviousStep' in obj
-}
+// Removed unused function - can be re-added if needed later
 
 export class WorkflowEngine {
   private mailActions: MailActionService
@@ -281,7 +279,7 @@ export class WorkflowEngine {
     }
   }
 
-  private resolveValue(value: any, context: WorkflowContext): any {
+  private resolveValue(value: unknown, context: WorkflowContext): unknown {
     // Handle strings that may contain references like "{{stepId.field}}"
     if (typeof value === 'string' && value.includes('{{') && value.includes('}}')) {
       // Replace all {{ref}} patterns in the string
@@ -314,7 +312,7 @@ export class WorkflowEngine {
     // Handle objects recursively
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       this.logger.debug('Resolving object:', { value }, {})
-      const resolved: any = {}
+      const resolved: Record<string, unknown> = {}
       for (const [key, val] of Object.entries(value)) {
         resolved[key] = this.resolveValue(val, context)
       }

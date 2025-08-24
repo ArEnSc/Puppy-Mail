@@ -76,17 +76,23 @@ export interface LMStudioToolCallNamePayload {
   name: string
 }
 
+// Tool call request structure from LM Studio SDK
+export interface LMStudioToolCallRequest {
+  name: string
+  arguments: Record<string, unknown>
+}
+
 export interface LMStudioToolCallEndPayload {
   roundIndex: number
   callId: number
-  toolCall: unknown
+  toolCall: LMStudioToolCallRequest
   rawContent: string | undefined
 }
 
 export interface LMStudioToolCallFinalizedPayload {
   roundIndex: number
   callId: number
-  toolCall: unknown
+  toolCall: LMStudioToolCallRequest
   rawContent: string | undefined
 }
 

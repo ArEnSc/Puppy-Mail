@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { formatFileSize } from '@/utils/formatters'
 
-export function EmailDetail(): JSX.Element {
+export function EmailDetail(): React.JSX.Element {
   const { getSelectedEmail, toggleStar, moveToTrash } = useEmailStore()
   const email = getSelectedEmail()
   const [viewMode, setViewMode] = useState<'clean' | 'original'>('clean')
@@ -72,7 +72,7 @@ export function EmailDetail(): JSX.Element {
         })
       : email.cleanBody || email.body
 
-  const getAttachmentIcon = (mimeType: string): React.ComponentType => {
+  const getAttachmentIcon = (mimeType: string): React.ComponentType<{ className?: string }> => {
     if (mimeType.startsWith('image/')) return Image
     if (mimeType === 'application/pdf') return FileText
     if (mimeType.startsWith('video/')) return Film

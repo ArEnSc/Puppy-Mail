@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -21,7 +21,7 @@ interface TaskRun {
   endTime?: Date
 }
 
-export function AutomatedTasksList(): JSX.Element {
+export function AutomatedTasksList(): React.JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
   const [taskRuns, setTaskRuns] = useState<TaskRun[]>([
     {

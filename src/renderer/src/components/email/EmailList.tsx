@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useEmailStore } from '@/store/emailStore'
 import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'
@@ -17,7 +17,7 @@ function formatEmailDate(date: Date): string {
   }
 }
 
-export function EmailList(): JSX.Element {
+export function EmailList(): React.JSX.Element {
   const {
     selectedEmailId,
     selectEmail,

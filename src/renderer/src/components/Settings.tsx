@@ -188,7 +188,7 @@ export function Settings(): JSX.Element {
       if (ipc.isAvailable()) {
         logInfo('Electron IPC available, starting OAuth')
         // Clear any previous errors
-        setGoogleAuth((prev) => ({ ...prev, error: null }))
+        setGoogleAuth({ error: null })
 
         // Listen for the OAuth response BEFORE sending the start event
         const handleOAuthComplete = (
@@ -211,7 +211,7 @@ export function Settings(): JSX.Element {
             setGoogleAuth({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
-              expiresAt: new Date(data.expiresAt),
+              expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
               userEmail: data.userEmail,
               isAuthenticated: true,
               error: null
@@ -232,7 +232,10 @@ export function Settings(): JSX.Element {
         }
 
         // Set up the listener first
-        ipc.once(IPC_CHANNELS.AUTH_GOOGLE_COMPLETE, handleOAuthComplete)
+        ipc.once(
+          IPC_CHANNELS.AUTH_GOOGLE_COMPLETE,
+          handleOAuthComplete as (...args: unknown[]) => void
+        )
 
         // Then send the start event
         logInfo('Sending google-oauth-start')

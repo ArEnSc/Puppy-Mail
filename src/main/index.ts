@@ -4,14 +4,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import * as dotenv from 'dotenv'
 import { GmailAuthService, setupAuthHandlers } from './auth/authService'
-import { createEmailService } from './services/email/emailService'
+import { UnifiedEmailService } from './services/UnifiedEmailService'
 import { createDatabase, closeDatabase } from './db/database'
 import { logInfo, logError } from '../shared/logger'
 
 import { setupLMStudioSDKHandlers } from './ipc/lmStudioSDKHandlers'
-import { setupMailActionHandlers } from './ipc/mailActionHandlers'
-
-import { sanitizeEmailBody, extractName, extractEmailAddress } from './utils/emailSanitizer'
 
 // Load environment variables
 dotenv.config()
@@ -31,7 +28,7 @@ function createWindow(): void {
       sandbox: false
     }
   })
-  //mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
   mainWindow.on('ready-to-show', () => {
     logInfo('Main window ready - showing window')
     mainWindow.show()
@@ -109,11 +106,17 @@ app.whenReady().then(async () => {
   // await workflowService.initialize()
   logInfo('WorkflowService initialized')
 
-  // Initialize email service
-  const emailService = createEmailService(gmailAuthService)
+  // Initialize unified email service
+  UnifiedEmailService.initialize(gmailAuthService)
+  logInfo('Unified email service initialized')
 
   // Connect email service to workflow triggers
-  emailService.onRawEmails(async (emails) => {
+  // TODO: Implement proper email listener for workflow triggers
+  /*
+  UnifiedEmailService.getInstance()?.startPolling(5, undefined)
+  
+  // Old workflow trigger code - needs updating
+  emailService.listenForEmails(undefined, async (emails) => {
     logInfo(`Processing ${emails.length} emails for workflow triggers`)
 
     for (const email of emails) {
@@ -152,13 +155,11 @@ app.whenReady().then(async () => {
       }
     }
   })
+  */
 
   // Initialize LM Studio SDK handlers
   logInfo('Setting Up SDK Handlers LMStudio')
   setupLMStudioSDKHandlers()
-  // Initialize Mail Action handlers
-  logInfo('Setting Up SDK Handlers GoogleMail')
-  setupMailActionHandlers()
 
   // Handle the existing google-oauth-start event to bridge with new auth system
   ipcMain.on('google-oauth-start', async (event) => {
