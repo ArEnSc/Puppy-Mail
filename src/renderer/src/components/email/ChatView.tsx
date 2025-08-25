@@ -21,6 +21,58 @@ import {
 import { FlickeringGrid } from '@/components/ui/flickering-grid'
 import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text'
 
+// Helper function to parse result and check for errors
+function parseResult(result: unknown): { parsedResult: unknown; isError: boolean } {
+  let parsedResult = result
+
+  // Try to parse if it's a string
+  if (typeof result === 'string') {
+    try {
+      parsedResult = JSON.parse(result)
+    } catch {
+      parsedResult = result
+    }
+  }
+
+  // Check if it's an error
+  const isError =
+    parsedResult &&
+    typeof parsedResult === 'object' &&
+    parsedResult !== null &&
+    (('success' in parsedResult && (parsedResult as { success?: boolean }).success === false) ||
+      'error' in parsedResult)
+
+  return { parsedResult, isError }
+}
+
+// Component for rendering function call results
+function FunctionCallResult({ result }: { result: unknown }): JSX.Element {
+  const { parsedResult, isError } = parseResult(result)
+
+  return (
+    <div
+      className={`mt-2 p-2 rounded border ${
+        isError
+          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+          : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+      }`}
+    >
+      <div
+        className={`text-xs font-medium mb-1 ${
+          isError ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'
+        }`}
+      >
+        Result:
+      </div>
+      <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
+        {typeof parsedResult === 'object'
+          ? JSON.stringify(parsedResult, null, 2)
+          : String(parsedResult)}
+      </div>
+    </div>
+  )
+}
+
 export function ChatView(): JSX.Element {
   const { selectedAutomatedTask } = useEmailStore()
   const {
@@ -316,46 +368,7 @@ export function ChatView(): JSX.Element {
                                       )}
                                     </div>
                                     {call.result !== undefined && (
-                                      (() => {
-                                        // Parse result if it's a string
-                                        let resultObj = call.result;
-                                        if (typeof call.result === 'string') {
-                                          try {
-                                            resultObj = JSON.parse(call.result);
-                                          } catch {
-                                            resultObj = call.result;
-                                          }
-                                        }
-                                        
-                                        // Check if it's an error
-                                        const isError = resultObj && typeof resultObj === 'object' && 
-                                                       (resultObj.success === false || 'error' in resultObj);
-                                        
-                                        return (
-                                          <div
-                                            className={`mt-2 p-2 rounded border ${
-                                              isError
-                                                ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
-                                                : 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
-                                            }`}
-                                          >
-                                            <div
-                                              className={`text-xs font-medium mb-1 ${
-                                                isError
-                                                  ? 'text-red-700 dark:text-red-400'
-                                                  : 'text-green-700 dark:text-green-400'
-                                              }`}
-                                            >
-                                              Result:
-                                            </div>
-                                            <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                                              {typeof call.result === 'object'
-                                                ? JSON.stringify(call.result, null, 2)
-                                                : String(call.result)}
-                                            </div>
-                                          </div>
-                                        );
-                                      })()
+                                      <FunctionCallResult result={call.result} />
                                     )}
                                     {call.error && (
                                       <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
