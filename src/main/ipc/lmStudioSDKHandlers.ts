@@ -26,6 +26,8 @@ import {
 let client: LMStudioClient | null = null
 
 // Store active chat sessions
+// These chat sessions are important to the LMStudio State
+// Everything that is returned is just to render to UI
 const chatSessions = new Map<string, Chat>()
 
 export function setupLMStudioSDKHandlers(): void {
@@ -168,8 +170,11 @@ export function setupLMStudioSDKHandlers(): void {
               roundIndex
             } as LMStudioRoundEndPayload)
           },
+          // Everything except this just provides a visual UI update
           onMessage: (message: ChatMessage) => {
-            // Send the message content to frontend
+            // maintain internal state
+            chat.append(message)
+            // send message content to update ui.
             event.reply(LMSTUDIO_IPC_CHANNELS.LMSTUDIO_MESSAGE, {
               role: message.getRole(),
               content: message.getText(),
@@ -238,6 +243,7 @@ export function setupLMStudioSDKHandlers(): void {
         return { success: false, error: 'Chat session not found' }
       }
 
+      // might actually want to save this into the db with session id, then return visual information.
       const messages = chat.getMessagesArray().map((msg) => ({
         role: msg.getRole(),
         content: msg.getText(),
@@ -253,6 +259,7 @@ export function setupLMStudioSDKHandlers(): void {
   ipcMain.handle(
     LMSTUDIO_IPC_CHANNELS.LMSTUDIO_CLEAR_CHAT,
     async (_event, sessionId: string): Promise<LMStudioResponse> => {
+      // might want to delete from the db
       chatSessions.delete(sessionId)
       return { success: true }
     }
