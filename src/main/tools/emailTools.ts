@@ -1,8 +1,9 @@
 import { tool } from '@lmstudio/sdk'
+import { LMStudioClient } from '@lmstudio/sdk'
 import { z } from 'zod'
 import { UnifiedEmailService } from '../services/UnifiedEmailService'
 import { Email, EmailFilter, EmailComposition } from '../../shared/types/email'
-import { logInfo } from '../../shared/logger'
+import { logInfo, logError } from '../../shared/logger'
 
 export const sendEmailTool = tool({
   name: 'sendEmail',
@@ -109,70 +110,103 @@ export const getEmailsTool = tool({
   }
 })
 
-export const markEmailAsReadTool = tool({
-  name: 'markEmailAsRead',
-  description: 'Mark an email as read',
+// Define a simple tool for the analysis LLM to use
+const jsonResponseTool = tool({
+  name: 'provide_analysis_result',
+  description: 'Provide the analysis result in JSON format',
   parameters: {
-    emailId: z.string().describe('The ID of the email to mark as read')
+    result: z.string().describe('The complete analysis result')
   },
   implementation: async (args) => {
-    logInfo('[EmailTools] Marking email as read', args)
+    // This just returns the result - the actual work is done by the LLM
+    return { result: args.result }
+  }
+})
 
-    const service = UnifiedEmailService.getInstance()
-    if (!service) {
-      return { success: false, error: 'Email service not initialized' }
-    }
+export const analysisTool = tool({
+  name: 'analysis',
+  description: 'Analyze email content using an LLM and return structured results',
+  parameters: {
+    emailBody: z.string().describe('The email body content to analyze'),
+    analysisPrompt: z.string().describe('The specific analysis prompt/question about the email')
+  },
+  implementation: async (args) => {
+    logInfo('[AnalysisTool] Analyzing email with prompt:', args.analysisPrompt)
 
     try {
-      await service.updateEmailStatus(args.emailId, { isRead: true })
-      return { success: true, message: 'Email marked as read' }
+      // Import Chat from the SDK
+      const { Chat } = await import('@lmstudio/sdk')
+
+      // Create a new LM Studio client for analysis
+      const client = new LMStudioClient({ baseUrl: 'ws://localhost:1234' })
+
+      // Get loaded models
+      const models = await client.llm.listLoaded()
+      if (models.length === 0) {
+        return {
+          error: 'No models loaded in LM Studio'
+        }
+      }
+
+      // Use the first available model
+      const model = models[0]
+
+      // Create a new chat session for this analysis
+      const analysisChat = Chat.empty()
+
+      // Add system prompt that includes the analysis prompt
+      analysisChat.append(
+        'system',
+        `You are a helpful email analysis assistant. Your task is to analyze emails based on the following prompt: "${args.analysisPrompt}"
+
+When you complete your analysis, you MUST use the provide_analysis_result tool to return your findings. 
+
+IMPORTANT: Always call the provide_analysis_result tool with your complete analysis as the result parameter.`
+      )
+
+      // Add the email content for analysis
+      analysisChat.append(
+        'user',
+        `Here is the email to analyze:
+
+${args.emailBody}
+
+Please analyze this email and use the provide_analysis_result tool to return your analysis.`
+      )
+
+      let toolCallResult: any = null
+
+      // Use act() with the jsonResponseTool
+      await model.act(analysisChat, [jsonResponseTool], {
+        onToolCallRequestFinalized: (roundIndex, callId, info) => {
+          // Capture the tool call result
+          if (info.toolCallRequest.name === 'provide_analysis_result') {
+            toolCallResult = info.toolCallRequest.arguments
+          }
+        }
+      })
+
+      // Check if we got a result
+      if (!toolCallResult) {
+        return {
+          error: 'LLM did not use the required tool to provide analysis'
+        }
+      }
+
+      return toolCallResult
     } catch (error) {
+      logError('[AnalysisTool] Analysis error:', error)
+
+      // Always return JSON, even for errors
       return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to mark email as read'
+        error: error instanceof Error ? error.message : 'Analysis failed',
+        errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
       }
     }
   }
 })
 
-export const toggleEmailStarTool = tool({
-  name: 'toggleEmailStar',
-  description: 'Toggle the starred status of an email',
-  parameters: {
-    emailId: z.string().describe('The ID of the email to toggle star')
-  },
-  implementation: async (args) => {
-    logInfo('[EmailTools] Toggling email star', args)
-
-    const service = UnifiedEmailService.getInstance()
-    if (!service) {
-      return { success: false, error: 'Email service not initialized' }
-    }
-
-    try {
-      // Get current status
-      const emails = await service.getLocalEmails({ limit: 1 })
-      const email = emails.find((e) => e.id === args.emailId)
-
-      if (!email) {
-        return { success: false, error: 'Email not found' }
-      }
-
-      await service.updateEmailStatus(args.emailId, { isStarred: !email.isStarred })
-      return {
-        success: true,
-        message: `Email ${!email.isStarred ? 'starred' : 'unstarred'}`
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to toggle star'
-      }
-    }
-  }
-})
-
-export const emailTools = [sendEmailTool, getEmailsTool, markEmailAsReadTool, toggleEmailStarTool]
+export const emailTools = [sendEmailTool, getEmailsTool, analysisTool]
 
 export function getToolByName(name: string): (typeof emailTools)[number] | undefined {
   return emailTools.find((tool) => tool.name === name)
