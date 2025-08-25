@@ -1,4 +1,4 @@
-import { tool } from '@lmstudio/sdk'
+import { tool, Chat } from '@lmstudio/sdk'
 import { LMStudioClient } from '@lmstudio/sdk'
 import { z } from 'zod'
 import { UnifiedEmailService } from '../services/UnifiedEmailService'
@@ -132,11 +132,8 @@ export const analysisTool = tool({
   },
   implementation: async (args) => {
     logInfo('[AnalysisTool] Analyzing email with prompt:', args.analysisPrompt)
-
+    logInfo('[AnalysisTool] Analyzing email with prompt:', args.emailBody)
     try {
-      // Import Chat from the SDK
-      const { Chat } = await import('@lmstudio/sdk')
-
       // Create a new LM Studio client for analysis
       const client = new LMStudioClient({ baseUrl: 'ws://localhost:1234' })
 
@@ -178,6 +175,17 @@ Please analyze this email and use the provide_analysis_result tool to return you
 
       // Use act() with the jsonResponseTool
       await model.act(analysisChat, [jsonResponseTool], {
+        onMessage: (message) => {
+          // Append each message to maintain the conversation context
+          analysisChat.append(message)
+
+          // Log the message for debugging
+          logInfo('[AnalysisTool] Message received:', {
+            role: message.getRole(),
+            content: message.getText(),
+            toolCalls: message.getToolCallRequests()
+          })
+        },
         onToolCallRequestFinalized: (roundIndex, callId, info) => {
           // Capture the tool call result
           if (info.toolCallRequest.name === 'provide_analysis_result') {
